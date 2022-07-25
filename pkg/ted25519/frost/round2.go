@@ -72,19 +72,19 @@ func (signer *Signer) SignRound2(msg []byte, round2Input map[uint32]*Round1Bcast
 
 	// Check length of round2Input
 	if uint32(len(round2Input)) != signer.threshold {
-		return nil, fmt.Errorf("Invalid length of round2Input")
+		return nil, fmt.Errorf("invalid length of round2Input")
 	}
 
 	// Step 2 - Check Dj, Ej on the curve and Store round2Input
 	for id, input := range round2Input {
 		if input == nil || input.Di == nil || input.Ei == nil {
-			return nil, fmt.Errorf("round2Input is nil from participant with id %d\n", id)
+			return nil, fmt.Errorf("round2Input is nil from participant with id %d", id)
 		}
 		if !input.Di.IsOnCurve() || input.Di.IsIdentity() {
-			return nil, fmt.Errorf("commitment Di is not on the curve with id %d\n", id)
+			return nil, fmt.Errorf("commitment Di is not on the curve with id %d", id)
 		}
 		if !input.Ei.IsOnCurve() || input.Ei.IsIdentity() {
-			return nil, fmt.Errorf("commitment Ei is not on the curve with id %d\n", id)
+			return nil, fmt.Errorf("commitment Ei is not on the curve with id %d", id)
 		}
 	}
 	// Store Dj, Ej for further usage.
@@ -115,7 +115,7 @@ func (signer *Signer) SignRound2(msg []byte, round2Input map[uint32]*Round1Bcast
 	}
 
 	// Step 7 - c = H(m, R)
-	c, err := signer.challengeDeriver.DeriveChallenge(msg, signer.verificationKey, R)
+	c, err := signer.challengeDeriver(msg, signer.verificationKey, R)
 	if err != nil {
 		return nil, err
 	}
@@ -157,9 +157,9 @@ func (signer *Signer) SignRound2(msg []byte, round2Input map[uint32]*Round1Bcast
 	}, nil
 }
 
-// concatHashArray puts id, msg and (Dj,Ej), j=1...t into a byte array
+// concatHashArray puts id, msg and (Dj,Ej), j=1...t into a byte array.
 func concatHashArray(id uint32, msg []byte, round2Input map[uint32]*Round1Bcast, cosigners []uint32) []byte {
-	var blob []byte
+	var blob []byte //nolint:prealloc // readability is lower if we specify the size to be 1 + len(msg) + (len(cosigners) * 3)
 	// Append identity id
 	blob = append(blob, byte(id))
 

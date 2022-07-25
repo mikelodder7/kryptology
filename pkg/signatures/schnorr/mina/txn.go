@@ -14,9 +14,10 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/coinbase/kryptology/pkg/core/curves"
+	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta"
 )
 
-// Transaction is a Mina transaction for payments or delegations
+// Transaction is a Mina transaction for payments or delegations.
 type Transaction struct {
 	Fee, FeeToken        uint64
 	FeePayerPk           *PublicKey
@@ -29,12 +30,12 @@ type Transaction struct {
 	NetworkId            NetworkType
 }
 
-type txnJson struct {
-	Common txnCommonJson
+type txnJSON struct {
+	Common txnCommonJSON
 	Body   [2]interface{}
 }
 
-type txnCommonJson struct {
+type txnCommonJSON struct {
 	Fee        uint64 `json:"fee"`
 	FeeToken   uint64 `json:"fee_token"`
 	FeePayerPk string `json:"fee_payer_pk"`
@@ -44,14 +45,14 @@ type txnCommonJson struct {
 	NetworkId  uint8  `json:"network_id"`
 }
 
-type txnBodyPaymentJson struct {
+type txnBodyPaymentJSON struct {
 	SourcePk   string `json:"source_pk"`
 	ReceiverPk string `json:"receiver_pk"`
 	TokenId    uint64 `json:"token_id"`
 	Amount     uint64 `json:"amount"`
 }
 
-type txnBodyDelegationJson struct {
+type txnBodyDelegationJSON struct {
 	Delegator   string `json:"delegator"`
 	NewDelegate string `json:"new_delegate"`
 }
@@ -70,7 +71,7 @@ func (txn *Transaction) MarshalBinary() ([]byte, error) {
 
 	out[56] = 0x01
 	out[57] = byte(len(txn.Memo))
-	copy(out[58:90], txn.Memo[:])
+	copy(out[58:90], txn.Memo)
 	out[90] = mapper[txn.Tag[0]]
 	out[91] = mapper[txn.Tag[1]]
 	out[92] = mapper[txn.Tag[2]]
@@ -124,8 +125,9 @@ func (txn *Transaction) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
+//nolint:nestif,revive // unnecessary to break up
 func (txn *Transaction) UnmarshalJSON(input []byte) error {
-	var t txnJson
+	var t txnJSON
 	err := json.Unmarshal(input, &t)
 	if err != nil {
 		return err
@@ -139,7 +141,7 @@ func (txn *Transaction) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	if strType == "Payment" {
-		b, ok := t.Body[1].(txnBodyPaymentJson)
+		b, ok := t.Body[1].(txnBodyPaymentJSON)
 		if !ok {
 			return fmt.Errorf("unexpected type")
 		}
@@ -151,7 +153,7 @@ func (txn *Transaction) UnmarshalJSON(input []byte) error {
 		receiverPk := new(PublicKey)
 		err = receiverPk.ParseAddress(b.ReceiverPk)
 		if err != nil {
-			return nil
+			return err
 		}
 		txn.FeePayerPk = feePayerPk
 		txn.ReceiverPk = receiverPk
@@ -165,7 +167,7 @@ func (txn *Transaction) UnmarshalJSON(input []byte) error {
 			return fmt.Errorf("unexpected type")
 		}
 		if delegateType == "Set_delegate" {
-			b, ok := bType[1].(txnBodyDelegationJson)
+			b, ok := bType[1].(txnBodyDelegationJSON)
 			if !ok {
 				return fmt.Errorf("unexpected type")
 			}
@@ -189,7 +191,8 @@ func (txn *Transaction) UnmarshalJSON(input []byte) error {
 	}
 	txn.Memo = string(memo[2 : 2+memo[1]])
 	sourcePk := new(PublicKey)
-	sourcePk.value = new(curves.Ep).Set(txn.FeePayerPk.value)
+	sourcePk.value = new(curves.PointPallas)
+	sourcePk.value.EllipticPoint = pasta.PointNew().Set(txn.FeePayerPk.value.EllipticPoint)
 	txn.Fee = t.Common.Fee
 	txn.FeeToken = t.Common.FeeToken
 	txn.Nonce = t.Common.Nonce
@@ -198,14 +201,14 @@ func (txn *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (txn Transaction) addRoInput(input *roinput) {
+func (txn *Transaction) addRoInput(input *roinput) {
 	input.AddFp(txn.FeePayerPk.value.X())
 	input.AddFp(txn.SourcePk.value.X())
 	input.AddFp(txn.ReceiverPk.value.X())
 
 	input.AddUint64(txn.Fee)
 	input.AddUint64(txn.FeeToken)
-	input.AddBit(txn.FeePayerPk.value.Y().IsOdd())
+	input.AddBit(txn.FeePayerPk.value.Y().Bytes()[0]&1 == 1)
 	input.AddUint32(txn.Nonce)
 	input.AddUint32(txn.ValidUntil)
 	memo := [34]byte{0x01, byte(len(txn.Memo))}
@@ -215,8 +218,8 @@ func (txn Transaction) addRoInput(input *roinput) {
 		input.AddBit(b)
 	}
 
-	input.AddBit(txn.SourcePk.value.Y().IsOdd())
-	input.AddBit(txn.ReceiverPk.value.Y().IsOdd())
+	input.AddBit(txn.SourcePk.value.Y().Bytes()[0]&1 == 1)
+	input.AddBit(txn.ReceiverPk.value.Y().Bytes()[0]&1 == 1)
 	input.AddUint64(txn.TokenId)
 	input.AddUint64(txn.Amount)
 	input.AddBit(txn.Locked)

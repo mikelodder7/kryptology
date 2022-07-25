@@ -23,7 +23,7 @@ import (
 const threshold = 2
 
 // Participant is a DKG player that contains information needed to perform DKG rounds
-// and yield a secret key share and public key when finished
+// and yield a secret key share and public key when finished.
 type Participant struct {
 	id             uint32
 	counterPartyId uint32
@@ -69,7 +69,7 @@ func NewParticipant(id, counterPartyId uint32, blind *curves.EcPoint,
 	return &Participant{id, counterPartyId, p, blind}, nil
 }
 
-// Creates a random blinding factor (as a generator) required for pedersen's VSS
+// Creates a random blinding factor (as a generator) required for pedersen's VSS.
 func newBlind(curveScalar curves.EcScalar, curve elliptic.Curve) (*curves.EcPoint, error) {
 	rScalar, err := curveScalar.Random()
 	if err != nil {
@@ -114,7 +114,8 @@ func (p *Participant) Round2(msg *Round1Message) (*Round2Message, error) {
 			p.counterPartyId: {
 				SecretShare:   msg.SecretShare,
 				BlindingShare: msg.BlindingShare,
-			}})
+			},
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "calling embedded.Round2()")
 	}

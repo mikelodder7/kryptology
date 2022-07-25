@@ -13,7 +13,7 @@ import (
 )
 
 // Round4Bcast are the values to be broadcast to the other players at the conclusion
-// of signing round 4
+// of signing round 4.
 type Round4Bcast struct {
 	Witness *core.Witness
 }
@@ -22,16 +22,16 @@ type Round4Bcast struct {
 // the delta_j values broadcast from signers at the conclusion of
 // round 3.
 // Trusted Dealer Mode: see [spec] fig 7: SignRound4
-// DKG Mode: see [spec] fig 8: SignRound4
+// DKG Mode: see [spec] fig 8: SignRound4.
 func (s *Signer) SignRound4(deltas map[uint32]*Round3Bcast) (*Round4Bcast, error) {
-	var err error
-	if err = s.verifyStateMap(4, deltas); err != nil {
+	if err := s.verifyStateMap(4, deltas); err != nil {
 		return nil, err
 	}
 
 	// 1. Set δ = δ_i
 	delta := new(big.Int).Set(s.state.deltai)
 
+	var err error
 	// 2. For j=[1,...,t+1]
 	for j, deltaj := range deltas {
 		// 3. If i = j, Continue

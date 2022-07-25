@@ -14,7 +14,7 @@ type polynomial struct {
 	Coefficients []*curves.Element
 }
 
-// newPoly creates a random polynomial of the given degree but with the provided intercept value
+// newPoly creates a random polynomial of the given degree but with the provided intercept value.
 func newPoly(intercept *curves.Element, degree uint32) (polynomial, error) {
 	p := polynomial{
 		Coefficients: make([]*curves.Element, degree),
@@ -35,7 +35,7 @@ func newPoly(intercept *curves.Element, degree uint32) (polynomial, error) {
 	return p, nil
 }
 
-// evaluate returns the value of the polynomial for the given x
+// evaluate returns the value of the polynomial for the given x.
 func (p polynomial) evaluate(x *curves.Element) *curves.Element {
 	// Compute the polynomial value using Horner's Method
 

@@ -16,11 +16,11 @@ import (
 )
 
 // Round3Bcast represents the value to be broadcast to all players
-// at the conclusion of round 3
+// at the conclusion of round 3.
 type (
 	Round3Bcast struct {
 		// Note that deltaElement is some element of the entire δ vector.
-		// In this round, it's δ_i. For the recepients of this message in the next round
+		// In this round, it's δ_i. For the recipients of this message in the next round
 		// this will be δ_j
 		deltaElement *big.Int
 		// The reason we can't do something straightforward like `type BetterRound3Bcast *big.int`
@@ -51,7 +51,7 @@ func (r3b *Round3Bcast) UnmarshalJSON(data []byte) error {
 
 // SignRound3 performs the round 3 signing operation according to
 // Trusted Dealer Mode: see [spec] fig 7: SignRound3
-// DKG Mode: see [spec] fig 8: SignRound3
+// DKG Mode: see [spec] fig 8: SignRound3.
 func (s *Signer) SignRound3(in map[uint32]*P2PSend) (*Round3Bcast, error) {
 	if err := s.verifyStateMap(3, in); err != nil {
 		return nil, err
@@ -78,19 +78,17 @@ func (s *Signer) SignRound3(in map[uint32]*P2PSend) (*Round3Bcast, error) {
 	}
 
 	for j, value := range in {
-
 		// 4. if i == j Continue
 		if j == s.id {
 			continue
 		}
 
 		if value == nil {
-			return nil, fmt.Errorf("P2P message for participant %v cannot be nil", j)
+			return nil, fmt.Errorf("p2p message for participant %v cannot be nil", j)
 		}
 
 		// 5. Compute α_ij = MtAFinalize(g,q,sk_i,pk_i,N~,h1,h2,c_i,c_ij,π_ij)
 		alphaij, err := value.Proof2.Finalize(verifyParams)
-
 		// 6. If α_ij = ⊥, Abort
 		if err != nil {
 			return nil, err
@@ -99,7 +97,6 @@ func (s *Signer) SignRound3(in map[uint32]*P2PSend) (*Round3Bcast, error) {
 		// 7. Compute μ_ij = MtAFinalize_wc(g,q,sk_i,pk_i,N~,h1,h2,c_i,c_ij,π_ij,W_j)
 		verifyParams.B = s.publicSharesMap[j].Point
 		mu, err := value.Proof3.FinalizeWc(verifyParams)
-
 		// 8. If μ_ij = ⊥, Abort
 		if err != nil {
 			return nil, err
@@ -124,7 +121,6 @@ func (s *Signer) SignRound3(in map[uint32]*P2PSend) (*Round3Bcast, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 
 	// 12. Return δ_i, σ_i

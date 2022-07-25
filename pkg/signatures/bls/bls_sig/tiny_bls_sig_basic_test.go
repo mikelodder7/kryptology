@@ -12,7 +12,8 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves/native/bls12381"
 )
 
-func generateBasicSignatureG1(sk *SecretKey, msg []byte, t *testing.T) *SignatureVt {
+func generateBasicSignatureG1(t *testing.T, sk *SecretKey, msg []byte) *SignatureVt {
+	t.Helper()
 	bls := NewSigBasicVt()
 	sig, err := bls.Sign(sk, msg)
 	if err != nil {
@@ -22,6 +23,7 @@ func generateBasicSignatureG1(sk *SecretKey, msg []byte, t *testing.T) *Signatur
 }
 
 func generateBasicAggregateDataG1(t *testing.T) ([]*PublicKeyVt, []*SignatureVt, [][]byte) {
+	t.Helper()
 	msgs := make([][]byte, numAggregateG1)
 	pks := make([]*PublicKeyVt, numAggregateG1)
 	sigs := make([]*SignatureVt, numAggregateG1)
@@ -29,14 +31,14 @@ func generateBasicAggregateDataG1(t *testing.T) ([]*PublicKeyVt, []*SignatureVt,
 	bls := NewSigBasicVt()
 
 	for i := 0; i < numAggregateG1; i++ {
-		readRand(ikm, t)
+		readRand(t, ikm)
 		pk, sk, err := bls.KeygenWithSeed(ikm)
 		if err != nil {
 			t.Errorf("Basic KeyGen failed")
 		}
 		msg := make([]byte, 20)
-		readRand(msg, t)
-		sig := generateBasicSignatureG1(sk, msg, t)
+		readRand(t, msg)
+		sig := generateBasicSignatureG1(t, sk, msg)
 		msgs[i] = msg
 		sigs[i] = sig
 		pks[i] = pk
@@ -46,7 +48,7 @@ func generateBasicAggregateDataG1(t *testing.T) ([]*PublicKeyVt, []*SignatureVt,
 
 func TestBasicKeyGenG1Works(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigBasicVt()
 	_, _, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
@@ -56,7 +58,7 @@ func TestBasicKeyGenG1Works(t *testing.T) {
 
 func TestBasicKeyGenG1Fail(t *testing.T) {
 	ikm := make([]byte, 10)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigBasicVt()
 	_, _, err := bls.KeygenWithSeed(ikm)
 	if err == nil {
@@ -66,16 +68,15 @@ func TestBasicKeyGenG1Fail(t *testing.T) {
 
 func TestBasicCustomDstG1(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigBasicVtWithDst("BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_TEST")
 	pk, sk, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
 		t.Errorf("Basic Custom Dst KeyGen failed")
 	}
 
-	readRand(ikm, t)
+	readRand(t, ikm)
 	sig, err := bls.Sign(sk, ikm)
-
 	if err != nil {
 		t.Errorf("Basic Custom Dst Sign failed")
 	}
@@ -92,15 +93,15 @@ func TestBasicCustomDstG1(t *testing.T) {
 
 func TestBasicSigningG1(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigBasicVt()
 	pk, sk, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
 		t.Errorf("Basic KeyGen failed")
 	}
 
-	readRand(ikm, t)
-	sig := generateBasicSignatureG1(sk, ikm, t)
+	readRand(t, ikm)
+	sig := generateBasicSignatureG1(t, sk, ikm)
 
 	if res, _ := bls.Verify(pk, ikm, sig); !res {
 		t.Errorf("Basic Verify failed")
@@ -286,7 +287,7 @@ func TestBasicPartialSignVt(t *testing.T) {
 	}
 }
 
-// Ensure that mixed partial signatures from distinct origins create invalid composite signatures
+// Ensure that mixed partial signatures from distinct origins create invalid composite signatures.
 func TestBasicVtPartialMixupShares(t *testing.T) {
 	total := uint(5)
 	ikm := make([]byte, 32)

@@ -9,7 +9,9 @@ package camshoup
 import (
 	"math/big"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
+
+	"github.com/coinbase/kryptology/pkg/core"
 )
 
 // CipherText represents verifiably encrypted ciphertext
@@ -19,34 +21,45 @@ type CipherText struct {
 	e    []*big.Int
 }
 
-type cipherTextMarshal struct {
-	E [][]byte `bare:"e"`
-	U []byte   `bare:"u"`
-	V []byte   `bare:"v"`
-}
-
 func (c CipherText) MarshalBinary() ([]byte, error) {
-	tv := new(cipherTextMarshal)
-	tv.U = c.u.Bytes()
-	tv.V = c.v.Bytes()
-	tv.E = make([][]byte, len(c.e))
+	u := c.u.Bytes()
+	v := c.v.Bytes()
+	eA := make([][]byte, len(c.e))
 	for i, e := range c.e {
-		tv.E[i] = e.Bytes()
+		eA[i] = e.Bytes()
 	}
-
-	return bare.Marshal(tv)
+	b := core.NewByteSerializer(uint(len(u) + len(v) + len(eA)*len(u)))
+	if _, err := b.WriteBytes(u); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err := b.WriteBytes(v); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err := b.WriteByteArray(eA); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return b.Bytes(), nil
 }
 
 func (c *CipherText) UnmarshalBinary(data []byte) error {
-	tv := new(cipherTextMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	uBytes, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	c.u = new(big.Int).SetBytes(tv.U)
-	c.v = new(big.Int).SetBytes(tv.V)
-	c.e = make([]*big.Int, len(tv.E))
-	for i, e := range tv.E {
+	vBytes, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	eABytes, err := b.ReadByteArray()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	c.u = new(big.Int).SetBytes(uBytes)
+	c.v = new(big.Int).SetBytes(vBytes)
+	c.e = make([]*big.Int, len(eABytes))
+	for i, e := range eABytes {
 		c.e[i] = new(big.Int).SetBytes(e)
 	}
 	return nil

@@ -11,5 +11,5 @@ import (
 )
 
 // Nonce is used for zero-knowledge proofs to prevent replay attacks
-// and prove freshness
+// and prove freshness.
 type Nonce = curves.Scalar

@@ -18,6 +18,7 @@ import (
 )
 
 func genSecretKey(t *testing.T) *SecretKey {
+	t.Helper()
 	ikm := make([]byte, 32)
 	sk, err := new(SecretKey).Generate(ikm)
 	if err != nil {
@@ -26,7 +27,8 @@ func genSecretKey(t *testing.T) *SecretKey {
 	return sk
 }
 
-func genRandSecretKey(ikm []byte, t *testing.T) *SecretKey {
+func genRandSecretKey(t *testing.T, ikm []byte) *SecretKey {
+	t.Helper()
 	sk, err := new(SecretKey).Generate(ikm)
 	if err != nil {
 		t.Errorf("Couldn't generate secret key")
@@ -34,7 +36,8 @@ func genRandSecretKey(ikm []byte, t *testing.T) *SecretKey {
 	return sk
 }
 
-func genPublicKeyVt(sk *SecretKey, t *testing.T) *PublicKeyVt {
+func genPublicKeyVt(t *testing.T, sk *SecretKey) *PublicKeyVt {
+	t.Helper()
 	pk, err := sk.GetPublicKeyVt()
 	if err != nil {
 		t.Errorf("Expected GetPublicKeyVt to pass but failed: %v", err)
@@ -42,7 +45,8 @@ func genPublicKeyVt(sk *SecretKey, t *testing.T) *PublicKeyVt {
 	return pk
 }
 
-func genPublicKey(sk *SecretKey, t *testing.T) *PublicKey {
+func genPublicKey(t *testing.T, sk *SecretKey) *PublicKey {
+	t.Helper()
 	pk, err := sk.GetPublicKey()
 	if err != nil {
 		t.Errorf("GetPublicKey failed. Couldn't generate public key: %v", err)
@@ -50,7 +54,8 @@ func genPublicKey(sk *SecretKey, t *testing.T) *PublicKey {
 	return pk
 }
 
-func genSignature(sk *SecretKey, message []byte, t *testing.T) *Signature {
+func genSignature(t *testing.T, sk *SecretKey, message []byte) *Signature {
+	t.Helper()
 	bls := NewSigPop()
 
 	sig, err := bls.Sign(sk, message)
@@ -60,7 +65,8 @@ func genSignature(sk *SecretKey, message []byte, t *testing.T) *Signature {
 	return sig
 }
 
-func genSignatureVt(sk *SecretKey, message []byte, t *testing.T) *SignatureVt {
+func genSignatureVt(t *testing.T, sk *SecretKey, message []byte) *SignatureVt {
+	t.Helper()
 	bls := NewSigPopVt()
 	sig, err := bls.Sign(sk, message)
 	if err != nil {
@@ -69,14 +75,16 @@ func genSignatureVt(sk *SecretKey, message []byte, t *testing.T) *SignatureVt {
 	return sig
 }
 
-func readRand(ikm []byte, t *testing.T) {
+func readRand(t *testing.T, ikm []byte) {
+	t.Helper()
 	n, err := rand.Read(ikm)
 	if err != nil || n < len(ikm) {
 		t.Errorf("Not enough data was read or an error occurred")
 	}
 }
 
-func assertSecretKeyGen(seed, expected []byte, t *testing.T) {
+func assertSecretKeyGen(t *testing.T, seed, expected []byte) {
+	t.Helper()
 	sk, err := new(SecretKey).Generate(seed)
 	if err != nil {
 		t.Errorf("Expected Generate to succeed but failed")
@@ -85,12 +93,13 @@ func assertSecretKeyGen(seed, expected []byte, t *testing.T) {
 	if len(actual) != len(expected) {
 		t.Errorf("Length of Generate output is incorrect. Expected 32, found: %v\n", len(actual))
 	}
-	if !bytes.Equal(actual[:], expected) {
+	if !bytes.Equal(actual, expected) {
 		t.Errorf("SecretKey was not as expected")
 	}
 }
 
-func marshalStruct(value encoding.BinaryMarshaler, t *testing.T) []byte {
+func marshalStruct(t *testing.T, value encoding.BinaryMarshaler) []byte {
+	t.Helper()
 	out, err := value.MarshalBinary()
 	if err != nil {
 		t.Errorf("MarshalBinary failed: %v", err)
@@ -112,11 +121,11 @@ func TestMarshalLeadingZeroes(t *testing.T) {
 		in   []byte
 	}{
 		{"no leading zeroes", []byte{74, 53, 59, 227, 218, 192, 145, 160, 167, 230, 64, 98, 3, 114, 245, 225, 226, 228, 64, 23, 23, 193, 231, 156, 172, 111, 251, 168, 246, 144, 86, 4}},
-		{"one leading zero byte", []byte{00, 53, 59, 227, 218, 192, 145, 160, 167, 230, 64, 98, 3, 114, 245, 225, 226, 228, 64, 23, 23, 193, 231, 156, 172, 111, 251, 168, 246, 144, 86, 4}},
-		{"two leading zeroes", []byte{00, 00, 59, 227, 218, 192, 145, 160, 167, 230, 64, 98, 3, 114, 245, 225, 226, 228, 64, 23, 23, 193, 231, 156, 172, 111, 251, 168, 246, 144, 86, 4}},
+		{"one leading zero byte", []byte{0o0, 53, 59, 227, 218, 192, 145, 160, 167, 230, 64, 98, 3, 114, 245, 225, 226, 228, 64, 23, 23, 193, 231, 156, 172, 111, 251, 168, 246, 144, 86, 4}},
+		{"two leading zeroes", []byte{0o0, 0o0, 59, 227, 218, 192, 145, 160, 167, 230, 64, 98, 3, 114, 245, 225, 226, 228, 64, 23, 23, 193, 231, 156, 172, 111, 251, 168, 246, 144, 86, 4}},
 	}
 	// Run all the tests!
-	ss := bls12381.Bls12381FqNew()
+	ss := bls12381.FqNew()
 	for _, test := range tests {
 		// Marshal
 		var k big.Int
@@ -139,7 +148,6 @@ func TestMarshalLeadingZeroes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var actual SecretKey
 			err := actual.UnmarshalBinary(bytes)
-
 			// Test for error
 			if err != nil {
 				t.Errorf("%v", err)
@@ -157,13 +165,13 @@ func TestMarshalLeadingZeroes(t *testing.T) {
 func TestSecretKey32Bytes(t *testing.T) {
 	seed := make([]byte, 32)
 	expected := []byte{77, 18, 154, 25, 223, 134, 160, 245, 52, 91, 173, 76, 198, 242, 73, 236, 42, 129, 156, 204, 51, 134, 137, 91, 235, 79, 125, 152, 179, 219, 98, 53}
-	assertSecretKeyGen(seed, expected, t)
+	assertSecretKeyGen(t, seed, expected)
 }
 
 func TestSecretKey128Bytes(t *testing.T) {
 	seed := make([]byte, 128)
 	expected := []byte{97, 207, 109, 96, 94, 90, 233, 215, 221, 207, 240, 139, 24, 209, 152, 170, 73, 209, 151, 241, 148, 176, 173, 92, 101, 48, 39, 175, 201, 219, 146, 168}
-	assertSecretKeyGen(seed, expected, t)
+	assertSecretKeyGen(t, seed, expected)
 }
 
 func TestRandomSecretKey(t *testing.T) {
@@ -177,7 +185,7 @@ func TestRandomSecretKey(t *testing.T) {
 
 func TestSecretKeyToBytes(t *testing.T) {
 	sk := genSecretKey(t)
-	skBytes := marshalStruct(sk, t)
+	skBytes := marshalStruct(t, sk)
 	sk1 := new(SecretKey)
 	err := sk1.UnmarshalBinary(skBytes)
 	if err != nil {
@@ -194,15 +202,15 @@ func TestSecretKeyToBytes(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected FromBytes to succeed but failed.")
 	}
-	if !bytes.Equal(marshalStruct(sk2, t), skBytes) {
+	if !bytes.Equal(marshalStruct(t, sk2), skBytes) {
 		t.Errorf("Expected secret keys to be equal but are different")
 	}
 }
 
 // Verifies that the thresholdize creates the expected number
-// of shares
+// of shares.
 func TestThresholdizeSecretKeyCountsCorrect(t *testing.T) {
-	sk := &SecretKey{value: bls12381.Bls12381FqNew().SetBigInt(big.NewInt(248631463258962596))}
+	sk := &SecretKey{value: bls12381.FqNew().SetBigInt(big.NewInt(248631463258962596))}
 	tests := []struct {
 		key           *SecretKey
 		t, n          uint

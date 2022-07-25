@@ -5,7 +5,7 @@
 //
 
 //
-// Demonstrates 2-party (client-server) DKG and message serialization
+// Demonstrates 2-party (client-server) DKG and message serialization.
 //
 
 package main
@@ -29,13 +29,13 @@ const (
 	useJson        = true
 )
 
-// Scalar for the curve we're using
+// Scalar for the curve we're using.
 var (
 	curveScalar = crypto.NewK256Scalar()
 	curve       = btcec.S256()
 )
 
-// Initiate and run a DKG with JSON-serialized messages
+// Initiate and run a DKG with JSON-serialized messages.
 func runClientJson(s *server) {
 	// Setup
 	lg := log.New(os.Stdout, "[client] ", log.Lshortfile|log.Lmsgprefix)
@@ -86,7 +86,7 @@ func runClientJson(s *server) {
 	s.phase2Json(clientR2Json)
 }
 
-// Initiate and run a DKG
+// Initiate and run a DKG.
 func runClient(s *server) {
 	// Setup
 	lg := log.New(os.Stdout, "[client] ", log.Lshortfile|log.Lmsgprefix)
@@ -131,7 +131,7 @@ func main() {
 	}
 }
 
-// If there's an error, print and exit(1)
+// If there's an error, print and exit(1).
 func dieOnError(err error) {
 	if err != nil {
 		fmt.Printf("Fatal: %v\n", err)

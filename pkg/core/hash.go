@@ -71,7 +71,7 @@ func getParams(curve elliptic.Curve) (*Params, error) {
 			L:                 48,
 		}, nil
 	default:
-		return nil, fmt.Errorf("Not implemented: %s", curve.Params().Name)
+		return nil, fmt.Errorf("not implemented: %s", curve.Params().Name)
 	}
 }
 
@@ -120,19 +120,20 @@ func xor(b1, b2 []byte) []byte {
 	return result
 }
 
-func ExpandMessageXmd(f func() hash.Hash, msg, DST []byte, lenInBytes int) ([]byte, error) {
+func ExpandMessageXmd(f func() hash.Hash, msg, capDST []byte, lenInBytes int) ([]byte, error) {
 	// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-5.4.1
 
 	// step 1
 	ell := int(math.Ceil(float64(lenInBytes) / float64(f().Size())))
 
-	//step 2
+	// step 2
 	if ell > 255 {
 		return nil, fmt.Errorf("ell > 255")
 	}
 
 	// step 3
-	dstPrime := append(DST, I2OSP(len(DST), 1)...)
+	dstPrime := capDST
+	dstPrime = append(dstPrime, I2OSP(len(capDST), 1)...)
 
 	// step 4
 	zPad := I2OSP(0, f().BlockSize())
@@ -208,7 +209,6 @@ func hashToField(msg []byte, count int, curve elliptic.Curve) ([][]*big.Int, err
 			tv := uniformBytes[elmOffset : elmOffset+L]
 			// step 7
 			e[j] = new(big.Int).Mod(OS2IP(tv), parameters.F.Characteristic)
-
 		}
 		// step 8
 		u[i] = e
@@ -243,7 +243,7 @@ func Hash(msg []byte, curve elliptic.Curve) (*big.Int, error) {
 // and https://signal.org/docs/specifications/xeddsa/#hash-functions
 // for more details.
 // This uses the KDF function similar to X3DH for each `value`
-// But changes the key just like XEdDSA where the prefix bytes change by a single bit
+// But changes the key just like XEdDSA where the prefix bytes change by a single bit.
 func FiatShamir(values ...*big.Int) ([]byte, error) {
 	// Don't accept any nil arguments
 	if AnyNil(values...) {
@@ -256,7 +256,8 @@ func FiatShamir(values ...*big.Int) ([]byte, error) {
 	f := bytes.Repeat([]byte{0xFF}, 32)
 
 	for _, b := range values {
-		ikm := append(f, b.Bytes()...)
+		ikm := f
+		ikm = append(ikm, b.Bytes()...)
 		ikm = append(ikm, okm...)
 		kdf := hkdf.New(sha256.New, ikm, salt, info)
 		n, err := kdf.Read(okm)

@@ -10,5 +10,5 @@ import (
 	kryptology "github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// ShareVerifier is used to verify secret shares from Feldman or Pedersen VSS
+// ShareVerifier is used to verify secret shares from Feldman or Pedersen VSS.
 type ShareVerifier = kryptology.EcPoint

@@ -17,7 +17,7 @@ import (
 
 // Round4 computes the public shares used by tECDSA during signing
 // that are converted to additive shares once the signing participants
-// are known. This function is idempotent
+// are known. This function is idempotent.
 func (dp *Participant) Round4() (map[uint32]*curves.EcPoint, error) {
 	// Check participant is not empty
 	if dp == nil || dp.curve == nil {

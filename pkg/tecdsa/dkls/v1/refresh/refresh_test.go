@@ -140,10 +140,8 @@ func Test_RefreshOTIsCorrect(t *testing.T) {
 					tt.Errorf("oblivious transfer is incorrect at index i=%v", i)
 				}
 			}
-
 		})
 	}
-
 }
 
 func Test_CanSignAfterRefresh(t *testing.T) {

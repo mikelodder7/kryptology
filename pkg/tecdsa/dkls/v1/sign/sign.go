@@ -32,7 +32,7 @@ const multiplicationCount = 2
 // Alice struct encoding Alice's state during one execution of the overall signing algorithm.
 // At the end of the joint computation, Alice will not possess the signature.
 type Alice struct {
-	hash           hash.Hash // which hash function should we use to compute message (i.e, teh digest)
+	hash           hash.Hash // which hash function should we use to compute message (i.e, the digest)
 	seedOtResults  *simplest.ReceiverOutput
 	secretKeyShare curves.Scalar // the witness
 	publicKey      curves.Point
@@ -61,9 +61,9 @@ type Bob struct {
 }
 
 // NewAlice creates a party that can participate in protocol runs of DKLs sign, in the role of Alice.
-func NewAlice(curve *curves.Curve, hash hash.Hash, dkgOutput *dkg.AliceOutput) *Alice {
+func NewAlice(curve *curves.Curve, h hash.Hash, dkgOutput *dkg.AliceOutput) *Alice {
 	return &Alice{
-		hash:           hash,
+		hash:           h,
 		seedOtResults:  dkgOutput.SeedOtResult,
 		curve:          curve,
 		secretKeyShare: dkgOutput.SecretKeyShare,
@@ -74,9 +74,9 @@ func NewAlice(curve *curves.Curve, hash hash.Hash, dkgOutput *dkg.AliceOutput) *
 
 // NewBob creates a party that can participate in protocol runs of DKLs sign, in the role of Bob.
 // This party receives the signature at the end.
-func NewBob(curve *curves.Curve, hash hash.Hash, dkgOutput *dkg.BobOutput) *Bob {
+func NewBob(curve *curves.Curve, h hash.Hash, dkgOutput *dkg.BobOutput) *Bob {
 	return &Bob{
-		hash:           hash,
+		hash:           h,
 		seedOtResults:  dkgOutput.SeedOtResult,
 		curve:          curve,
 		secretKeyShare: dkgOutput.SecretKeyShare,
@@ -85,8 +85,8 @@ func NewBob(curve *curves.Curve, hash hash.Hash, dkgOutput *dkg.BobOutput) *Bob 
 	}
 }
 
-// SignRound2Output is the output of the 3rd round of the protocol.
-type SignRound2Output struct {
+// Round2Output is the output of the 3rd round of the protocol.
+type Round2Output struct {
 	// KosRound1Outputs is the output of the first round of OT Extension, stored for future rounds.
 	KosRound1Outputs [multiplicationCount]*kos.Round1Output
 
@@ -97,8 +97,8 @@ type SignRound2Output struct {
 	Seed [simplest.DigestSize]byte
 }
 
-// SignRound3Output is the output of the 3rd round of the protocol.
-type SignRound3Output struct {
+// Round3Output is the output of the 3rd round of the protocol.
+type Round3Output struct {
 	// MultiplyRound2Outputs is the output of the second round of multiply sub-protocol. Stored to use in future rounds.
 	MultiplyRound2Outputs [multiplicationCount]*MultiplyRound2Output
 
@@ -120,7 +120,7 @@ type SignRound3Output struct {
 // Note that this is not _explicitly_ given as part of the protocol in https://eprint.iacr.org/2018/499.pdf, Protocol 1).
 // Rather, it is part of our generation of `idExt`, the shared random salt which both parties must use in cOT.
 // This value introduced in Protocol 9), very top of page 16. it is not indicated how it should be derived.
-// We do it by having each party sample 32 bytes, then by appending _both_ as salts. Secure if either party is honest
+// We do it by having each party sample 32 bytes, then by appending _both_ as salts. Secure if either party is honest.
 func (alice *Alice) Round1GenerateRandomSeed() ([simplest.DigestSize]byte, error) {
 	aliceSeed := [simplest.DigestSize]byte{}
 	if _, err := rand.Read(aliceSeed[:]); err != nil {
@@ -136,7 +136,7 @@ func (alice *Alice) Round1GenerateRandomSeed() ([simplest.DigestSize]byte, error
 // and moreover actually initiating the (first respective messages of) the multiplication protocol using these inputs.
 // This latter step in turn amounts to sending the initial message in a new cOT extension.
 // All the resulting data gets packaged and sent to Alice.
-func (bob *Bob) Round2Initialize(aliceSeed [simplest.DigestSize]byte) (*SignRound2Output, error) {
+func (bob *Bob) Round2Initialize(aliceSeed [simplest.DigestSize]byte) (*Round2Output, error) {
 	bobSeed := [simplest.DigestSize]byte{}
 	if _, err := rand.Read(bobSeed[:]); err != nil {
 		return nil, errors.Wrap(err, "flipping random coins in bob round 2 initialize")
@@ -156,7 +156,7 @@ func (bob *Bob) Round2Initialize(aliceSeed [simplest.DigestSize]byte) (*SignRoun
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating multiply receiver 1 in Bob sign round 3")
 	}
-	round2Output := &SignRound2Output{
+	round2Output := &Round2Output{
 		Seed: bobSeed,
 	}
 	bob.kB = bob.curve.Scalar.Random(rand.Reader)
@@ -181,7 +181,7 @@ func (bob *Bob) Round2Initialize(aliceSeed [simplest.DigestSize]byte) (*SignRoun
 // then to invoke the multiplication on these two input values (stashing the outputs in her running result struct),
 // then to use the _output_ of the multiplication (which she already possesses as of the end of her computation),
 // and use that to compute some final values which will help Bob compute the final signature.
-func (alice *Alice) Round3Sign(message []byte, round2Output *SignRound2Output) (*SignRound3Output, error) {
+func (alice *Alice) Round3Sign(message []byte, round2Output *Round2Output) (*Round3Output, error) {
 	alice.transcript.AppendMessage([]byte("session_id_bob"), round2Output.Seed[:])
 
 	multiplySenders := [multiplicationCount]*MultiplySender{}
@@ -195,7 +195,7 @@ func (alice *Alice) Round3Sign(message []byte, round2Output *SignRound2Output) (
 	if multiplySenders[1], err = NewMultiplySender(alice.seedOtResults, alice.curve, uniqueSessionId); err != nil {
 		return nil, errors.Wrap(err, "creating multiply sender 1 in Alice round 4 sign")
 	}
-	round3Output := &SignRound3Output{}
+	round3Output := &Round3Output{}
 	kPrimeA := alice.curve.Scalar.Random(rand.Reader)
 	round3Output.RPrime = round2Output.DB.Mul(kPrimeA)
 	hashRPrimeBytes := sha3.Sum256(round3Output.RPrime.ToAffineCompressed())
@@ -269,7 +269,7 @@ func (alice *Alice) Round3Sign(message []byte, round2Output *SignRound2Output) (
 // Bob begins by _finishing_ the OT-based multiplication, using Alice's one and only message to him re: the mult.
 // Bob then move's onto the remainder of Alice's message, which contains extraneous data used to finish the signature.
 // Using this data, Bob completes the signature, which gets stored in `Bob.Sig`. Bob also verifies it.
-func (bob *Bob) Round4Final(message []byte, round3Output *SignRound3Output) error {
+func (bob *Bob) Round4Final(message []byte, round3Output *Round3Output) error {
 	if err := bob.multiplyReceivers[0].Round3Multiply(round3Output.MultiplyRound2Outputs[0]); err != nil {
 		return errors.Wrap(err, "error in round 3 multiply 0 within sign round 5")
 	}

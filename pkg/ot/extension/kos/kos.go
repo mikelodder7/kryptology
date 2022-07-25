@@ -75,11 +75,11 @@ type Sender struct {
 	curve *curves.Curve
 }
 
-func binaryFieldMul(A []byte, B []byte) []byte {
-	// multiplies `A` and `B` in the finite field of order 2^256.
+func binaryFieldMul(capA, capB []byte) []byte {
+	// multiplies `capA` and `capB` in the finite field of order 2^256.
 	// The reference is Hankerson, Vanstone and Menezes, Guide to Elliptic Curve Cryptography. https://link.springer.com/book/10.1007/b97644
-	// `A` and `B` are both assumed to be 32-bytes slices. here we view them as little-endian coordinate representations of degree-255 polynomials.
-	// the multiplication takes place modulo the irreducible (over F_2) polynomial f(X) = X^256 + X^10 + X^5 + X^2 + 1. see Table A.1.
+	// `capA` and `capB` are both assumed to be 32-bytes slices. here we view them as little-endian coordinate representations of degree-255 polynomials.
+	// the multiplication takes place modulo the irreducible (over F_2) polynomial f(X) = X^256 + X^10 + X^5 + X^2 + 1. see Table capA.1.
 	// the techniques we use are given in section 2.3, Binary field arithmetic.
 	// for the multiplication part, we use Algorithm 2.34, "Right-to-left comb method for polynomial multiplication".
 	// for the reduction part, we use a variant of the idea of Figure 2.9, customized to our setting.
@@ -88,20 +88,20 @@ func binaryFieldMul(A []byte, B []byte) []byte {
 	c := make([]uint64, 2*t) // result
 	a := make([]uint64, t)
 	b := make([]uint64, t+1)  // will hold a copy of b, shifted by some amount
-	for i := 0; i < 32; i++ { // "condense" `A` and `B` into word-vectors, instead of byte-vectors
-		a[i>>3] |= uint64(A[i]) << (i & 0x07 << 3)
-		b[i>>3] |= uint64(B[i]) << (i & 0x07 << 3)
+	for i := 0; i < 32; i++ { // "condense" `capA` and `capB` into word-vectors, instead of byte-vectors
+		a[i>>3] |= uint64(capA[i]) << (i & 0x07 << 3)
+		b[i>>3] |= uint64(capB[i]) << (i & 0x07 << 3)
 	}
 	for k := 0; k < W; k++ {
 		for j := 0; j < t; j++ {
-			// conditionally add a copy of (the appropriately shifted) B to C, depending on the appropriate bit of A
-			// do this in constant-time; i.e., independent of A.
+			// conditionally add a copy of (the appropriately shifted) capB to C, depending on the appropriate bit of capA
+			// do this in constant-time; i.e., independent of capA.
 			// technically, in each time we call this, the right-hand argument is a public datum,
 			// so we could arrange things so that it's _not_ constant-time, but the variable-time stuff always depends on something public.
 			// better to just be safe here though and make it constant-time anyway.
-			mask := -(a[j] >> k & 0x01) // if A[j] >> k & 0x01 == 1 then 0xFFFFFFFFFFFFFFFF else 0x0000000000000000
+			mask := -(a[j] >> k & 0x01) // if capA[j] >> k & 0x01 == 1 then 0xFFFFFFFFFFFFFFFF else 0x0000000000000000
 			for i := 0; i < t+1; i++ {
-				c[j+i] ^= b[i] & mask // conditionally add B to C{j}
+				c[j+i] ^= b[i] & mask // conditionally add capB to C{j}
 			}
 		}
 		for i := t; i > 0; i-- {
@@ -131,7 +131,7 @@ func binaryFieldMul(A []byte, B []byte) []byte {
 }
 
 // NewCOtReceiver creates a `Receiver` instance, ready for use as the receiver in the KOS cOT protocol
-// you must supply the output gotten by running an instance of seed OT as the _sender_ (note the reversal of roles)
+// you must supply the output gotten by running an instance of seed OT as the _sender_ (note the reversal of roles).
 func NewCOtReceiver(seedOTResults *simplest.SenderOutput, curve *curves.Curve) *Receiver {
 	return &Receiver{
 		seedOtResults: seedOTResults,
@@ -140,7 +140,7 @@ func NewCOtReceiver(seedOTResults *simplest.SenderOutput, curve *curves.Curve) *
 }
 
 // NewCOtSender creates a `Sender` instance, ready for use as the sender in the KOS cOT protocol.
-// you must supply the output gotten by running an instance of seed OT as the _receiver_ (note the reversal of roles)
+// you must supply the output gotten by running an instance of seed OT as the _receiver_ (note the reversal of roles).
 func NewCOtSender(seedOTResults *simplest.ReceiverOutput, curve *curves.Curve) *Sender {
 	return &Sender{
 		seedOtResults: seedOTResults,
@@ -174,7 +174,7 @@ func convertBitToBitmask(bit byte) byte {
 // but likewise we want to compact the output matrix as bytes, again _row-wise_.
 // so the output matrix's dimensions are lPrime by `kappa >> 3 == KappaBytes`, as a _byte_ matrix.
 // the technique is fairly straightforward, but involves some bitwise operations.
-func transposeBooleanMatrix(input [Kappa][cOtExtendedBlockSizeBytes]byte) [lPrime][KappaBytes]byte {
+func transposeBooleanMatrix(input *[Kappa][cOtExtendedBlockSizeBytes]byte) [lPrime][KappaBytes]byte {
 	output := [lPrime][KappaBytes]byte{}
 	for rowByte := 0; rowByte < KappaBytes; rowByte++ {
 		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
@@ -200,7 +200,7 @@ func transposeBooleanMatrix(input [Kappa][cOtExtendedBlockSizeBytes]byte) [lPrim
 
 // Round1Initialize initializes the OT Extension. see page 17, steps 1), 2), 3) and 4) of Protocol 9 of the paper.
 // The input `choice` vector is "packed" (i.e., the underlying abstract vector of `L` bits is represented as a `cOTBlockSizeBytes` bytes).
-func (receiver *Receiver) Round1Initialize(uniqueSessionId [simplest.DigestSize]byte, choice [COtBlockSizeBytes]byte) (*Round1Output, error) {
+func (receiver *Receiver) Round1Initialize(uniqueSessionId [simplest.DigestSize]byte, choice *[COtBlockSizeBytes]byte) (*Round1Output, error) {
 	// salt the transcript with the OT-extension session ID
 	receiver.uniqueSessionId = uniqueSessionId
 
@@ -238,7 +238,7 @@ func (receiver *Receiver) Round1Initialize(uniqueSessionId [simplest.DigestSize]
 			return nil, err
 		}
 	}
-	receiver.psi = transposeBooleanMatrix(v[0])
+	receiver.psi = transposeBooleanMatrix(&v[0])
 	digest := hash.Sum(nil) // go ahead and record this, so that we only have to hash the big matrix U once.
 	for j := 0; j < lPrime; j++ {
 		hash = sha3.New256()
@@ -266,7 +266,7 @@ func (receiver *Receiver) Round1Initialize(uniqueSessionId [simplest.DigestSize]
 // `message` contains the message the receiver ("Bob") sent us. this itself contains Bob's values WPrime, VPrime, and U
 // the output is just the values `Tau` we send back to Bob.
 // as a side effect of this function, our (i.e., the sender's) outputs tA_j from the cOT will be populated.
-func (sender *Sender) Round2Transfer(uniqueSessionId [simplest.DigestSize]byte, input [L][OtWidth]curves.Scalar, round1Output *Round1Output) (*Round2Output, error) {
+func (sender *Sender) Round2Transfer(uniqueSessionId [simplest.DigestSize]byte, input *[L][OtWidth]curves.Scalar, round1Output *Round1Output) (*Round2Output, error) {
 	z := [Kappa][cOtExtendedBlockSizeBytes]byte{}
 	hash := sha3.New256() // basically this will contain a hash of the matrix U.
 
@@ -288,7 +288,7 @@ func (sender *Sender) Round2Transfer(uniqueSessionId [simplest.DigestSize]byte, 
 			return nil, errors.Wrap(err, "writing matrix U to hash in cOT sender round 2 transfer")
 		}
 	}
-	zeta := transposeBooleanMatrix(z)
+	zeta := transposeBooleanMatrix(&z)
 	digest := hash.Sum(nil) // go ahead and record this, so that we only have to hash the big matrix U once.
 	zPrime := [simplest.DigestSize]byte{}
 	for j := 0; j < lPrime; j++ {
@@ -327,14 +327,14 @@ func (sender *Sender) Round2Transfer(uniqueSessionId [simplest.DigestSize]byte, 
 		if _, err := shake.Write(zeta[j][:]); err != nil {
 			return nil, errors.Wrap(err, "writing input zeta_j into shake while computing OutputAdditiveShares in cOT sender round 2 transfer")
 		}
-		if _, err := shake.Read(column[:]); err != nil {
+		if _, err := shake.Read(column); err != nil {
 			return nil, errors.Wrap(err, "reading shake into column while computing OutputAdditiveShares in cOT sender round 2 transfer")
 		}
 		var err error
 		for k := 0; k < OtWidth; k++ {
 			sender.OutputAdditiveShares[j][k], err = sender.curve.Scalar.SetBytes(column[k*simplest.DigestSize : (k+1)*simplest.DigestSize])
 			if err != nil {
-				return nil, errors.Wrap(err, "OutputAdditiveShares scalar from bytes")
+				return nil, errors.Wrap(err, "outputAdditiveShares scalar from bytes")
 			}
 		}
 		for i := 0; i < KappaBytes; i++ {
@@ -349,7 +349,7 @@ func (sender *Sender) Round2Transfer(uniqueSessionId [simplest.DigestSize]byte, 
 		if _, err := shake.Write(zeta[j][:]); err != nil {
 			return nil, errors.Wrap(err, "writing input zeta_j into shake while computing tau in cOT sender round 2 transfer")
 		}
-		if _, err := shake.Read(column[:]); err != nil {
+		if _, err := shake.Read(column); err != nil {
 			return nil, errors.Wrap(err, "reading shake into column while computing tau in cOT sender round 2 transfer")
 		}
 		for k := 0; k < OtWidth; k++ {
@@ -377,7 +377,7 @@ func (receiver *Receiver) Round3Transfer(round2Output *Round2Output) error {
 		if _, err := shake.Write(receiver.psi[j][:]); err != nil {
 			return errors.Wrap(err, "writing input zeta_j into shake while computing tB in cOT receiver round 3 transfer")
 		}
-		if _, err := shake.Read(column[:]); err != nil {
+		if _, err := shake.Read(column); err != nil {
 			return errors.Wrap(err, "reading shake into column while computing tB in cOT receiver round 3 transfer")
 		}
 		bit := int(simplest.ExtractBitFromByteVector(receiver.extendedPackedChoices[:], j))

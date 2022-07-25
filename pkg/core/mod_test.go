@@ -19,16 +19,16 @@ var (
 	four = big.NewInt(4)
 
 	// Large numbers for testing -- computing with independent tooling
-	// x,y 100-digit numbers
+	// x,y 100-digit numbers.
 	x, _     = new(big.Int).SetString("7146643783615963513942641287213372249533955323510461217840179896547799100626220786140425637990097431", 10)
 	y, _     = new(big.Int).SetString("1747698065194620177681258504464368264357359841192790848951902311522815739310792522712583635858354245", 10)
 	sumxy, _ = new(big.Int).SetString("8894341848810583691623899791677740513891315164703252066792082208070614839937013308853009273848451676", 10)
 	xy, _    = new(big.Int).SetString("12490175513260779219420155073726764321605372267033815716483640700978475653623775696463227582174703069158832890348206546318843052423532258178885792744599932977235221784868792263260215861775082862444595", 10)
 
-	// 101-digit modulus
+	// 101-digit modulus.
 	m, _ = new(big.Int).SetString("85832751158419329546684678412285185885848111422509523329716452068504806021136687603399722116388773253", 10)
 
-	// 99-digit modulus
+	// 99-digit modulus.
 	n, _ = new(big.Int).SetString("604464499356780653111583485887412477603580949137220100557796699530113283915988830359783807274682723", 10)
 )
 
@@ -92,16 +92,16 @@ func TestConstantTimeEqSound(t *testing.T) {
 	}
 }
 
-// Ring membership tests
+// Ring membership tests.
 func TestIn(t *testing.T) {
 	// Some large numbers for testing
-	x, _ := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10)
-	y, _ := new(big.Int).SetString("32168432167132168106409840321684604654063138460840123871234181628904319728058", 10)
-	N := new(big.Int).Mul(x, y)  // N = xy
-	NN := new(big.Int).Mul(N, N) // N^2 = N*N = x^2y^2
+	xx, _ := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10)
+	yy, _ := new(big.Int).SetString("32168432167132168106409840321684604654063138460840123871234181628904319728058", 10)
+	N := new(big.Int).Mul(xx, yy) // N = xy
+	NN := new(big.Int).Mul(N, N)  // N^2 = N*N = x^2y^2
 	errMember := internal.ErrZmMembership
 
-	var tests = []struct {
+	tests := []struct {
 		x        *big.Int
 		m        *big.Int
 		expected error
@@ -131,22 +131,22 @@ func TestIn(t *testing.T) {
 		// Large numbers
 		//
 		// x,y,N < N^2
-		{x, NN, nil},
-		{y, NN, nil},
+		{xx, NN, nil},
+		{yy, NN, nil},
 		{N, NN, nil},
 
 		// N+x,N+y,2N < N^2 ⇒ x ∈ Z_N^2
-		{big.NewInt(0).Add(N, x), NN, nil},
-		{big.NewInt(0).Add(N, y), NN, nil},
+		{big.NewInt(0).Add(N, xx), NN, nil},
+		{big.NewInt(0).Add(N, yy), NN, nil},
 		{big.NewInt(0).Add(N, N), NN, nil},
 
 		// Nx,Ny < N^2 ⇒ x ∈ Z_N^2
-		{big.NewInt(0).Mul(N, x), NN, nil},
-		{big.NewInt(0).Mul(N, y), NN, nil},
+		{big.NewInt(0).Mul(N, xx), NN, nil},
+		{big.NewInt(0).Mul(N, yy), NN, nil},
 
 		// -x,-y,-N ∉ Z_N^2
-		{big.NewInt(0).Neg(x), NN, errMember},
-		{big.NewInt(0).Neg(y), NN, errMember},
+		{big.NewInt(0).Neg(xx), NN, errMember},
+		{big.NewInt(0).Neg(yy), NN, errMember},
 		{big.NewInt(0).Neg(N), NN, errMember},
 
 		// N^2 ∉ Z_N^2
@@ -160,13 +160,13 @@ func TestIn(t *testing.T) {
 	}
 }
 
-// Tests for modular addition with known answers
+// Tests for modular addition with known answers.
 func TestAdd(t *testing.T) {
 	// Pre-compute some values
 	sumXyModn, err := Add(x, y, n)
 	require.Nil(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y, m, expected *big.Int // inputs: x,y,m
 	}{
 		// Small number tests
@@ -202,7 +202,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-// Tests for modular addition according to known invariants
+// Tests for modular addition according to known invariants.
 func TestAddInvariants(t *testing.T) {
 	inputs := []*big.Int{x, y, Zero, One, new(big.Int).Neg(x), new(big.Int).Neg(y)}
 	moduli := []*big.Int{m, n, big.NewInt(10001)}
@@ -211,7 +211,6 @@ func TestAddInvariants(t *testing.T) {
 	for _, x := range inputs {
 		for _, y := range inputs {
 			for _, m := range moduli {
-
 				// Addition is commutative
 				z0, err := Add(x, y, m)
 				require.NoError(t, err)
@@ -236,12 +235,12 @@ func TestAddInvariants(t *testing.T) {
 	}
 }
 
-// Tests modular multiplication with known answers
+// Tests modular multiplication with known answers.
 func TestMul(t *testing.T) {
 	// Pre-compute some values
 	xyModm := new(big.Int).Mod(xy, m)
 
-	var tests = []struct {
+	tests := []struct {
 		x, y, m, expected *big.Int // inputs: x,y,m
 	}{
 		// Small number tests
@@ -268,7 +267,7 @@ func TestMul(t *testing.T) {
 	}
 }
 
-// Tests for modular multiplication according to known invariants
+// Tests for modular multiplication according to known invariants.
 func TestMulInvariants(t *testing.T) {
 	inputs := []*big.Int{x, y, Zero, One, new(big.Int).Neg(x), new(big.Int).Neg(y)}
 	moduli := []*big.Int{m, n, big.NewInt(10001)}
@@ -277,7 +276,6 @@ func TestMulInvariants(t *testing.T) {
 	for _, x := range inputs {
 		for _, y := range inputs {
 			for _, m := range moduli {
-
 				// Mul is commutative
 				a, err := Mul(x, y, m)
 				require.NoError(t, err)
@@ -297,9 +295,9 @@ func TestMulInvariants(t *testing.T) {
 	}
 }
 
-// Tests modular negation with known answers
+// Tests modular negation with known answers.
 func TestNeg(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		x, m, e *big.Int
 	}{
 		{big.NewInt(1), big.NewInt(7), big.NewInt(6)},
@@ -334,7 +332,7 @@ func TestNeg(t *testing.T) {
 }
 
 func TestNegInvariants(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		x, m, e *big.Int
 	}{
 		{big.NewInt(0), big.NewInt(7), big.NewInt(0)},
@@ -351,7 +349,7 @@ func TestNegInvariants(t *testing.T) {
 	}
 }
 
-// Simple test for distinct Rand output
+// Simple test for distinct Rand output.
 func TestRandDistinct(t *testing.T) {
 	// Each value should be distinct
 	a, _ := Rand(n)
@@ -364,7 +362,7 @@ func TestRandDistinct(t *testing.T) {
 	require.NotEqual(t, b, c)
 }
 
-// Rand values should be O(log2(m)) bits
+// Rand values should be O(log2(m)) bits.
 func TestRandIsExpectedLength(t *testing.T) {
 	trials := 1000
 	max := big.NewInt(-1)
@@ -391,7 +389,7 @@ func TestRandIsExpectedLength(t *testing.T) {
 	}
 }
 
-// Randomly selected nonces with a large modulus will be unique with overwhelming probability
+// Randomly selected nonces with a large modulus will be unique with overwhelming probability.
 func TestRandDistinctWithLargeModulus(t *testing.T) {
 	const iterations = 1000
 	testUnique(t, iterations, func() *big.Int {
@@ -402,6 +400,7 @@ func TestRandDistinctWithLargeModulus(t *testing.T) {
 
 // Calls sampleFunc() n times and asserts that the lower 64B of each output are unique.
 func testUnique(t *testing.T, iterations int, sampleFunc func() *big.Int) {
+	t.Helper()
 	// For simplicity, we test only the lower 64B of each nonce. This is sufficient
 	// to prove uniqueness and go-lang doesn't hash slices (no slices in maps)
 	const size = 256 / 8
@@ -446,7 +445,7 @@ func TestRand_NilModulusErrors(t *testing.T) {
 	require.Contains(t, err.Error(), internal.ErrNilArguments.Error())
 }
 
-// Double-inverse is the identity function in fields
+// Double-inverse is the identity function in fields.
 func TestInvRoundTrip(t *testing.T) {
 	m := internal.B10("1031") // Prime-order modulus
 
@@ -472,7 +471,7 @@ func TestInvRoundTrip(t *testing.T) {
 	}
 }
 
-// Tests values for which there is no inverse in the given field
+// Tests values for which there is no inverse in the given field.
 func TestInvNotFound(t *testing.T) {
 	m := internal.B10("1024") // m = 2^10
 	// 0 and even numbers will not have inverse in this ring
@@ -518,10 +517,10 @@ func TestExpKnownAnswer(t *testing.T) {
 	}
 }
 
-// A product of two 1024b safe primes
+// A product of two 1024b safe primes.
 var N1024 = internal.B10("22657252520748253292205422817162431301953923432914829530688424232913850279325496327198502914522231560238552529734156383924448818535517634061008476071362010781638360092704508943571866960229942049437914690556866055765377519627454975682400206932320319743805083072214857842762721537739950074695623974079312071498296625705376593890814889314744719469735809152488403143751157723139035869185892099006348653635981206799193781030834368833947197930944812082594326193527332208252230115672713914945889734620959932802893197325106135662762752470236627025599443912886530954179753873735786171937758916890000958846322096261981191349917")
 
-// A product of two 256b safe primes
+// A product of two 256b safe primes.
 var N256 = internal.B10("10815068324662993508164204692909269429257853772524581783499643160896147777579932560873002543907262462663453338979819981987639157192530671167315407970757417")
 
 func Benchmark_rand1024(b *testing.B) {
@@ -530,7 +529,7 @@ func Benchmark_rand1024(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N1024) // nolint
+		Rand(N1024)
 	}
 }
 
@@ -540,7 +539,7 @@ func BenchmarkRand1024(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N1024) // nolint
+		Rand(N1024)
 	}
 }
 
@@ -550,7 +549,7 @@ func Benchmark_rand256(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N256) // nolint
+		Rand(N256)
 	}
 }
 
@@ -560,6 +559,6 @@ func BenchmarkRandStar256(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		Rand(N256) // nolint
+		Rand(N256)
 	}
 }

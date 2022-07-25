@@ -19,18 +19,19 @@ const numAggregateG2 = 10
 
 func TestGetPublicKeyG1(t *testing.T) {
 	sk := genSecretKey(t)
-	pk := genPublicKey(sk, t)
-	actual := marshalStruct(pk, t)
+	pk := genPublicKey(t, sk)
+	actual := marshalStruct(t, pk)
 	expected := []byte{166, 149, 173, 50, 93, 252, 126, 17, 145, 251, 201, 241, 134, 245, 142, 255, 66, 166, 52, 2, 151, 49, 177, 131, 128, 255, 137, 191, 66, 196, 100, 164, 44, 184, 202, 85, 178, 0, 240, 81, 245, 127, 30, 24, 147, 198, 135, 89}
 	if !bytes.Equal(actual, expected) {
 		t.Errorf("Expected GetPublicKey to pass but failed.")
 	}
 }
 
-func testSignG2(message []byte, t *testing.T) {
+func testSignG2(t *testing.T, message []byte) {
+	t.Helper()
 	sk := genSecretKey(t)
-	sig := genSignature(sk, message, t)
-	pk := genPublicKey(sk, t)
+	sig := genSignature(t, sk, message)
+	pk := genPublicKey(t, sk)
 
 	bls := NewSigPop()
 
@@ -43,14 +44,14 @@ func TestSignG2EmptyMessage(t *testing.T) {
 	bls := NewSigPop()
 	sk := genSecretKey(t)
 	sig, _ := bls.Sign(sk, nil)
-	pk := genPublicKey(sk, t)
+	pk := genPublicKey(t, sk)
 
 	if res, _ := bls.Verify(pk, nil, sig); res {
 		t.Errorf("createSignature succeeded when it should've failed")
 	}
 
 	message := []byte{}
-	sig = genSignature(sk, message, t)
+	sig = genSignature(t, sk, message)
 
 	if res, err := bls.Verify(pk, message, sig); !res {
 		t.Errorf("create and verify failed on empty message: %v", err)
@@ -59,25 +60,25 @@ func TestSignG2EmptyMessage(t *testing.T) {
 
 func TestSignG2OneByteMessage(t *testing.T) {
 	message := []byte{1}
-	testSignG2(message, t)
+	testSignG2(t, message)
 }
 
 func TestSignG2LargeMessage(t *testing.T) {
 	message := make([]byte, 1048576)
-	testSignG2(message, t)
+	testSignG2(t, message)
 }
 
 func TestSignG2RandomMessage(t *testing.T) {
 	message := make([]byte, 65537)
-	readRand(message, t)
-	testSignG2(message, t)
+	readRand(t, message)
+	testSignG2(t, message)
 }
 
 func TestSignG2BadMessage(t *testing.T) {
 	message := make([]byte, 1024)
 	sk := genSecretKey(t)
-	sig := genSignature(sk, message, t)
-	pk := genPublicKey(sk, t)
+	sig := genSignature(t, sk, message)
+	pk := genPublicKey(t, sk)
 	message = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
 
 	bls := NewSigPop()
@@ -90,8 +91,8 @@ func TestSignG2BadMessage(t *testing.T) {
 func TestBadConversionsG2(t *testing.T) {
 	sk := genSecretKey(t)
 	message := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
-	sig := genSignature(sk, message, t)
-	pk := genPublicKey(sk, t)
+	sig := genSignature(t, sk, message)
+	pk := genPublicKey(t, sk)
 
 	bls := NewSigPop()
 
@@ -104,12 +105,12 @@ func TestBadConversionsG2(t *testing.T) {
 
 	// Convert public key to signature in G2
 	sig2 := new(SignatureVt)
-	err := sig2.UnmarshalBinary(marshalStruct(pk, t))
+	err := sig2.UnmarshalBinary(marshalStruct(t, pk))
 	if err != nil {
 		t.Errorf("Should be able to convert to signature in G2")
 	}
 	pk2 := new(PublicKeyVt)
-	err = pk2.UnmarshalBinary(marshalStruct(sig, t))
+	err = pk2.UnmarshalBinary(marshalStruct(t, sig))
 	if err != nil {
 		t.Errorf("Should be able to convert to public key in G1")
 	}
@@ -123,9 +124,9 @@ func TestAggregatePublicKeysG1(t *testing.T) {
 	pks := []*PublicKey{}
 	ikm := make([]byte, 32)
 	for i := 0; i < 20; i++ {
-		readRand(ikm, t)
-		sk := genRandSecretKey(ikm, t)
-		pk := genPublicKey(sk, t)
+		readRand(t, ikm)
+		sk := genRandSecretKey(t, ikm)
+		pk := genPublicKey(t, sk)
 		pks = append(pks, pk)
 	}
 	apk1, err := aggregatePublicKeys(pks...)
@@ -138,7 +139,7 @@ func TestAggregatePublicKeysG1(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	if !bytes.Equal(marshalStruct(apk1, t), marshalStruct(apk2, t)) {
+	if !bytes.Equal(marshalStruct(t, apk1), marshalStruct(t, apk2)) {
 		t.Errorf("Aggregated public keys should be equal")
 	}
 	rand.Shuffle(len(pks), func(i, j int) { pks[i], pks[j] = pks[j], pks[i] })
@@ -146,19 +147,20 @@ func TestAggregatePublicKeysG1(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	if !bytes.Equal(marshalStruct(apk1, t), marshalStruct(apk2, t)) {
+	if !bytes.Equal(marshalStruct(t, apk1), marshalStruct(t, apk2)) {
 		t.Errorf("Aggregated public keys should be equal")
 	}
 }
 
 func TestAggregateSignaturesG2(t *testing.T) {
-	var sigs []*Signature
+	total := 20
+	sigs := make([]*Signature, total)
 	ikm := make([]byte, 32)
 	for i := 0; i < 20; i++ {
-		readRand(ikm, t)
-		sk := genRandSecretKey(ikm, t)
-		sig := genSignature(sk, ikm, t)
-		sigs = append(sigs, sig)
+		readRand(t, ikm)
+		sk := genRandSecretKey(t, ikm)
+		sig := genSignature(t, sk, ikm)
+		sigs[i] = sig
 	}
 	asig1, err := aggregateSignatures(sigs...)
 	if err != nil {
@@ -170,7 +172,7 @@ func TestAggregateSignaturesG2(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	if !bytes.Equal(marshalStruct(asig1, t), marshalStruct(asig2, t)) {
+	if !bytes.Equal(marshalStruct(t, asig1), marshalStruct(t, asig2)) {
 		t.Errorf("Aggregated signatures should be equal")
 	}
 	rand.Shuffle(len(sigs), func(i, j int) { sigs[i], sigs[j] = sigs[j], sigs[i] })
@@ -178,21 +180,22 @@ func TestAggregateSignaturesG2(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	if !bytes.Equal(marshalStruct(asig1, t), marshalStruct(asig2, t)) {
+	if !bytes.Equal(marshalStruct(t, asig1), marshalStruct(t, asig2)) {
 		t.Errorf("Aggregated signatures should be equal")
 	}
 }
 
-func initAggregatedTestValuesG2(messages [][]byte, t *testing.T) ([]*PublicKey, []*Signature) {
+func initAggregatedTestValuesG2(t *testing.T, messages [][]byte) ([]*PublicKey, []*Signature) {
+	t.Helper()
 	pks := []*PublicKey{}
 	sigs := []*Signature{}
 	ikm := make([]byte, 32)
 	for i := 0; i < numAggregateG2; i++ {
-		readRand(ikm, t)
-		sk := genRandSecretKey(ikm, t)
-		sig := genSignature(sk, messages[i%len(messages)], t)
+		readRand(t, ikm)
+		sk := genRandSecretKey(t, ikm)
+		sig := genSignature(t, sk, messages[i%len(messages)])
 		sigs = append(sigs, sig)
-		pk := genPublicKey(sk, t)
+		pk := genPublicKey(t, sk)
 		pks = append(pks, pk)
 	}
 	return pks, sigs
@@ -202,7 +205,7 @@ func TestAggregatedFunctionalityG2(t *testing.T) {
 	message := make([]byte, 20)
 	messages := make([][]byte, 1)
 	messages[0] = message
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 
 	bls := NewSigPop()
 	asig, err := bls.AggregateSignatures(sigs...)
@@ -228,7 +231,7 @@ func TestBadAggregatedFunctionalityG2(t *testing.T) {
 	message := make([]byte, 20)
 	messages := make([][]byte, 1)
 	messages[0] = message
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 
 	bls := NewSigPop()
 
@@ -272,10 +275,10 @@ func TestAggregateVerifyG2Pass(t *testing.T) {
 	messages := make([][]byte, numAggregateG2)
 	for i := 0; i < numAggregateG2; i++ {
 		message := make([]byte, 20)
-		readRand(message, t)
+		readRand(t, message)
 		messages[i] = message
 	}
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	if res, _ := bls.AggregateVerify(pks, messages, sigs); !res {
 		t.Errorf("Expected aggregateVerify to pass but failed")
@@ -286,11 +289,11 @@ func TestAggregateVerifyG2MsgSigCntMismatch(t *testing.T) {
 	messages := make([][]byte, 8)
 	for i := 0; i < 8; i++ {
 		message := make([]byte, 20)
-		readRand(message, t)
+		readRand(t, message)
 		messages[i] = message
 	}
 
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	if res, _ := bls.AggregateVerify(pks, messages, sigs); res {
 		t.Errorf("Expected AggregateVerifyG2 to fail with duplicate message but passed")
@@ -301,12 +304,12 @@ func TestAggregateVerifyG2FailDupMsg(t *testing.T) {
 	messages := make([][]byte, 10)
 	for i := 0; i < 9; i++ {
 		message := make([]byte, 20)
-		readRand(message, t)
+		readRand(t, message)
 		messages[i] = message
 	}
 	// Duplicate message
 	messages[9] = messages[0]
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	if res, _ := bls.AggregateVerify(pks, messages, sigs); res {
 		t.Errorf("Expected aggregateVerify to fail with duplicate message but passed")
@@ -317,12 +320,12 @@ func TestAggregateVerifyG2FailIncorrectMsg(t *testing.T) {
 	messages := make([][]byte, 10)
 	for i := 0; i < 9; i++ {
 		message := make([]byte, 20)
-		readRand(message, t)
+		readRand(t, message)
 		messages[i] = message
 	}
 	// Duplicate message
 	messages[9] = messages[0]
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	if res, _ := bls.AggregateVerify(pks[2:], messages[2:], sigs); res {
 		t.Errorf("Expected aggregateVerify to fail with duplicate message but passed")
@@ -333,8 +336,8 @@ func TestAggregateVerifyG2OneMsg(t *testing.T) {
 	messages := make([][]byte, 1)
 	messages[0] = make([]byte, 20)
 	sk := genSecretKey(t)
-	sig := genSignature(sk, messages[0], t)
-	pk := genPublicKey(sk, t)
+	sig := genSignature(t, sk, messages[0])
+	pk := genPublicKey(t, sk)
 	bls := NewSigPop()
 	// Should be the same as verifySignature
 	if res, _ := bls.AggregateVerify([]*PublicKey{pk}, messages, []*Signature{sig}); !res {
@@ -343,10 +346,10 @@ func TestAggregateVerifyG2OneMsg(t *testing.T) {
 }
 
 func TestVerifyG2Mutability(t *testing.T) {
-	//verify should not change any inputs
+	// verify should not change any inputs
 	ikm := make([]byte, 32)
 	ikm_copy := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	copy(ikm_copy, ikm)
 	bls := NewSigPop()
 	pk, sk, err := bls.KeygenWithSeed(ikm)
@@ -364,14 +367,14 @@ func TestVerifyG2Mutability(t *testing.T) {
 	if err != nil {
 		t.Errorf("SigPop.KeygenWithSeed to succeed but failed.")
 	}
-	sigCopy := marshalStruct(sig, t)
+	sigCopy := marshalStruct(t, sig)
 	if res, _ := bls.Verify(pk, ikm, sig); !res {
 		t.Errorf("Expected verify to succeed but failed.")
 	}
 	if !bytes.Equal(ikm, ikm_copy) {
 		t.Errorf("SigPop.verify modifies message")
 	}
-	if !bytes.Equal(sigCopy, marshalStruct(sig, t)) {
+	if !bytes.Equal(sigCopy, marshalStruct(t, sig)) {
 		t.Errorf("SigPop.verify modifies signature")
 	}
 }
@@ -397,7 +400,7 @@ func TestPublicKeyG1FromBadBytes(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected GetPublicKey to pass but failed.")
 	}
-	out := marshalStruct(pk1, t)
+	out := marshalStruct(t, pk1)
 	out[3] += 1
 	err = new(PublicKey).UnmarshalBinary(pk)
 	if err == nil {
@@ -424,7 +427,7 @@ func TestSignatureG2FromBadBytes(t *testing.T) {
 }
 
 func TestBadSecretKeyG2(t *testing.T) {
-	sk := &SecretKey{value: bls12381.Bls12381FqNew()}
+	sk := &SecretKey{value: bls12381.FqNew()}
 	pk, err := sk.GetPublicKey()
 	if err == nil {
 		t.Errorf("Expected GetPublicKey to fail with 0 byte secret key but passed: %v", pk)
@@ -448,7 +451,7 @@ func TestBadSecretKeyG2(t *testing.T) {
 
 func TestProofOfPossessionG2Works(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigPop()
 	pk, sk, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
@@ -467,7 +470,7 @@ func TestProofOfPossessionG2FromBadKey(t *testing.T) {
 	ikm := make([]byte, 32)
 	value := new(big.Int)
 	value.SetBytes(ikm)
-	sk := SecretKey{value: bls12381.Bls12381FqNew().SetBigInt(value)}
+	sk := SecretKey{value: bls12381.FqNew().SetBigInt(value)}
 	_, err := sk.createProofOfPossession(blsSignaturePopDst)
 	if err == nil {
 		t.Errorf("createProofOfPossession should've failed but succeeded.")
@@ -480,7 +483,7 @@ func TestProofOfPossessionG2BytesWorks(t *testing.T) {
 	if err != nil {
 		t.Errorf("CreateProofOfPossesionG2 failed but shouldn've succeeded.")
 	}
-	out := marshalStruct(pop, t)
+	out := marshalStruct(t, pop)
 	if len(out) != ProofOfPossessionSize {
 		t.Errorf("ProofOfPossessionBytes incorrect size: expected %v, got %v", ProofOfPossessionSize, len(out))
 	}
@@ -489,7 +492,7 @@ func TestProofOfPossessionG2BytesWorks(t *testing.T) {
 	if err != nil {
 		t.Errorf("ProofOfPossession.UnmarshalBinary failed: %v", err)
 	}
-	out2 := marshalStruct(pop2, t)
+	out2 := marshalStruct(t, pop2)
 	if !bytes.Equal(out, out2) {
 		t.Errorf("ProofOfPossession.UnmarshalBinary failed, not equal when deserialized")
 	}
@@ -512,8 +515,8 @@ func TestProofOfPossessionG2Fails(t *testing.T) {
 	}
 
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
-	sk = genRandSecretKey(ikm, t)
+	readRand(t, ikm)
+	sk = genRandSecretKey(t, ikm)
 	bad, err := sk.GetPublicKey()
 	if err != nil {
 		t.Errorf("Expected PublicKeyG1FromBytes to succeed but failed: %v", err)
@@ -527,13 +530,13 @@ func TestMultiSigG2Bytes(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 20)
 	messages[0] = message
-	_, sigs := initAggregatedTestValuesG2(messages, t)
+	_, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	msig, err := bls.AggregateSignatures(sigs...)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	msigBytes := marshalStruct(msig, t)
+	msigBytes := marshalStruct(t, msig)
 	if len(msigBytes) != SignatureSize {
 		t.Errorf("Invalid multi-sig length. Expected %d bytes, found %d", SignatureSize, len(msigBytes))
 	}
@@ -542,7 +545,7 @@ func TestMultiSigG2Bytes(t *testing.T) {
 	if err != nil {
 		t.Errorf("MultiSignatureG2FromBytes failed with %v", err)
 	}
-	msigBytes2 := marshalStruct(msig2, t)
+	msigBytes2 := marshalStruct(t, msig2)
 
 	if !bytes.Equal(msigBytes, msigBytes2) {
 		t.Errorf("Bytes methods not equal.")
@@ -553,13 +556,13 @@ func TestMultiSigG2BadBytes(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 20)
 	messages[0] = message
-	_, sigs := initAggregatedTestValuesG2(messages, t)
+	_, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	msig, err := bls.AggregateSignatures(sigs...)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	msigBytes := marshalStruct(msig, t)
+	msigBytes := marshalStruct(t, msig)
 	if len(msigBytes) != SignatureSize {
 		t.Errorf("Invalid multi-sig length. Expected %d bytes, found %d", SignatureSize, len(msigBytes))
 	}
@@ -580,13 +583,13 @@ func TestMultiPubkeyG1Bytes(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 20)
 	messages[0] = message
-	pks, _ := initAggregatedTestValuesG2(messages, t)
+	pks, _ := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	apk, err := bls.AggregatePublicKeys(pks...)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	apkBytes := marshalStruct(apk, t)
+	apkBytes := marshalStruct(t, apk)
 	if len(apkBytes) != PublicKeySize {
 		t.Errorf("MultiPublicKey has an incorrect size")
 	}
@@ -595,7 +598,7 @@ func TestMultiPubkeyG1Bytes(t *testing.T) {
 	if err != nil {
 		t.Errorf("MultiPublicKey.UnmarshalBinary failed with %v", err)
 	}
-	apk2Bytes := marshalStruct(apk2, t)
+	apk2Bytes := marshalStruct(t, apk2)
 	if !bytes.Equal(apkBytes, apk2Bytes) {
 		t.Errorf("Bytes methods not equal.")
 	}
@@ -605,13 +608,13 @@ func TestMultiPubkeyG1BadBytes(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 20)
 	messages[0] = message
-	pks, _ := initAggregatedTestValuesG2(messages, t)
+	pks, _ := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	apk, err := bls.AggregatePublicKeys(pks...)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	apkBytes := marshalStruct(apk, t)
+	apkBytes := marshalStruct(t, apk)
 	if len(apkBytes) != PublicKeySize {
 		t.Errorf("MultiPublicKey has an incorrect size")
 	}
@@ -632,7 +635,7 @@ func TestFastAggregateVerifyG2Works(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 1)
 	messages[0] = message
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	asigs, _ := aggregateSignatures(sigs...)
 	bls := NewSigPop()
 	if res, _ := bls.FastAggregateVerify(pks, message, asigs); !res {
@@ -644,7 +647,7 @@ func TestFastAggregateVerifyConstituentG2Works(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 1)
 	messages[0] = message
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	if res, _ := bls.FastAggregateVerifyConstituent(pks, message, sigs); !res {
 		t.Errorf("FastAggregateVerify failed.")
@@ -655,7 +658,7 @@ func TestFastAggregateVerifyG2Fails(t *testing.T) {
 	messages := make([][]byte, 1)
 	message := make([]byte, 1)
 	messages[0] = message
-	pks, sigs := initAggregatedTestValuesG2(messages, t)
+	pks, sigs := initAggregatedTestValuesG2(t, messages)
 	bls := NewSigPop()
 	message[0] = 1
 	if res, _ := bls.FastAggregateVerifyConstituent(pks, message, sigs); res {
@@ -685,7 +688,7 @@ func TestCustomPopDstG2Works(t *testing.T) {
 	pks[0] = pk
 	sigs[0] = sig
 	for i := 1; i < 10; i++ {
-		readRand(ikm, t)
+		readRand(t, ikm)
 		pkt, skt, err := bls.KeygenWithSeed(ikm)
 		if err != nil {
 			t.Errorf("Couldn't create custom dst keys: %v", err)
@@ -755,6 +758,7 @@ func TestPopThresholdKeygen(t *testing.T) {
 		t.Errorf("ThresholdKeygen did not produce enough shares")
 	}
 }
+
 func TestPopPartialSign(t *testing.T) {
 	ikm := make([]byte, 32)
 	bls := NewSigPop()
@@ -789,7 +793,7 @@ func TestPopPartialSign(t *testing.T) {
 	}
 }
 
-// Ensure that mixed partial signatures from distinct origins create invalid composite signatures
+// Ensure that mixed partial signatures from distinct origins create invalid composite signatures.
 func TestPopPartialMixupShares(t *testing.T) {
 	total := uint(5)
 	ikm := make([]byte, 32)

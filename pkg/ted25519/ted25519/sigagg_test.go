@@ -81,6 +81,7 @@ func TestSigAgg_validations(t *testing.T) {
 }
 
 func assertSignatureVerifies(t *testing.T, pub, message, sig []byte) {
+	t.Helper()
 	ok, _ := Verify(pub, message, sig)
 	if !ok {
 		t.Errorf("valid signature rejected")

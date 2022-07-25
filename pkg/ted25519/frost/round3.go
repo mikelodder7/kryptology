@@ -13,21 +13,13 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// Round3Bcast contains the output of FROST signature, i.e., it contains FROST signature (z,c) and the
-// corresponding message msg.
-type Round3Bcast struct {
-	R    curves.Point
-	Z, C curves.Scalar
-	msg  []byte
-}
-
-// Define frost signature type
+// Signature is the standard Schnorr signature, which contains (R, s).
 type Signature struct {
 	Z curves.Scalar
-	C curves.Scalar
+	R curves.Point
 }
 
-func (signer *Signer) SignRound3(round3Input map[uint32]*Round2Bcast) (*Round3Bcast, error) {
+func (signer *Signer) SignRound3(round3Input map[uint32]*Round2Bcast) (*Signature, error) {
 	// Make sure signer is not empty
 	if signer == nil || signer.curve == nil {
 		return nil, internal.ErrNilArguments
@@ -95,7 +87,7 @@ func (signer *Signer) SignRound3(round3Input map[uint32]*Round2Bcast) (*Round3Bc
 
 		// Check equation
 		if !zjG.Equal(right) {
-			return nil, fmt.Errorf("zjG != right with participant id %d\n", id)
+			return nil, fmt.Errorf("zjG != right with participant id %d", id)
 		}
 
 		// Step 3 - z = z+zj
@@ -108,7 +100,7 @@ func (signer *Signer) SignRound3(round3Input map[uint32]*Round2Bcast) (*Round3Bc
 	cvk := signer.verificationKey.Mul(signer.state.c.Neg())
 	tempR := zG.Add(cvk)
 	// Step 6 - c' = H(m, R')
-	tempC, err := signer.challengeDeriver.DeriveChallenge(signer.state.msg, signer.verificationKey, tempR)
+	tempC, err := signer.challengeDeriver(signer.state.msg, signer.verificationKey, tempR)
 	if err != nil {
 		return nil, err
 	}
@@ -122,29 +114,33 @@ func (signer *Signer) SignRound3(round3Input map[uint32]*Round2Bcast) (*Round3Bc
 	signer.round = 4
 
 	// Step 8 - Broadcast signature and message
-	return &Round3Bcast{
-		signer.state.sumR,
+	return &Signature{
 		z,
-		signer.state.c,
-		signer.state.msg,
+		signer.state.sumR,
 	}, nil
 }
 
-// Method to verify a frost signature.
-func Verify(curve *curves.Curve, challengeDeriver ChallengeDerive, vk curves.Point, msg []byte, signature *Signature) (bool, error) {
-	if vk == nil || msg == nil || len(msg) == 0 || signature.C == nil || signature.Z == nil {
+// Verify is used to verify a Schnorr signature.
+func Verify(curve *curves.Curve, vk curves.Point, msg []byte, signature *Signature) (bool, error) {
+	if vk == nil || msg == nil || len(msg) == 0 || signature.R == nil || signature.Z == nil {
 		return false, fmt.Errorf("invalid input")
 	}
 	z := signature.Z
-	c := signature.C
+	capR := signature.R
 
-	//R' = z*G - c*vk
+	// Compute c = H(m, R)
+	c, err := DeriveChallenge(msg, vk, capR)
+	if err != nil {
+		return false, err
+	}
+
+	// R' = z*G - c*vk
 	zG := curve.ScalarBaseMult(z)
 	cvk := vk.Mul(c.Neg())
 	tempR := zG.Add(cvk)
 
-	//c' = H(m, R')
-	tempC, err := challengeDeriver.DeriveChallenge(msg, vk, tempR)
+	// c' = H(m, R')
+	tempC, err := DeriveChallenge(msg, vk, tempR)
 	if err != nil {
 		return false, err
 	}

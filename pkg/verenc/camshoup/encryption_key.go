@@ -10,22 +10,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
 
-	mod "github.com/coinbase/kryptology/pkg/core"
+	"github.com/coinbase/kryptology/pkg/core"
 )
-
-type encryptionKeyMarshal struct {
-	Y1    [][]byte `bare:"y1"`
-	Y2    []byte   `bare:"y2"`
-	Y3    []byte   `bare:"y3"`
-	Group []byte   `bare:"group"`
-}
 
 // EncryptionKey encrypts a message to a ciphertext from which
 // zero-knowledge proofs can be derived
 // as described in section 3.2 in <https://shoup.net/papers/verenc.pdf>.
-// n, g are stored in the `PaillierGroup` struct
+// n, g are stored in the `PaillierGroup` struct.
 type EncryptionKey struct {
 	y1     []*big.Int
 	y2, y3 *big.Int
@@ -40,19 +33,19 @@ func NewKeys(numMsgs uint, group *PaillierGroup) (*EncryptionKey, *DecryptionKey
 	x1 := make([]*big.Int, numMsgs)
 	y1 := make([]*big.Int, numMsgs)
 	for i := range x1 {
-		x, err := mod.Rand(group.n2d4)
+		x, err := core.Rand(group.n2d4)
 		if err != nil {
 			return nil, nil, err
 		}
 		x1[i] = x
 		y1[i] = group.Gexp(x)
 	}
-	x2, err := mod.Rand(group.n2d4)
+	x2, err := core.Rand(group.n2d4)
 	if err != nil {
 		return nil, nil, err
 	}
 	y2 := group.Gexp(x2)
-	x3, err := mod.Rand(group.n2d4)
+	x3, err := core.Rand(group.n2d4)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,46 +59,26 @@ func NewKeys(numMsgs uint, group *PaillierGroup) (*EncryptionKey, *DecryptionKey
 	return ek, dk, nil
 }
 
-// MarshalBinary serializes a key to bytes
+// MarshalBinary serializes a key to bytes.
 func (ek EncryptionKey) MarshalBinary() ([]byte, error) {
-	tv := new(encryptionKeyMarshal)
-	var err error
-	tv.Group, err = ek.group.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	tv.Y3 = ek.y3.Bytes()
-	tv.Y2 = ek.y2.Bytes()
-	tv.Y1 = make([][]byte, len(ek.y1))
-	for i, y := range ek.y1 {
-		tv.Y1[i] = y.Bytes()
-	}
-	return bare.Marshal(tv)
+	return marshalData(ek.group, ek.y3, ek.y2, ek.y1)
 }
 
-// UnmarshalBinary deserializes a key from bytes
+// UnmarshalBinary deserializes a key from bytes.
 func (ek *EncryptionKey) UnmarshalBinary(data []byte) error {
-	tv := new(encryptionKeyMarshal)
-	err := bare.Unmarshal(data, tv)
+	group, y3, y2, y1, err := unmarshalData(data)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	ek.group = new(PaillierGroup)
-	err = ek.group.UnmarshalBinary(tv.Group)
-	if err != nil {
-		return err
-	}
-	ek.y2 = new(big.Int).SetBytes(tv.Y2)
-	ek.y3 = new(big.Int).SetBytes(tv.Y3)
-	ek.y1 = make([]*big.Int, len(tv.Y1))
-	for i, b := range tv.Y1 {
-		ek.y1[i] = new(big.Int).SetBytes(b)
-	}
+	ek.group = group
+	ek.y3 = y3
+	ek.y2 = y2
+	ek.y1 = y1
 	return nil
 }
 
 // Encrypt multiple messages as described in <https://shoup.net/papers/verenc.pdf>
-// `domain` represents a domain separation tag or nonce
+// `domain` represents a domain separation tag or nonce.
 func (ek EncryptionKey) Encrypt(domain []byte, msgs []*big.Int) (*CipherText, error) {
 	if len(msgs) > len(ek.y1) {
 		return nil, fmt.Errorf("number of messages %d is more than supported by this key %d", len(msgs), len(ek.y1))

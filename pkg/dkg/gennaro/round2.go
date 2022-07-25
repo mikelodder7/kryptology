@@ -18,9 +18,8 @@ type Round2Bcast = []*v1.ShareVerifier
 // Round2 computes the second round for Gennaro DKG
 // Algorithm 3 - Gennaro DKG Round 2
 // bcast contains all Round1 broadcast from other participants to this participant
-// p2p contains all Round1 P2P send message from other participants to this participant
+// p2p contains all Round1 P2P send message from other participants to this participant.
 func (dp *Participant) Round2(bcast map[uint32]Round1Bcast, p2p map[uint32]*Round1P2PSendPacket) (Round2Bcast, error) {
-
 	// Check participant is not empty
 	if dp == nil || dp.curve == nil {
 		return nil, internal.ErrNilArguments
@@ -41,7 +40,6 @@ func (dp *Participant) Round2(bcast map[uint32]Round1Bcast, p2p map[uint32]*Roun
 
 	// 2. for j in 1,...,n
 	for id := range bcast {
-
 		// 3. if i = j continue
 		if id == dp.id {
 			continue

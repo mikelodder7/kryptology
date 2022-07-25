@@ -134,7 +134,7 @@ func (receiver *MultiplyReceiver) encode(beta curves.Scalar) ([kos.COtBlockSizeB
 		jthBitOfGamma := simplest.ExtractBitFromByteVector(encoding[:], j)
 		// constant-time computation of the dot product beta - < gR, gamma >.
 		// we can only `ConstantTimeCopy` byte slices (as opposed to big ints). so keep them as bytes.
-		option0, err := receiver.curve.Scalar.SetBytes(bytesOfBetaMinusDotProduct[:])
+		option0, err := receiver.curve.Scalar.SetBytes(bytesOfBetaMinusDotProduct)
 		if err != nil {
 			return encoding, errors.Wrap(err, "setting masking bits scalar from bytes")
 		}
@@ -142,19 +142,19 @@ func (receiver *MultiplyReceiver) encode(beta curves.Scalar) ([kos.COtBlockSizeB
 		option1 := option0.Sub(receiver.gadget[j])
 		option1Bytes := option1.Bytes()
 		bytesOfBetaMinusDotProduct = option0Bytes
-		subtle.ConstantTimeCopy(int(jthBitOfGamma), bytesOfBetaMinusDotProduct[:], option1Bytes)
+		subtle.ConstantTimeCopy(int(jthBitOfGamma), bytesOfBetaMinusDotProduct, option1Bytes)
 	}
-	copy(encoding[0:kos.KappaBytes], internal.ReverseScalarBytes(bytesOfBetaMinusDotProduct[:]))
+	copy(encoding[0:kos.KappaBytes], internal.ReverseScalarBytes(bytesOfBetaMinusDotProduct))
 	return encoding, nil
 }
 
-// Round1Initialize Protocol 5., Multiplication, 3). Bob (receiver) encodes beta and initiates the cOT extension
+// Round1Initialize Protocol 5., Multiplication, 3). Bob (receiver) encodes beta and initiates the cOT extension.
 func (receiver *MultiplyReceiver) Round1Initialize(beta curves.Scalar) (*kos.Round1Output, error) {
 	var err error
 	if receiver.omega, err = receiver.encode(beta); err != nil {
 		return nil, errors.Wrap(err, "encoding input beta in receiver round 1 initialize")
 	}
-	cOtRound1Output, err := receiver.cOtReceiver.Round1Initialize(receiver.uniqueSessionId, receiver.omega)
+	cOtRound1Output, err := receiver.cOtReceiver.Round1Initialize(receiver.uniqueSessionId, &receiver.omega)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in cOT round 1 initialize within multiply round 1 initialize")
 	}
@@ -181,7 +181,7 @@ func (sender *MultiplySender) Round2Multiply(alpha curves.Scalar, round1Output *
 		input[j][1] = alphaHat
 	}
 	round2Output := &MultiplyRound2Output{}
-	round2Output.COTRound2Output, err = sender.cOtSender.Round2Transfer(sender.uniqueSessionId, input, round1Output)
+	round2Output.COTRound2Output, err = sender.cOtSender.Round2Transfer(sender.uniqueSessionId, &input, round1Output)
 	if err != nil {
 		return nil, errors.Wrap(err, "error in cOT within round 2 multiply")
 	}

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An entry into our test table
+// An entry into our test table.
 type entry struct {
 	// Input
 	msg []byte
@@ -26,21 +26,25 @@ type entry struct {
 }
 
 // Test inputs and placeholders for results that will be filled in
-// during init()
+// during init().
 var testResults = []entry{
 	{[]byte("This is a test message"), nil, nil, nil},
 	{[]byte("short msg"), nil, nil, nil},
-	{[]byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
-		nil, nil, nil},
-	{[]byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
-		nil, nil, nil},
+	{
+		[]byte("This input field is intentionally longer than the SHA256 block size to ensure that the entire message is processed"),
+		nil, nil, nil,
+	},
+	{
+		[]byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
+		nil, nil, nil,
+	},
 	// msg = \epsilon (empty string)
 	{[]byte{}, nil, nil, nil},
 	// msg == nil
 	{nil, nil, nil, nil},
 }
 
-// Run our inputs through commit and record the outputs
+// Run our inputs through commit and record the outputs.
 func init() {
 	for i := range testResults {
 		entry := &testResults[i]
@@ -48,7 +52,7 @@ func init() {
 	}
 }
 
-// Computing commitments should never produce errors
+// Computing commitments should never produce errors.
 func TestCommitWithoutErrors(t *testing.T) {
 	for _, entry := range testResults {
 		if entry.err != nil {
@@ -57,7 +61,7 @@ func TestCommitWithoutErrors(t *testing.T) {
 	}
 }
 
-// Commitments should be 256b == 64B in length
+// Commitments should be 256b == 64B in length.
 func TestCommitmentsAreExpectedLength(t *testing.T) {
 	const expLen = 256 / 8
 	for _, entry := range testResults {
@@ -67,7 +71,7 @@ func TestCommitmentsAreExpectedLength(t *testing.T) {
 	}
 }
 
-// Decommit cannot be nil
+// Decommit cannot be nil.
 func TestCommmitProducesDecommit(t *testing.T) {
 	for _, entry := range testResults {
 		if entry.decommit == nil {
@@ -76,7 +80,7 @@ func TestCommmitProducesDecommit(t *testing.T) {
 	}
 }
 
-// Decommit value should contain the same message
+// Decommit value should contain the same message.
 func TestCommmitProducesDecommitWithSameMessage(t *testing.T) {
 	for _, entry := range testResults {
 		if !bytes.Equal(entry.msg, entry.decommit.Msg) {
@@ -85,13 +89,12 @@ func TestCommmitProducesDecommitWithSameMessage(t *testing.T) {
 	}
 }
 
-// Commitments should be unique
+// Commitments should be unique.
 func TestCommmitProducesDistinctCommitments(t *testing.T) {
 	seen := make(map[[Size]byte]bool)
 
 	// Check the pre-computed commitments for uniquness
 	for _, entry := range testResults {
-
 		// Slices cannot be used as hash keys, so we need to copy into
 		// an array. Oh, go-lang.
 		var cee [Size]byte
@@ -106,7 +109,7 @@ func TestCommmitProducesDistinctCommitments(t *testing.T) {
 }
 
 // Commitments should be unique even for the same message since the nonce is
-// randomly selected
+// randomly selected.
 func TestCommmitDistinctCommitments(t *testing.T) {
 	seen := make(map[[Size]byte]bool)
 	msg := []byte("black lives matter")
@@ -132,7 +135,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 	}
 }
 
-// Nonces must be 256b = 64B
+// Nonces must be 256b = 64B.
 func TestCommmitNonceIsExpectedLength(t *testing.T) {
 	const expLen = 256 / 8
 
@@ -144,7 +147,7 @@ func TestCommmitNonceIsExpectedLength(t *testing.T) {
 	}
 }
 
-// Randomly selected nonces will be unique with overwhelming probability
+// Randomly selected nonces will be unique with overwhelming probability.
 func TestCommmitProducesDistinctNonces(t *testing.T) {
 	seen := make(map[[Size]byte]bool)
 	msg := []byte("black lives matter")
@@ -168,10 +171,8 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 
 func TestOpenOnValidCommitments(t *testing.T) {
 	for _, entry := range testResults {
-
 		// Open each commitment
 		ok, err := Open(entry.commit, *entry.decommit)
-
 		// There should be no error
 		if err != nil {
 			t.Error(err)
@@ -220,7 +221,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 	}
 }
 
-// Makes a deep copy of a Witness
+// Makes a deep copy of a Witness.
 func copyWitness(d *Witness) *Witness {
 	msg := make([]byte, len(d.Msg))
 	var r [Size]byte
@@ -232,6 +233,7 @@ func copyWitness(d *Witness) *Witness {
 
 // Asserts that err != nil, and ok == false.
 func assertFailedOpen(t *testing.T, ok bool, err error) {
+	t.Helper()
 	// There should be no error
 	if err != nil {
 		t.Error(err)
@@ -243,7 +245,7 @@ func assertFailedOpen(t *testing.T, ok bool, err error) {
 	}
 }
 
-// An unrelated message should fail on open
+// An unrelated message should fail on open.
 func TestOpenOnNewMessage(t *testing.T) {
 	for _, entry := range testResults {
 		dʹ := copyWitness(entry.decommit)
@@ -257,7 +259,7 @@ func TestOpenOnNewMessage(t *testing.T) {
 	}
 }
 
-// An appended message should fail on open
+// An appended message should fail on open.
 func TestOpenOnAppendedMessage(t *testing.T) {
 	for _, entry := range testResults {
 		dʹ := copyWitness(entry.decommit)
@@ -271,7 +273,7 @@ func TestOpenOnAppendedMessage(t *testing.T) {
 	}
 }
 
-// A modified message should fail on open
+// A modified message should fail on open.
 func TestOpenOnModifiedMessage(t *testing.T) {
 	for _, entry := range testResults {
 		// Skip the empty string message for this test case
@@ -289,12 +291,12 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 	}
 }
 
-// A modified commitment should fail on open
+// A modified commitment should fail on open.
 func TestOpenOnModifiedCommitment(t *testing.T) {
 	for _, entry := range testResults {
 		// Copy and then modify the commitment
 		cʹ := make([]byte, Size)
-		copy(cʹ[:], entry.commit)
+		copy(cʹ, entry.commit)
 		cʹ[6] ^= 0x33
 
 		// Open and check for failure
@@ -303,7 +305,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 	}
 }
 
-// An empty decommit should fail to open
+// An empty decommit should fail to open.
 func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	for _, entry := range testResults {
 		// Open and check for failure
@@ -312,34 +314,35 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	}
 }
 
-// A nil commit should return an error
+// A nil commit should return an error.
 func TestOpenOnNilCommitment(t *testing.T) {
 	_, err := Open(nil, Witness{})
 	assertError(t, err)
 }
 
-// Verifies that err != nil
+// Verifies that err != nil.
 func assertError(t *testing.T, err error) {
+	t.Helper()
 	if err == nil {
 		t.Error("expected an error but received nil")
 	}
 }
 
-// Ill-formed commitment should produce an error
+// Ill-formed commitment should produce an error.
 func TestOpenOnLongCommitment(t *testing.T) {
 	tooLong := make([]byte, Size+1)
 	_, err := Open(tooLong, Witness{})
 	assertError(t, err)
 }
 
-// Ill-formed commitment should produce an error
+// Ill-formed commitment should produce an error.
 func TestOpenOnShortCommitment(t *testing.T) {
 	tooShort := make([]byte, Size-1)
 	_, err := Open(tooShort, Witness{})
 	assertError(t, err)
 }
 
-// Tests that marshal-unmarshal is the identity function
+// Tests that marshal-unmarshal is the identity function.
 func TestWitnessMarshalRoundTrip(t *testing.T) {
 	expected := &Witness{
 		[]byte("I'm the dude. So that's what you call me"),
@@ -358,7 +361,7 @@ func TestWitnessMarshalRoundTrip(t *testing.T) {
 	require.Equal(t, expected.r, actual.r)
 }
 
-// Tests that marshal-unmarshal is the identity function
+// Tests that marshal-unmarshal is the identity function.
 func TestCommitmentMarshalRoundTrip(t *testing.T) {
 	expected := Commitment([]byte("That or uh his-dudeness or duder or el duderino."))
 

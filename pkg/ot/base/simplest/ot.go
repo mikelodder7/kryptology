@@ -8,7 +8,7 @@
 // The original "Simplest OT" protocol is presented in [CC15](https://eprint.iacr.org/2015/267.pdf).
 // In our implementation, we run OTs for multiple choice bits in parallel. Furthermore, as described in the DKLs paper,
 // we implement this as Random OT protocol. We also add encryption and decryption steps as defined in the protocol, but
-// emphasise that these steps are optional. Specifically, in the setting where this OT is used as the seed OT in an
+// emphasize that these steps are optional. Specifically, in the setting where this OT is used as the seed OT in an
 // OT Extension protocol, the encryption and decryption steps are not needed.
 //
 // Limitation: currently we only support batch OTs that are multiples of 8.
@@ -53,7 +53,7 @@ type (
 	// OtChallengeResponse is the type of Rho' in the paper.
 	OtChallengeResponse = [DigestSize]byte
 
-	// ChallengeOpening is the type of hashed Rho^0 and Rho^1
+	// ChallengeOpening is the type of hashed Rho^0 and Rho^1.
 	ChallengeOpening = [keyCount][DigestSize]byte
 
 	// ReceiversMaskedChoices corresponds to the "A" value in the paper in compressed format.
@@ -123,7 +123,7 @@ type Receiver struct {
 // NewSender creates a new "sender" object, ready to participate in a _random_ verified simplest OT in the role of the sender.
 // no messages are specified by the sender, because random ones will be sent (hence the random OT).
 // ultimately, the `Sender`'s `Output` field will be appropriately populated.
-// you can use it directly, or alternatively bootstrap it into an _actual_ (non-random) OT using `Round7Encrypt` below
+// you can use it directly, or alternatively bootstrap it into an _actual_ (non-random) OT using `Round7Encrypt` below.
 func NewSender(curve *curves.Curve, batchSize int, uniqueSessionId [DigestSize]byte) (*Sender, error) {
 	if batchSize&0x07 != 0 { // This is the same as `batchSize % 8 != 0`, but is constant time
 		return nil, errors.New("batch size should be a multiple of 8")
@@ -157,7 +157,7 @@ func NewReceiver(curve *curves.Curve, batchSize int, uniqueSessionId [DigestSize
 	}
 	batchSizeBytes := batchSize >> 3 // divide by 8
 	receiver.Output.PackedRandomChoiceBits = make([]byte, batchSizeBytes)
-	if _, err := rand.Read(receiver.Output.PackedRandomChoiceBits[:]); err != nil {
+	if _, err := rand.Read(receiver.Output.PackedRandomChoiceBits); err != nil {
 		return nil, errors.Wrap(err, "choosing random choice bits")
 	}
 	// Unpack into Choice bits
@@ -228,7 +228,7 @@ func (receiver *Receiver) Round2VerifySchnorrAndPadTransfer(proof *schnorr.Proof
 }
 
 // Round3PadTransfer is the sender's "Pad Transfer" phase in OT; see steps 4 and 5 of page 16 of the paper.
-// Returns the challenges xi
+// Returns the challenges xi.
 func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []ReceiversMaskedChoices) ([]OtChallenge, error) {
 	var err error
 	challenge := make([]OtChallenge, sender.batchSize)
@@ -237,7 +237,6 @@ func (sender *Sender) Round3PadTransfer(compressedReceiversMaskedChoice []Receiv
 
 	receiversMaskedChoice := make([]curves.Point, len(compressedReceiversMaskedChoice))
 	for i := 0; i < len(compressedReceiversMaskedChoice); i++ {
-
 		if receiversMaskedChoice[i], err = sender.curve.Point.FromAffineCompressed(compressedReceiversMaskedChoice[i]); err != nil {
 			return nil, errors.Wrap(err, "uncompress the point")
 		}
@@ -303,7 +302,7 @@ func (receiver *Receiver) Round4RespondToChallenge(challenge []OtChallenge) ([]O
 // Round5Verify verifies the challenge response. If the verification passes, sender opens his challenges to the receiver.
 // See step 7 of page 16 of the paper.
 // Abort if Rho' != H(H(Rho^0)) in other words, if challengeResponse != H(H(encryption key 0)).
-// opening is H(encryption key)
+// opening is H(encryption key).
 func (sender *Sender) Round5Verify(challengeResponses []OtChallengeResponse) ([]ChallengeOpening, error) {
 	opening := make([]ChallengeOpening, sender.batchSize)
 	for i := 0; i < sender.batchSize; i++ {
@@ -345,13 +344,13 @@ func (receiver *Receiver) Round6Verify(challengeOpenings []ChallengeOpening) err
 }
 
 // Round7Encrypt wraps an `Encrypt` operation on the Sender's underlying output from the random OT; see `Encrypt` below.
-// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT
+// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT.
 func (sender *Sender) Round7Encrypt(messages [][keyCount][DigestSize]byte) ([][keyCount][DigestSize]byte, error) {
 	return sender.Output.Encrypt(messages)
 }
 
 // Round8Decrypt wraps a `Decrypt` operation on the Receiver's underlying output from the random OT; see `Decrypt` below
-// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT
+// this is optional; it will be used only in circumstances when you want to run "actual" (i.e., non-random) OT.
 func (receiver *Receiver) Round8Decrypt(ciphertext [][keyCount][DigestSize]byte) ([][DigestSize]byte, error) {
 	return receiver.Output.Decrypt(ciphertext)
 }

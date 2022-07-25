@@ -14,25 +14,27 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/coinbase/kryptology/internal"
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 	"github.com/coinbase/kryptology/pkg/sharing"
 )
 
-// Round1Bcast are values that are broadcast to all other participants
-// after round1 completes
-type Round1Bcast struct {
+// Round3Bcast are values that are broadcast to all other participants
+// after round1 completes.
+type Round3Bcast struct {
 	Verifiers *sharing.FeldmanVerifier
 	Wi, Ci    curves.Scalar
 }
 
-type Round1Result struct {
-	Broadcast *Round1Bcast
+type Round3Result struct {
+	Broadcast *Round3Bcast
 	P2P       *sharing.ShamirShare
 }
 
-func (result *Round1Result) Encode() ([]byte, error) {
+func (result *Round3Result) Encode() ([]byte, error) {
 	gob.Register(result.Broadcast.Verifiers.Commitments[0]) // just the point for now
 	gob.Register(result.Broadcast.Ci)
 	buf := &bytes.Buffer{}
@@ -43,7 +45,7 @@ func (result *Round1Result) Encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (result *Round1Result) Decode(input []byte) error {
+func (result *Round3Result) Decode(input []byte) error {
 	buf := bytes.NewBuffer(input)
 	dec := gob.NewDecoder(buf)
 	if err := dec.Decode(result); err != nil {
@@ -52,26 +54,77 @@ func (result *Round1Result) Decode(input []byte) error {
 	return nil
 }
 
-// Round1P2PSend are values that are P2PSend to all other participants
-// after round1 completes
-type Round1P2PSend = map[uint32]*sharing.ShamirShare
+// Round3P2PSend are values that are P2PSend to all other participants
+// after round1 completes.
+type Round3P2PSend = map[uint32]*sharing.ShamirShare
 
-// Round1 implements dkg round 1 of FROST
-func (dp *DkgParticipant) Round1(secret []byte) (*Round1Bcast, Round1P2PSend, error) {
+// Round3FrostDkgFirstRound validates openings, generate the fixed string and then implements dkg round 1 of FROST DKG.
+func (dp *DkgParticipant) Round3FrostDkgFirstRound(secret []byte, openings map[uint32]*core.Witness) (*Round3Bcast, Round3P2PSend, error) {
 	// Make sure dkg participant is not empty
-	if dp == nil || dp.Curve == nil {
+	if dp == nil || dp.Curve == nil || dp.preRoundCommitments == nil {
 		return nil, nil, internal.ErrNilArguments
 	}
 
 	// Make sure round number is correct
-	if dp.round != 1 {
+	if dp.round != 3 {
 		return nil, nil, internal.ErrInvalidRound
 	}
 
+	// Check length of openings
+	if openings == nil || uint32(len(openings)) != dp.Limit {
+		return nil, nil, fmt.Errorf("invalid length of openings")
+	}
+
+	// Check each opening is not empty
+	for _, opening := range openings {
+		if opening == nil {
+			return nil, nil, fmt.Errorf("some opening is nil")
+		}
+	}
+
 	// Check number of participants
-	if uint32(len(dp.otherParticipantShares)+1) > dp.feldman.Limit || uint32(len(dp.otherParticipantShares)+1) < dp.feldman.Threshold {
+	if uint32(len(dp.participantIds)) > dp.feldman.Limit || uint32(len(dp.participantIds)) < dp.feldman.Threshold {
 		return nil, nil, fmt.Errorf("length of dp.otherParticipantShares + 1 should be equal to feldman limit")
 	}
+
+	// Check participantIds are the same as Ids of the input openings
+	for _, id := range dp.participantIds {
+		_, containsId := openings[id]
+		if !containsId {
+			return nil, nil, fmt.Errorf("invalid openings doesn't contain id %d", id)
+		}
+	}
+
+	// Validate each opening
+	var appendHashInput []byte
+	for id, opening := range openings {
+		if id == dp.Id {
+			continue
+		}
+		commitment := dp.preRoundCommitments[id]
+		ok, err := core.Open(*commitment, *opening)
+		// The commitment should be no error
+		if err != nil {
+			return nil, nil, fmt.Errorf("there is error in opening with id %d", id)
+		}
+		// The commitment should verify
+		if !ok {
+			return nil, nil, fmt.Errorf("failed to open with id %d", id)
+		}
+	}
+
+	// Concatenate values
+	for _, id := range dp.participantIds {
+		appendHashInput = append(appendHashInput, openings[id].Msg...)
+	}
+
+	// Compute the fixed string and store it
+	h := sha3.New256()
+	_, _ = h.Write(appendHashInput)
+	ctx := h.Sum(nil)
+
+	// Store ctx
+	dp.ctx = ctx
 
 	// If secret is nil, sample a new one
 	// If not, check secret is valid
@@ -114,7 +167,7 @@ func (dp *DkgParticipant) Round1(secret []byte) (*Round1Bcast, Round1P2PSend, er
 	// Append participant id
 	msg = append(msg, byte(dp.Id))
 	// Append CTX
-	msg = append(msg, dp.ctx)
+	msg = append(msg, dp.ctx...)
 	// Append a_{i,0}*G
 	msg = append(msg, verifiers.Commitments[0].ToAffineCompressed()...)
 	// Append Ri
@@ -128,20 +181,23 @@ func (dp *DkgParticipant) Round1(secret []byte) (*Round1Bcast, Round1P2PSend, er
 	wi := s.MulAdd(ci, ki)
 
 	// Step 6 - Broadcast (Ci, Wi, Ci) to other participants
-	round1Bcast := &Round1Bcast{
+	round1Bcast := &Round3Bcast{
 		verifiers,
 		wi,
 		ci,
 	}
 
 	// Step 7 - P2PSend f_i(j) to each participant Pj and keep (i, f_j(i)) for himself
-	p2pSend := make(Round1P2PSend, len(dp.otherParticipantShares))
-	for id := range dp.otherParticipantShares {
+	p2pSend := make(Round3P2PSend, len(dp.participantIds)-1)
+	for _, id := range dp.participantIds {
+		if dp.Id == id {
+			continue
+		}
 		p2pSend[id] = shares[id-1]
 	}
 
 	// Update internal state
-	dp.round = 2
+	dp.round = 4
 
 	// return
 	return round1Bcast, p2pSend, nil

@@ -173,6 +173,10 @@ type BenchScalarP256 struct {
 	value *big.Int
 }
 
+func (s *BenchScalarP256) Pow(exp uint64) Scalar {
+	panic("implement me")
+}
+
 type BenchPointP256 struct {
 	x, y *big.Int
 }
@@ -338,11 +342,11 @@ func (s *BenchScalarP256) Neg() Scalar {
 
 func (s *BenchScalarP256) SetBigInt(v *big.Int) (Scalar, error) {
 	if v == nil {
-		return nil, fmt.Errorf("invalid value")
+		return nil, fmt.Errorf("invalid Value")
 	}
 	t := new(big.Int).Mod(v, elliptic.P256().Params().N)
 	if t.Cmp(v) != 0 {
-		return nil, fmt.Errorf("invalid value")
+		return nil, fmt.Errorf("invalid Value")
 	}
 	return &BenchScalarP256{
 		value: t,
@@ -391,11 +395,11 @@ func (s *BenchScalarP256) Clone() Scalar {
 }
 
 func (s *BenchScalarP256) MarshalBinary() ([]byte, error) {
-	return scalarMarshalBinary(s)
+	return ScalarMarshalBinary(s)
 }
 
 func (s *BenchScalarP256) UnmarshalBinary(input []byte) error {
-	sc, err := scalarUnmarshalBinary(input)
+	sc, err := ScalarUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -408,11 +412,11 @@ func (s *BenchScalarP256) UnmarshalBinary(input []byte) error {
 }
 
 func (s *BenchScalarP256) MarshalText() ([]byte, error) {
-	return scalarMarshalText(s)
+	return ScalarMarshalText(s)
 }
 
 func (s *BenchScalarP256) UnmarshalText(input []byte) error {
-	sc, err := scalarUnmarshalText(input)
+	sc, err := ScalarUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -425,11 +429,11 @@ func (s *BenchScalarP256) UnmarshalText(input []byte) error {
 }
 
 func (s *BenchScalarP256) MarshalJSON() ([]byte, error) {
-	return scalarMarshalJson(s)
+	return ScalarMarshalJSON(s)
 }
 
 func (s *BenchScalarP256) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	sc, err := ScalarUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -450,7 +454,7 @@ func (p *BenchPointP256) Random(reader io.Reader) Point {
 func (p *BenchPointP256) Hash(bytes []byte) Point {
 	curve := elliptic.P256().Params()
 
-	var domain = []byte("P256_XMD:SHA-256_SSWU_RO_")
+	domain := []byte("P256_XMD:SHA-256_SSWU_RO_")
 	uniformBytes, _ := expandMsgXmd(sha256.New(), bytes, domain, 96)
 
 	u0 := new(big.Int).SetBytes(uniformBytes[:48])
@@ -666,11 +670,11 @@ func (p *BenchPointP256) Params() *elliptic.CurveParams {
 }
 
 func (p *BenchPointP256) MarshalBinary() ([]byte, error) {
-	return pointMarshalBinary(p)
+	return PointMarshalBinary(p)
 }
 
 func (p *BenchPointP256) UnmarshalBinary(input []byte) error {
-	pt, err := pointUnmarshalBinary(input)
+	pt, err := PointUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -684,11 +688,11 @@ func (p *BenchPointP256) UnmarshalBinary(input []byte) error {
 }
 
 func (p *BenchPointP256) MarshalText() ([]byte, error) {
-	return pointMarshalText(p)
+	return PointMarshalText(p)
 }
 
 func (p *BenchPointP256) UnmarshalText(input []byte) error {
-	pt, err := pointUnmarshalText(input)
+	pt, err := PointUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -702,11 +706,11 @@ func (p *BenchPointP256) UnmarshalText(input []byte) error {
 }
 
 func (p *BenchPointP256) MarshalJSON() ([]byte, error) {
-	return pointMarshalJson(p)
+	return PointMarshalJSON(p)
 }
 
 func (p *BenchPointP256) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	pt, err := PointUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -744,7 +748,7 @@ func p256SswuParams() *sswuParams {
 	}
 }
 
-//rhs of the curve equation
+// rhs of the curve equation.
 func rhsP256(x *big.Int, params *elliptic.CurveParams) *big.Int {
 	f := NewField(params.P)
 	r := f.NewElement(x)

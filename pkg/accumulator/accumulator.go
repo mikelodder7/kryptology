@@ -14,22 +14,15 @@ package accumulator
 import (
 	"fmt"
 
-	"git.sr.ht/~sircmpwn/go-bare"
-
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-type structMarshal struct {
-	Value []byte `bare:"value"`
-	Curve string `bare:"curve"`
-}
-
 type Element curves.Scalar
 
-// Coefficient is a point
+// Coefficient is a point.
 type Coefficient curves.Point
 
-// Accumulator is a point
+// Accumulator is a point.
 type Accumulator struct {
 	value curves.Point
 }
@@ -48,10 +41,9 @@ func (acc *Accumulator) New(curve *curves.PairingCurve) (*Accumulator, error) {
 
 // WithElements initializes a new accumulator prefilled with entries
 // Each member is assumed to be hashed
-// V = prod(y + α) * V0, for all y∈ Y_V
+// V = prod(y + α) * V0, for all y∈ Y_V.
 func (acc *Accumulator) WithElements(curve *curves.PairingCurve, key *SecretKey, m []Element) (*Accumulator, error) {
-	_, err := acc.New(curve)
-	if err != nil {
+	if _, err := acc.New(curve); err != nil {
 		return nil, err
 	}
 	y, err := key.BatchAdditions(m)
@@ -76,7 +68,7 @@ func (acc *Accumulator) AddElements(key *SecretKey, m []Element) (*Accumulator, 
 }
 
 // Add accumulates a single element into the accumulator
-// V' = (y + alpha) * V
+// V' = (y + alpha) * V.
 func (acc *Accumulator) Add(key *SecretKey, e Element) (*Accumulator, error) {
 	if acc.value == nil || acc.value.IsIdentity() || key.value == nil || e == nil {
 		return nil, fmt.Errorf("accumulator, secret key and element should not be nil")
@@ -87,7 +79,7 @@ func (acc *Accumulator) Add(key *SecretKey, e Element) (*Accumulator, error) {
 }
 
 // Remove removes a single element from accumulator if it exists
-// V' = 1/(y+alpha) *  V
+// V' = 1/(y+alpha) *  V.
 func (acc *Accumulator) Remove(key *SecretKey, e Element) (*Accumulator, error) {
 	if acc.value == nil || acc.value.IsIdentity() || key.value == nil || e == nil {
 		return nil, fmt.Errorf("accumulator, secret key and element should not be nil")
@@ -103,7 +95,7 @@ func (acc *Accumulator) Remove(key *SecretKey, e Element) (*Accumulator, error) 
 
 // Update performs a batch addition and deletion as described on page 7, section 3 in
 // https://eprint.iacr.org/2020/777.pdf
-func (acc *Accumulator) Update(key *SecretKey, additions []Element, deletions []Element) (*Accumulator, []Coefficient, error) {
+func (acc *Accumulator) Update(key *SecretKey, additions, deletions []Element) (*Accumulator, []Coefficient, error) {
 	if acc.value == nil || acc.value.IsIdentity() || key.value == nil {
 		return nil, nil, fmt.Errorf("accumulator and secret key should not be nil")
 	}
@@ -138,32 +130,17 @@ func (acc *Accumulator) Update(key *SecretKey, additions []Element, deletions []
 	return acc, coefficients, nil
 }
 
-// MarshalBinary converts Accumulator to bytes
+// MarshalBinary converts Accumulator to bytes.
 func (acc Accumulator) MarshalBinary() ([]byte, error) {
 	if acc.value == nil {
 		return nil, fmt.Errorf("accumulator cannot be nil")
 	}
-	tv := &structMarshal{
-		Value: acc.value.ToAffineCompressed(),
-		Curve: acc.value.CurveName(),
-	}
-	return bare.Marshal(tv)
+	return curves.PointMarshalBinary(acc.value)
 }
 
-// UnmarshalBinary sets Accumulator from bytes
+// UnmarshalBinary sets Accumulator from bytes.
 func (acc *Accumulator) UnmarshalBinary(data []byte) error {
-	tv := new(structMarshal)
-	err := bare.Unmarshal(data, tv)
-	if err != nil {
-		return err
-	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
-	}
-
-	value, err := curve.NewIdentityPoint().FromAffineCompressed(tv.Value)
-
+	value, err := curves.PointUnmarshalBinary(data)
 	if err != nil {
 		return err
 	}

@@ -10,17 +10,18 @@ package dealer
 import (
 	"crypto/elliptic"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 	"github.com/coinbase/kryptology/pkg/paillier"
-	"github.com/coinbase/kryptology/pkg/sharing/v1"
+	v1 "github.com/coinbase/kryptology/pkg/sharing/v1"
 )
 
 // ParticipantData represents all data to be sent to a participant
-// after the dealer is finished
+// after the dealer is finished.
 type ParticipantData struct {
 	Id             uint32
 	DecryptKey     *paillier.SecretKey
@@ -32,7 +33,7 @@ type ParticipantData struct {
 	EncryptKeys    map[uint32]*paillier.PublicKey
 }
 
-type ParticipantDataJson struct {
+type ParticipantDataJSON struct {
 	Id             uint32
 	DecryptKey     *paillier.SecretKey
 	SecretKeyShare *Share
@@ -45,7 +46,7 @@ type ParticipantDataJson struct {
 }
 
 func (pd ParticipantData) MarshalJSON() ([]byte, error) {
-	data := ParticipantDataJson{
+	data := ParticipantDataJSON{
 		Id:             pd.Id,
 		DecryptKey:     pd.DecryptKey,
 		SecretKeyShare: pd.SecretKeyShare,
@@ -56,13 +57,17 @@ func (pd ParticipantData) MarshalJSON() ([]byte, error) {
 	if pd.KeyGenType.IsTrustedDealer() {
 		data.DealerParams = pd.KeyGenType.GetProofParams(0)
 	} else {
-		data.ParticipantParams = pd.KeyGenType.(DistributedKeyGenType).ProofParams
+		keygenType, ok := pd.KeyGenType.(DistributedKeyGenType)
+		if !ok {
+			return nil, errors.New("invalid type conversion")
+		}
+		data.ParticipantParams = keygenType.ProofParams
 	}
 	return json.Marshal(data)
 }
 
 func (pd *ParticipantData) UnmarshalJSON(bytes []byte) error {
-	data := new(ParticipantDataJson)
+	data := new(ParticipantDataJSON)
 	if err := json.Unmarshal(bytes, data); err != nil {
 		return err
 	}
@@ -85,7 +90,7 @@ func (pd *ParticipantData) UnmarshalJSON(bytes []byte) error {
 }
 
 // ProofParams is the modulus and generators
-// used when constructing keys and completing the signing rounds
+// used when constructing keys and completing the signing rounds.
 type ProofParams struct {
 	// n is the modulus for the signing rounds, product of two safe primes
 	N *big.Int
@@ -95,28 +100,28 @@ type ProofParams struct {
 	H2 *big.Int
 }
 
-// PublicShare can be sent to a Participant so it can be used to convert Share to its additive form
+// PublicShare can be sent to a Participant so it can be used to convert Share to its additive form.
 type PublicShare struct {
 	Point *curves.EcPoint
 }
 
-// Share represents a piece of the ECDSA private key and a commitment to the share
+// Share represents a piece of the ECDSA private key and a commitment to the share.
 type Share struct {
 	*v1.ShamirShare
 	Point *curves.EcPoint
 }
 
-// ShareJson encapsulates the data that is serialized to JSON
+// ShareJSON encapsulates the data that is serialized to JSON
 // used internally and not for external use. Public so other pieces
-// can use for serialization
-type ShareJson struct {
+// can use for serialization.
+type ShareJSON struct {
 	Identifier uint32   // x-coordinate
 	Value      *big.Int // y-coordinate
 	Point      *curves.EcPoint
 }
 
 func (s Share) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ShareJson{
+	return json.Marshal(ShareJSON{
 		Identifier: s.Identifier,
 		Value:      s.Value.BigInt(),
 		Point:      s.Point,
@@ -124,7 +129,7 @@ func (s Share) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Share) UnmarshalJSON(bytes []byte) error {
-	sh := ShareJson{}
+	sh := ShareJSON{}
 	err := json.Unmarshal(bytes, &sh)
 	if err != nil {
 		return err
@@ -137,13 +142,13 @@ func (s *Share) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-// NewProofParams creates new ProofParams with `bits` sized values
+// NewProofParams creates new ProofParams with `bits` sized values.
 func NewProofParams() (*ProofParams, error) {
 	return genProofParams(core.GenerateSafePrime, core.Rand, paillier.PaillierPrimeBits)
 }
 
 // NewProofParamsWithPrimes creates new ProofParams using the
-// parameters as the primes
+// parameters as the primes.
 func NewProofParamsWithPrimes(p, q *big.Int) (*ProofParams, error) {
 	pIdx := 0
 	safePrimes := []*big.Int{p, q}
@@ -156,7 +161,7 @@ func NewProofParamsWithPrimes(p, q *big.Int) (*ProofParams, error) {
 }
 
 // PreparePublicShares makes public shares that can be sent
-// to the participant to compute their additive shares and participate in signing rounds
+// to the participant to compute their additive shares and participate in signing rounds.
 func PreparePublicShares(sharesMap map[uint32]*Share) (map[uint32]*PublicShare, error) {
 	if len(sharesMap) == 0 {
 		return nil, fmt.Errorf("sharesMap cannot be nil or empty")
@@ -171,7 +176,7 @@ func PreparePublicShares(sharesMap map[uint32]*Share) (map[uint32]*PublicShare, 
 	return publicSharesMap, nil
 }
 
-// New Secret generates a new private key
+// New Secret generates a new private key.
 func NewSecret(curve elliptic.Curve) (*big.Int, error) {
 	return core.Rand(curve.Params().N)
 }
@@ -181,7 +186,7 @@ func DerivePublicKey(curve elliptic.Curve, secretKey *big.Int) (*curves.EcPoint,
 }
 
 // NewDealerShares generates the Secp256k1 private key shares and public key
-// if ikm == nil, a new private key will be generated
+// if ikm == nil, a new private key will be generated.
 func NewDealerShares(curve elliptic.Curve, threshold, total uint32, ikm *big.Int) (*curves.EcPoint, map[uint32]*Share, error) {
 	if total < threshold {
 		return nil, nil, fmt.Errorf("parts cannot be less than threshold")
@@ -238,11 +243,10 @@ func NewDealerShares(curve elliptic.Curve, threshold, total uint32, ikm *big.Int
 }
 
 // genProofParams creates all the values needed for ProofParams using the specified
-// genSafePrime function, genRandInMod function, and number of bits
+// genSafePrime function, genRandInMod function, and number of bits.
 func genProofParams(genSafePrime func(uint) (*big.Int, error), genRandInMod func(*big.Int) (*big.Int, error), bits uint) (*ProofParams, error) {
-
 	values := make(chan *big.Int, 2)
-	errors := make(chan error, 2)
+	errorsChannel := make(chan error, 2)
 
 	var p, q *big.Int
 
@@ -251,11 +255,11 @@ func genProofParams(genSafePrime func(uint) (*big.Int, error), genRandInMod func
 			go func() {
 				value, err := genSafePrime(bits)
 				values <- value
-				errors <- err
+				errorsChannel <- err
 			}()
 		}
 
-		for _, err := range []error{<-errors, <-errors} {
+		for _, err := range []error{<-errorsChannel, <-errorsChannel} {
 			if err != nil {
 				return nil, err
 			}
@@ -274,11 +278,11 @@ func genProofParams(genSafePrime func(uint) (*big.Int, error), genRandInMod func
 			go func() {
 				value, err := genRandInMod(n)
 				values <- value
-				errors <- err
+				errorsChannel <- err
 			}()
 		}
 
-		for _, err := range []error{<-errors, <-errors} {
+		for _, err := range []error{<-errorsChannel, <-errorsChannel} {
 			if err != nil {
 				return nil, err
 			}

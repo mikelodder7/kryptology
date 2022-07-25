@@ -14,16 +14,16 @@ import (
 // EcdsaVerify runs a curve- or algorithm-specific ECDSA verification function on input
 // an ECDSA public (verification) key, a message digest, and an ECDSA signature.
 // It must return true if all the parameters are sane and the ECDSA signature is valid,
-// and false otherwise
+// and false otherwise.
 type EcdsaVerify func(pubKey *EcPoint, hash []byte, signature *EcdsaSignature) bool
 
-// EcdsaSignature represents a (composite) digital signature
+// EcdsaSignature represents a (composite) digital signature.
 type EcdsaSignature struct {
 	V    int
 	R, S *big.Int
 }
 
-// Static type assertion
+// Static type assertion.
 var _ EcdsaVerify = VerifyEcdsa
 
 // Verifies ECDSA signature using core types.

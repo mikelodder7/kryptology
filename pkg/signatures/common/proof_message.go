@@ -15,7 +15,7 @@ import (
 // ProofMessage classifies how a message is presented in a proof
 // Either Revealed or Hidden. Hidden has two sub categories:
 // proof specific i.e. the message is only used for this proof or
-// shared i.e. the message should be proved to be common across proofs
+// shared i.e. the message should be proved to be common across proofs.
 type ProofMessage interface {
 	// IsHidden indicates the message should be hidden
 	IsHidden() bool
@@ -34,11 +34,11 @@ type RevealedMessage struct {
 	Message curves.Scalar
 }
 
-func (r RevealedMessage) IsHidden() bool {
+func (RevealedMessage) IsHidden() bool {
 	return false
 }
 
-func (r RevealedMessage) GetBlinding(reader io.Reader) curves.Scalar {
+func (RevealedMessage) GetBlinding(reader io.Reader) curves.Scalar {
 	return nil
 }
 
@@ -47,15 +47,19 @@ func (r RevealedMessage) GetMessage() curves.Scalar {
 }
 
 type ProofSpecificMessage struct {
-	Message curves.Scalar
+	Message        curves.Scalar
+	blindingFactor curves.Scalar
 }
 
-func (ps ProofSpecificMessage) IsHidden() bool {
+func (ProofSpecificMessage) IsHidden() bool {
 	return true
 }
 
 func (ps ProofSpecificMessage) GetBlinding(reader io.Reader) curves.Scalar {
-	return ps.Message.Random(reader)
+	if ps.blindingFactor == nil {
+		ps.blindingFactor = ps.Message.Random(reader) //nolint:revive // false positive.
+	}
+	return ps.blindingFactor
 }
 
 func (ps ProofSpecificMessage) GetMessage() curves.Scalar {
@@ -66,7 +70,7 @@ type SharedBlindingMessage struct {
 	Message, Blinding curves.Scalar
 }
 
-func (ps SharedBlindingMessage) IsHidden() bool {
+func (SharedBlindingMessage) IsHidden() bool {
 	return true
 }
 

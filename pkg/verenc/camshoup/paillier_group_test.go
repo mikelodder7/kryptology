@@ -26,7 +26,7 @@ func TestPaillierGroupAbs(t *testing.T) {
 	group, err := NewPaillierGroupWithPrimes(testP, testQ)
 	require.NoError(t, err)
 
-	var tests = []struct {
+	tests := []struct {
 		tst, expt *big.Int
 	}{
 		{new(big.Int).Sub(group.n2, big.NewInt(1)), big.NewInt(1)},

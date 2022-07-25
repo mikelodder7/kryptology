@@ -16,7 +16,7 @@ import (
 	"github.com/coinbase/kryptology/pkg/tecdsa/gg20/proof"
 )
 
-// Round1Bcast contains values to be broadcast to all players after the completion of singing round 1
+// Round1Bcast contains values to be broadcast to all players after the completion of singing round 1.
 type Round1Bcast struct {
 	Identifier uint32
 	C          core.Commitment

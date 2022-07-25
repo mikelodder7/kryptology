@@ -82,7 +82,8 @@ func verifyProof(
 	encKey *elgamal.EncryptionKey,
 	serverPk *elgamal.EncryptionKey,
 ) bool {
-	genBytes := append(domain, encKey.Value.ToAffineUncompressed()...)
+	genBytes := domain
+	genBytes = append(genBytes, encKey.Value.ToAffineUncompressed()...)
 	genBytes = append(genBytes, proof.encctxt.Nonce...)
 	h := curve.NewGeneratorPoint().Hash(genBytes)
 
@@ -122,7 +123,8 @@ func computeProof(
 	n1 := curve.Scalar.Random(crand.Reader)
 	n2 := curve.Scalar.Random(crand.Reader)
 
-	genBytes := append(domain, encKey.Value.ToAffineUncompressed()...)
+	genBytes := domain
+	genBytes = append(genBytes, encKey.Value.ToAffineUncompressed()...)
 	genBytes = append(genBytes, encctxt.Nonce...)
 	h := curve.NewGeneratorPoint().Hash(genBytes)
 

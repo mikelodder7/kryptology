@@ -7,16 +7,15 @@
 package elgamal
 
 import (
-	"fmt"
-
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
 
 	"github.com/coinbase/kryptology/internal"
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
 // CipherText represents verifiably encrypted ciphertext
-// using El-Gamal encryption
+// using El-Gamal encryption.
 type CipherText struct {
 	C1, C2      curves.Point
 	Nonce       []byte
@@ -33,111 +32,139 @@ type HomomorphicCipherText struct {
 	C1, C2 curves.Point
 }
 
-type cipherTextMarshal struct {
-	C1          []byte `bare:"c1"`
-	C2          []byte `bare:"c2"`
-	Nonce       []byte `bare:"nonce"`
-	Aead        []byte `bare:"aead"`
-	Curve       string `bare:"curve"`
-	MsgIsHashed bool   `bare:"msgIsHashed"`
-}
+func (c *CipherText) MarshalBinary() ([]byte, error) {
+	c1, err := curves.PointMarshalBinary(c.C1)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	c2, err := curves.PointMarshalBinary(c.C2)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	b := core.NewByteSerializer(uint(1 + len(c.Nonce) + len(c.Aead) + len(c1) + len(c2)))
+	if _, err = b.WriteBytes(c1); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(c2); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(c.Nonce); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(c.Aead); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBool(c.MsgIsHashed); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
-type homomorphicCipherTextMarshal struct {
-	C1    []byte `bare:"c1"`
-	C2    []byte `bare:"c2"`
-	Curve string `bare:"curve"`
-}
-
-func (c CipherText) MarshalBinary() ([]byte, error) {
-	tv := new(cipherTextMarshal)
-	tv.C1 = c.C1.ToAffineCompressed()
-	tv.C2 = c.C2.ToAffineCompressed()
-	tv.Nonce = make([]byte, len(c.Nonce))
-	copy(tv.Nonce, c.Nonce)
-	tv.Aead = make([]byte, len(c.Aead))
-	tv.Curve = c.C1.CurveName()
-	copy(tv.Aead, c.Aead)
-	tv.MsgIsHashed = c.MsgIsHashed
-	return bare.Marshal(tv)
+	return b.Bytes(), nil
 }
 
 func (c *CipherText) UnmarshalBinary(data []byte) error {
-	tv := new(cipherTextMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	c1Bytes, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("unknown curve")
-	}
-	c1, err := curve.Point.FromAffineCompressed(tv.C1)
+	c2Bytes, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	c2, err := curve.Point.FromAffineCompressed(tv.C2)
+	nonce, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
+	}
+	aead, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	msgIsHashed, err := b.ReadBool()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	c1, err := curves.PointUnmarshalBinary(c1Bytes)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	c2, err := curves.PointUnmarshalBinary(c2Bytes)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	c.C1 = c1
 	c.C2 = c2
-	c.Aead = tv.Aead
-	c.Nonce = tv.Nonce
-	c.MsgIsHashed = tv.MsgIsHashed
+	c.Aead = make([]byte, len(aead))
+	copy(c.Aead, aead)
+	c.Nonce = make([]byte, len(nonce))
+	copy(c.Nonce, nonce)
+	c.MsgIsHashed = msgIsHashed
 
 	return nil
 }
 
 // ToHomomorphicCipherText returns the El-Gamal points that can be
-// homomorphically multiplied
-func (c CipherText) ToHomomorphicCipherText() *HomomorphicCipherText {
+// homomorphically multiplied.
+func (c *CipherText) ToHomomorphicCipherText() *HomomorphicCipherText {
 	return &HomomorphicCipherText{
 		C1: c.C1,
 		C2: c.C2,
 	}
 }
 
-// Add combines two ciphertexts multiplicatively homomorphic
-func (c HomomorphicCipherText) Add(rhs *HomomorphicCipherText) *HomomorphicCipherText {
+// Add combines two ciphertexts multiplicatively homomorphic.
+func (c *HomomorphicCipherText) Add(rhs *HomomorphicCipherText) *HomomorphicCipherText {
 	return &HomomorphicCipherText{
 		C1: c.C1.Add(rhs.C1),
 		C2: c.C2.Add(rhs.C2),
 	}
 }
 
-// Decrypt returns the C2 - C1
-func (c HomomorphicCipherText) Decrypt(dk *DecryptionKey) (curves.Point, error) {
+// Decrypt returns the C2 - C1.
+func (c *HomomorphicCipherText) Decrypt(dk *DecryptionKey) (curves.Point, error) {
 	if dk == nil {
 		return nil, internal.ErrNilArguments
 	}
 	return c.C2.Sub(c.C1.Mul(dk.x)), nil
 }
 
-func (c HomomorphicCipherText) MarshalBinary() ([]byte, error) {
-	tv := new(homomorphicCipherTextMarshal)
-	tv.C1 = c.C1.ToAffineCompressed()
-	tv.C2 = c.C2.ToAffineCompressed()
-	tv.Curve = c.C1.CurveName()
-	return bare.Marshal(tv)
+func (c *HomomorphicCipherText) MarshalBinary() ([]byte, error) {
+	c1, err := curves.PointMarshalBinary(c.C1)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	c2, err := curves.PointMarshalBinary(c.C2)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	b := core.NewByteSerializer(uint(len(c1) + len(c2)))
+	_, err = b.WriteBytes(c1)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	_, err = b.WriteBytes(c2)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return b.Bytes(), nil
 }
 
 func (c *HomomorphicCipherText) UnmarshalBinary(in []byte) error {
-	tv := new(homomorphicCipherTextMarshal)
-	err := bare.Unmarshal(in, tv)
+	b := core.NewByteDeserializer(in)
+	c1Bytes, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("unknown curve")
-	}
-	c1, err := curve.Point.FromAffineCompressed(tv.C1)
+	c2Bytes, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	c2, err := curve.Point.FromAffineCompressed(tv.C2)
+	c1, err := curves.PointUnmarshalBinary(c1Bytes)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
+	}
+	c2, err := curves.PointUnmarshalBinary(c2Bytes)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	c.C1 = c1
 	c.C2 = c2

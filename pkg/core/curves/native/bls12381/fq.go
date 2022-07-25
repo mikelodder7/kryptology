@@ -10,64 +10,67 @@ import (
 
 type Fq [native.FieldLimbs]uint64
 
-var bls12381FqInitonce sync.Once
-var bls12381FqParams native.FieldParams
+var (
+	fqInitonce sync.Once
+	fqParams   native.FieldParams
+)
 
-// 2^S * t = MODULUS - 1 with t odd
+// 2^S * t = MODULUS - 1 with t odd.
 const fqS = 32
 
-// qInv = -(q^{-1} mod 2^64) mod 2^64
+// qInv = -(q^{-1} mod 2^64) mod 2^64.
 const qInv = 0xfffffffeffffffff
 
-// fqGenerator = 7 (multiplicative fqGenerator of r-1 order, that is also quadratic nonresidue)
+// fqGenerator = 7 (multiplicative fqGenerator of r-1 order, that is also quadratic nonresidue).
 var fqGenerator = [native.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f, 0xff9c57876f8457b0, 0x351332208fc5a8c4}
 
-// fqModulus
+// fqModulus.
 var fqModulus = [native.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
 
-func Bls12381FqNew() *native.Field {
+func FqNew() *native.Field {
 	return &native.Field{
 		Value:      [native.FieldLimbs]uint64{},
-		Params:     getBls12381FqParams(),
-		Arithmetic: bls12381FqArithmetic{},
+		Params:     getFqParams(),
+		Arithmetic: fqArithmetic{},
 	}
 }
 
-func bls12381FqParamsInit() {
-	bls12381FqParams = native.FieldParams{
+func fqParamsInit() {
+	fqParams = native.FieldParams{
 		R:       [native.FieldLimbs]uint64{0x00000001fffffffe, 0x5884b7fa00034802, 0x998c4fefecbc4ff5, 0x1824b159acc5056f},
 		R2:      [native.FieldLimbs]uint64{0xc999e990f3f29c6d, 0x2b6cedcb87925c23, 0x05d314967254398f, 0x0748d9d99f59ff11},
 		R3:      [native.FieldLimbs]uint64{0xc62c1807439b73af, 0x1b3e0d188cf06990, 0x73d13c71c7b5f418, 0x6e2a5bb9c8db33e9},
 		Modulus: [native.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48},
 		BiModulus: new(big.Int).SetBytes([]byte{
-			0x73, 0xed, 0xa7, 0x53, 0x29, 0x9d, 0x7d, 0x48, 0x33, 0x39, 0xd8, 0x08, 0x09, 0xa1, 0xd8, 0x05, 0x53, 0xbd, 0xa4, 0x02, 0xff, 0xfe, 0x5b, 0xfe, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01}),
+			0x73, 0xed, 0xa7, 0x53, 0x29, 0x9d, 0x7d, 0x48, 0x33, 0x39, 0xd8, 0x08, 0x09, 0xa1, 0xd8, 0x05, 0x53, 0xbd, 0xa4, 0x02, 0xff, 0xfe, 0x5b, 0xfe, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01,
+		}),
 	}
 }
 
-func getBls12381FqParams() *native.FieldParams {
-	bls12381FqInitonce.Do(bls12381FqParamsInit)
-	return &bls12381FqParams
+func getFqParams() *native.FieldParams {
+	fqInitonce.Do(fqParamsInit)
+	return &fqParams
 }
 
-// bls12381FqArithmetic is a struct with all the methods needed for working
-// in mod q
-type bls12381FqArithmetic struct{}
+// fqArithmetic is a struct with all the methods needed for working
+// in mod q.
+type fqArithmetic struct{}
 
-// ToMontgomery converts this field to montgomery form
-func (f bls12381FqArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// ToMontgomery converts this field to montgomery form.
+func (f fqArithmetic) ToMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	// arg.R^0 * R^2 / R = arg.R
-	f.Mul(out, arg, &getBls12381FqParams().R2)
+	f.Mul(out, arg, &getFqParams().R2)
 }
 
-// FromMontgomery converts this field from montgomery form
-func (f bls12381FqArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
+// FromMontgomery converts this field from montgomery form.
+func (f fqArithmetic) FromMontgomery(out, arg *[native.FieldLimbs]uint64) {
 	// Mul by 1 is division by 2^256 mod q
-	//f.Mul(out, arg, &[native.FieldLimbs]uint64{1, 0, 0, 0})
+	// f.Mul(out, arg, &[native.FieldLimbs]uint64{1, 0, 0, 0})
 	f.montReduce(out, &[native.FieldLimbs * 2]uint64{arg[0], arg[1], arg[2], arg[3], 0, 0, 0, 0})
 }
 
-// Neg performs modular negation
-func (f bls12381FqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
+// Neg performs modular negation.
+func (fqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
 	// Subtract `arg` from `fqModulus`. Ignore final borrow
 	// since it can't underflow.
 	var t [native.FieldLimbs]uint64
@@ -87,8 +90,8 @@ func (f bls12381FqArithmetic) Neg(out, arg *[native.FieldLimbs]uint64) {
 	out[3] = t[3] & mask
 }
 
-// Square performs modular square
-func (f bls12381FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
+// Square performs modular square.
+func (f fqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	var r [2 * native.FieldLimbs]uint64
 	var carry uint64
 
@@ -107,7 +110,7 @@ func (f bls12381FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	r[4] = (r[4] << 1) | r[3]>>63
 	r[3] = (r[3] << 1) | r[2]>>63
 	r[2] = (r[2] << 1) | r[1]>>63
-	r[1] = r[1] << 1
+	r[1] <<= 1
 
 	r[0], carry = mac(0, arg[0], arg[0], 0)
 	r[1], carry = adc(0, r[1], carry)
@@ -121,8 +124,8 @@ func (f bls12381FqArithmetic) Square(out, arg *[native.FieldLimbs]uint64) {
 	f.montReduce(out, &r)
 }
 
-// Mul performs modular multiplication
-func (f bls12381FqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Mul performs modular multiplication.
+func (f fqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	// Schoolbook multiplication
 	var r [2 * native.FieldLimbs]uint64
 	var carry uint64
@@ -150,8 +153,8 @@ func (f bls12381FqArithmetic) Mul(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	f.montReduce(out, &r)
 }
 
-// Add performs modular addition
-func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Add performs modular addition.
+func (f fqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	var t [native.FieldLimbs]uint64
 	var carry uint64
 
@@ -165,8 +168,8 @@ func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	f.Sub(out, &t, &fqModulus)
 }
 
-// Sub performs modular subtraction
-func (f bls12381FqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
+// Sub performs modular subtraction.
+func (fqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	d0, borrow := sbb(arg1[0], arg2[0], 0)
 	d1, borrow := sbb(arg1[1], arg2[1], borrow)
 	d2, borrow := sbb(arg1[2], arg2[2], borrow)
@@ -186,8 +189,8 @@ func (f bls12381FqArithmetic) Sub(out, arg1, arg2 *[native.FieldLimbs]uint64) {
 	out[3] = d3
 }
 
-// Sqrt performs modular square root
-func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint64) {
+// Sqrt performs modular square root.
+func (f fqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
 	// c1 := fqS
@@ -205,13 +208,13 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]
 		0x94cebea4199cec04,
 		0x0000000039f6d3a9,
 	}
-	//c4 := fqGenerator
+	// c4 := fqGenerator
 	var c5 [native.FieldLimbs]uint64
-	native.Pow(&c5, &fqGenerator, &c2, getBls12381FqParams(), f)
-	//c5 := [native.FieldLimbs]uint64{0x1015708f7e368fe1, 0x31c6c5456ecc4511, 0x5281fe8998a19ea1, 0x0279089e10c63fe8}
+	native.Pow(&c5, &fqGenerator, &c2, getFqParams(), f)
+	// c5 := [native.FieldLimbs]uint64{0x1015708f7e368fe1, 0x31c6c5456ecc4511, 0x5281fe8998a19ea1, 0x0279089e10c63fe8}
 	var z, t, b, c, tv [native.FieldLimbs]uint64
 
-	native.Pow(&z, arg, &c3, getBls12381FqParams(), f)
+	native.Pow(&z, arg, &c3, getFqParams(), f)
 	f.Square(&t, &z)
 	f.Mul(&t, &t, arg)
 	f.Mul(&z, &z, arg)
@@ -226,7 +229,7 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]
 		// if b == 1 flag = 0 else flag = 1
 		flag := -(&native.Field{
 			Value:      b,
-			Params:     getBls12381FqParams(),
+			Params:     getFqParams(),
 			Arithmetic: f,
 		}).IsOne() + 1
 		f.Mul(&tv, &z, &c)
@@ -239,18 +242,18 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[native.FieldLimbs]
 	f.Square(&c, &z)
 	*wasSquare = (&native.Field{
 		Value:      c,
-		Params:     getBls12381FqParams(),
+		Params:     getFqParams(),
 		Arithmetic: f,
 	}).Equal(&native.Field{
 		Value:      *arg,
-		Params:     getBls12381FqParams(),
+		Params:     getFqParams(),
 		Arithmetic: f,
 	})
 	f.Selectznz(out, out, &z, *wasSquare)
 }
 
-// Invert performs modular inverse
-func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]uint64) {
+// Invert performs modular inverse.
+func (f fqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLimbs]uint64) {
 	// Using an addition chain from
 	// https://github.com/kwantam/addchain
 	var t0, t1, t2, t3, t4, t5, t6, t7, t8 [native.FieldLimbs]uint64
@@ -344,22 +347,22 @@ func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[native.FieldLi
 
 	*wasInverted = (&native.Field{
 		Value:      *arg,
-		Params:     getBls12381FqParams(),
+		Params:     getFqParams(),
 		Arithmetic: f,
 	}).IsNonZero()
 	f.Selectznz(out, out, &t0, *wasInverted)
 }
 
-// FromBytes converts a little endian byte array into a field element
-func (f bls12381FqArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
+// FromBytes converts a little endian byte array into a field element.
+func (fqArithmetic) FromBytes(out *[native.FieldLimbs]uint64, arg *[native.FieldBytes]byte) {
 	out[0] = binary.LittleEndian.Uint64(arg[:8])
 	out[1] = binary.LittleEndian.Uint64(arg[8:16])
 	out[2] = binary.LittleEndian.Uint64(arg[16:24])
 	out[3] = binary.LittleEndian.Uint64(arg[24:])
 }
 
-// ToBytes converts a field element to a little endian byte array
-func (f bls12381FqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
+// ToBytes converts a field element to a little endian byte array.
+func (fqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native.FieldLimbs]uint64) {
 	binary.LittleEndian.PutUint64(out[:8], arg[0])
 	binary.LittleEndian.PutUint64(out[8:16], arg[1])
 	binary.LittleEndian.PutUint64(out[16:24], arg[2])
@@ -367,8 +370,8 @@ func (f bls12381FqArithmetic) ToBytes(out *[native.FieldBytes]byte, arg *[native
 }
 
 // Selectznz performs conditional select.
-// selects arg1 if choice == 0 and arg2 if choice == 1
-func (f bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
+// selects arg1 if choice == 0 and arg2 if choice == 1.
+func (fqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint64, choice int) {
 	b := uint64(-choice)
 	out[0] = arg1[0] ^ ((arg1[0] ^ arg2[0]) & b)
 	out[1] = arg1[1] ^ ((arg1[1] ^ arg2[1]) & b)
@@ -376,7 +379,7 @@ func (f bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[native.FieldLimbs]uint
 	out[3] = arg1[3] ^ ((arg1[3] ^ arg2[3]) & b)
 }
 
-func (f bls12381FqArithmetic) montReduce(out *[native.FieldLimbs]uint64, r *[2 * native.FieldLimbs]uint64) {
+func (f fqArithmetic) montReduce(out *[native.FieldLimbs]uint64, r *[2 * native.FieldLimbs]uint64) {
 	// Taken from Algorithm 14.32 in Handbook of Applied Cryptography
 	var r1, r2, r3, r4, r5, r6, carry, carry2, k uint64
 	var rr [native.FieldLimbs]uint64

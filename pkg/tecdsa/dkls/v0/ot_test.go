@@ -64,7 +64,7 @@ func TestCOTExtension(t *testing.T) {
 	_, err = rand.Read(idExt[:])
 	require.Nil(t, err)
 	choice := make([]byte, receiver.l>>3) // Bob's
-	_, err = rand.Read(choice[:])
+	_, err = rand.Read(choice)
 	require.Nil(t, err)
 	input := [2 * kappa * multiplicity]*big.Int{} // Alice's
 	inputOT := [2 * s][]*big.Int{}                // Alice's
@@ -85,7 +85,7 @@ func TestCOTExtension(t *testing.T) {
 		errors <- receiver.cOT(idExt, choice, receiverPipe)
 	}()
 	go func() {
-		errors <- sender.cOT(idExt, input[:], inputOT, senderPipe)
+		errors <- sender.cOT(idExt, input[:], &inputOT, senderPipe)
 	}()
 	for i := 0; i < 2; i++ {
 		require.Nil(t, <-errors)

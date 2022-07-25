@@ -22,10 +22,10 @@ import (
 	"github.com/coinbase/kryptology/pkg/sharing"
 )
 
-// Secret key in Fr
+// Secret key in Fr.
 const SecretKeySize = 32
 
-// Secret key share with identifier byte in Fr
+// Secret key share with identifier byte in Fr.
 const SecretKeyShareSize = 33
 
 // The salt used with generating secret keys
@@ -33,7 +33,7 @@ const SecretKeyShareSize = 33
 const hkdfKeyGenSalt = "BLS-SIG-KEYGEN-SALT-"
 
 // Represents a value mod r where r is the curve order or
-// order of the subgroups in G1 and G2
+// order of the subgroups in G1 and G2.
 type SecretKey struct {
 	value *native.Field
 }
@@ -65,7 +65,7 @@ func generateRandBytes(count int) ([]byte, error) {
 // Creates a new BLS secret key
 // Input key material (ikm) MUST be at least 32 bytes long,
 // but it MAY be longer.
-func (sk SecretKey) Generate(ikm []byte) (*SecretKey, error) {
+func (SecretKey) Generate(ikm []byte) (*SecretKey, error) {
 	if len(ikm) < 32 {
 		return nil, fmt.Errorf("ikm is too short. Must be at least 32")
 	}
@@ -94,11 +94,11 @@ func (sk SecretKey) Generate(ikm []byte) (*SecretKey, error) {
 	if read != 48 {
 		return nil, fmt.Errorf("failed to create private key")
 	}
-	v := bls12381.Bls12381FqNew().SetBytesWide(&okm)
+	v := bls12381.FqNew().SetBytesWide(&okm)
 	return &SecretKey{value: v}, nil
 }
 
-// Serialize a secret key to raw bytes
+// Serialize a secret key to raw bytes.
 func (sk SecretKey) MarshalBinary() ([]byte, error) {
 	bytes := sk.value.Bytes()
 	return internal.ReverseScalarBytes(bytes[:]), nil
@@ -117,7 +117,7 @@ func (sk *SecretKey) UnmarshalBinary(data []byte) error {
 	}
 	var bb [native.FieldBytes]byte
 	copy(bb[:], internal.ReverseScalarBytes(data))
-	value, err := bls12381.Bls12381FqNew().SetBytes(&bb)
+	value, err := bls12381.FqNew().SetBytes(&bb)
 	if err != nil {
 		return err
 	}
@@ -125,13 +125,13 @@ func (sk *SecretKey) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// SecretKeyShare is shamir share of a private key
+// SecretKeyShare is shamir share of a private key.
 type SecretKeyShare struct {
 	identifier byte
 	value      []byte
 }
 
-// Serialize a secret key share to raw bytes
+// Serialize a secret key share to raw bytes.
 func (sks SecretKeyShare) MarshalBinary() ([]byte, error) {
 	var blob [SecretKeyShareSize]byte
 	l := len(sks.value)
@@ -140,7 +140,7 @@ func (sks SecretKeyShare) MarshalBinary() ([]byte, error) {
 	return blob[:], nil
 }
 
-// Deserialize a secret key share from raw bytes
+// Deserialize a secret key share from raw bytes.
 func (sks *SecretKeyShare) UnmarshalBinary(data []byte) error {
 	if len(data) != SecretKeyShareSize {
 		return fmt.Errorf("secret key share must be %d bytes", SecretKeyShareSize)
@@ -152,12 +152,13 @@ func (sks *SecretKeyShare) UnmarshalBinary(data []byte) error {
 	}
 	l := len(data)
 	sks.identifier = data[l-1]
+	sks.value = make([]byte, l-1)
 	copy(sks.value, data[:l])
 	return nil
 }
 
 // thresholdizeSecretKey splits a composite secret key such that
-// `threshold` partial signatures can be combined to form a composite signature
+// `threshold` partial signatures can be combined to form a composite signature.
 func thresholdizeSecretKey(secretKey *SecretKey, threshold, total uint) ([]*SecretKeyShare, error) {
 	// Verify our parameters are acceptable.
 	if secretKey == nil {

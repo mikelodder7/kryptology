@@ -17,7 +17,7 @@ import (
 	"github.com/coinbase/kryptology/pkg/tecdsa/gg20/proof"
 )
 
-// DkgRound1Bcast contains values to be broadcast to all players after the completion of DKG round 1
+// DkgRound1Bcast contains values to be broadcast to all players after the completion of DKG round 1.
 type DkgRound1Bcast struct {
 	Identifier       uint32
 	Ci               core.Commitment
@@ -27,7 +27,7 @@ type DkgRound1Bcast struct {
 }
 
 // DkgRound1 performs round 1 distributed key generation operation
-// [spec] fig 5: DistKeyGenRound1
+// [spec] fig 5: DistKeyGenRound1.
 func (dp *DkgParticipant) DkgRound1(threshold, total uint32) (*DkgRound1Bcast, error) {
 	if total < threshold {
 		return nil, fmt.Errorf("parts cannot be less than threshold")

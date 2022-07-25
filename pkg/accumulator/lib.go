@@ -15,7 +15,7 @@ import (
 
 // dad constructs two polynomials - dA(x) and dD(x)
 // dA(y) = prod(y_A,t - y), t = 1...n
-// dD(y) = prod(y_D,t - y), t = 1...n
+// dD(y) = prod(y_D,t - y), t = 1...n.
 func dad(values []Element, y Element) (Element, error) {
 	if values == nil || y == nil {
 		return nil, fmt.Errorf("curve, values or y should not be nil")
@@ -63,7 +63,7 @@ func (p polynomialPoint) evaluate(x curves.Scalar) (curves.Point, error) {
 	return res, nil
 }
 
-// Add adds two PolynomialG1
+// Add adds two PolynomialG1.
 func (p polynomialPoint) Add(rhs polynomialPoint) (polynomialPoint, error) {
 	maxLen := int(math.Max(float64(len(p)), float64(len(rhs))))
 
@@ -89,7 +89,7 @@ func (p polynomialPoint) Add(rhs polynomialPoint) (polynomialPoint, error) {
 	return result, nil
 }
 
-// Mul for PolynomialG1 computes rhs * p, p is a polynomial, rhs is a value
+// Mul for PolynomialG1 computes rhs * p, p is a polynomial, rhs is a value.
 func (p polynomialPoint) Mul(rhs curves.Scalar) (polynomialPoint, error) {
 	result := make(polynomialPoint, len(p))
 
@@ -105,7 +105,7 @@ func (p polynomialPoint) Mul(rhs curves.Scalar) (polynomialPoint, error) {
 
 type polynomial []curves.Scalar
 
-// Add adds two polynomials
+// Add adds two polynomials.
 func (p polynomial) Add(rhs polynomial) (polynomial, error) {
 	maxLen := int(math.Max(float64(len(p)), float64(len(rhs))))
 	result := make([]curves.Scalar, maxLen)
@@ -131,7 +131,7 @@ func (p polynomial) Add(rhs polynomial) (polynomial, error) {
 	return result, nil
 }
 
-// Sub computes p-rhs and returns
+// Sub computes p-rhs and returns.
 func (p polynomial) Sub(rhs polynomial) (polynomial, error) {
 	maxLen := int(math.Max(float64(len(p)), float64(len(rhs))))
 	result := make([]curves.Scalar, maxLen)
@@ -157,7 +157,7 @@ func (p polynomial) Sub(rhs polynomial) (polynomial, error) {
 	return result, nil
 }
 
-// Mul multiplies two polynomials - p * rhs
+// Mul multiplies two polynomials - p * rhs.
 func (p polynomial) Mul(rhs polynomial) (polynomial, error) {
 	// Check for each coefficient that should not be nil
 	for i, c := range p {
@@ -191,7 +191,7 @@ func (p polynomial) Mul(rhs polynomial) (polynomial, error) {
 	return prod, nil
 }
 
-// MulScalar computes p * rhs, where rhs is a scalar value
+// MulScalar computes p * rhs, where rhs is a scalar value.
 func (p polynomial) MulScalar(rhs curves.Scalar) (polynomial, error) {
 	result := make(polynomial, len(p))
 	for i, c := range p {

@@ -21,7 +21,7 @@ const ell = 128
 // Curve contains EC group generator g and EC group modulus q
 // Pi, Qi are small p_i, q_i s.t. P_i = 2p_i+1, Q_i = 2q_i+1, which are Safe Primes
 // ScalarX is a random element from Z_N~ and it should be kept as secret
-// N is the field modulus
+// N is the field modulus.
 type CdlProofParams struct {
 	Curve                      elliptic.Curve
 	Pi, Qi, H1, H2, ScalarX, N *big.Int
@@ -31,28 +31,28 @@ type CdlProof struct {
 	u, s []*big.Int
 }
 
-// U, S are small u, s in JSON format
+// U, S are small u, s in JSON format.
 type cdlProofJSON struct {
 	U, S []*big.Int
 }
 
-func (cdlp CdlProof) MarshalJSON() ([]byte, error) {
+func (p CdlProof) MarshalJSON() ([]byte, error) {
 	data := cdlProofJSON{
-		U: cdlp.u,
-		S: cdlp.s,
+		U: p.u,
+		S: p.s,
 	}
 	return json.Marshal(data)
 }
 
-func (cdlp *CdlProof) UnmarshalJSON(bytes []byte) error {
+func (p *CdlProof) UnmarshalJSON(bytes []byte) error {
 	data := new(cdlProofJSON)
 
 	err := json.Unmarshal(bytes, &data)
 	if err != nil {
 		return err
 	}
-	cdlp.u = data.U
-	cdlp.s = data.S
+	p.u = data.U
+	p.s = data.S
 	return nil
 }
 
@@ -62,7 +62,7 @@ type CdlVerifyParams struct {
 }
 
 // Prove generates a CdlProof as specified in
-// [spec] §10.fig 16
+// [spec] §10.fig 16.
 func (p CdlProofParams) Prove() (*CdlProof, error) {
 	if p.Curve == nil || p.H1 == nil || p.H2 == nil || p.Pi == nil || p.Qi == nil || p.ScalarX == nil || p.N == nil {
 		return nil, fmt.Errorf("invalid params")
@@ -116,7 +116,7 @@ func (p CdlProofParams) Prove() (*CdlProof, error) {
 }
 
 // Verify checks the CdlProof as specified in
-// [spec] §10.fig 16
+// [spec] §10.fig 16.
 func (p CdlProof) Verify(cv *CdlVerifyParams) error {
 	if p.u == nil || p.s == nil {
 		return fmt.Errorf("proof values cannot be nil")
@@ -129,7 +129,7 @@ func (p CdlProof) Verify(cv *CdlVerifyParams) error {
 	// When you multiply two numbers m and n, the number of bits in the product cannot be less than max(m,n) and cannot be more than (m+n).
 	// (Unless one of the two numbers is a 0).
 	if cv.N.BitLen() < 1024 {
-		return fmt.Errorf("Modulus length is invalid")
+		return fmt.Errorf("modulus length is invalid")
 	}
 
 	// Step 1

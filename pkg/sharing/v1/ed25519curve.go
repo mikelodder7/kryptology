@@ -17,8 +17,10 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-var ed25519Initonce sync.Once
-var ed25519 Ed25519Curve
+var (
+	ed25519Initonce sync.Once
+	ed25519         Ed25519Curve
+)
 
 type Ed25519Curve struct {
 	*elliptic.CurveParams
@@ -44,14 +46,14 @@ func (curve *Ed25519Curve) Params() *elliptic.CurveParams {
 	return curve.CurveParams
 }
 
-func (curve *Ed25519Curve) IsOnCurve(x, y *big.Int) bool {
+func (*Ed25519Curve) IsOnCurve(x, y *big.Int) bool {
 	// ignore the x value since Ed25519 is canonical 32 bytes of y according to RFC 8032
 	// Set bytes returns an error if not a valid point
 	_, err := internal.BigInt2Ed25519Point(y)
 	return err == nil
 }
 
-func (curve *Ed25519Curve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
+func (*Ed25519Curve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	var p1, p2 *ed.Point
 	var err error
 	if y1.Cmp(big.NewInt(0)) == 0 {
@@ -74,7 +76,7 @@ func (curve *Ed25519Curve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	return new(big.Int), new(big.Int).SetBytes(p1.Bytes())
 }
 
-func (curve *Ed25519Curve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
+func (*Ed25519Curve) Double(_, y1 *big.Int) (*big.Int, *big.Int) {
 	p, err := internal.BigInt2Ed25519Point(y1)
 	if err != nil {
 		panic(err)
@@ -84,8 +86,8 @@ func (curve *Ed25519Curve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 	return new(big.Int), new(big.Int).SetBytes(p.Bytes())
 }
 
-func (curve *Ed25519Curve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
-	p, err := internal.BigInt2Ed25519Point(By)
+func (*Ed25519Curve) ScalarMult(_, capBy *big.Int, k []byte) (*big.Int, *big.Int) {
+	p, err := internal.BigInt2Ed25519Point(capBy)
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +104,7 @@ func (curve *Ed25519Curve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big
 	return new(big.Int), new(big.Int).SetBytes(p.Bytes())
 }
 
-func (curve *Ed25519Curve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
+func (*Ed25519Curve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	s, err := internal.BigInt2Ed25519Scalar(new(big.Int).SetBytes(k))
 	if err != nil {
 		var t [64]byte
@@ -116,13 +118,13 @@ func (curve *Ed25519Curve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	return new(big.Int), new(big.Int).SetBytes(p.Bytes())
 }
 
-func (curve *Ed25519Curve) Neg(Bx, By *big.Int) (*big.Int, *big.Int) {
+func (*Ed25519Curve) Neg(_, capBy *big.Int) (*big.Int, *big.Int) {
 	var p1 *ed.Point
 	var err error
-	if By.Cmp(big.NewInt(0)) == 0 {
+	if capBy.Cmp(big.NewInt(0)) == 0 {
 		p1 = ed.NewIdentityPoint()
 	} else {
-		p1, err = internal.BigInt2Ed25519Point(By)
+		p1, err = internal.BigInt2Ed25519Point(capBy)
 		if err != nil {
 			panic(err)
 		}
@@ -131,7 +133,7 @@ func (curve *Ed25519Curve) Neg(Bx, By *big.Int) (*big.Int, *big.Int) {
 	return new(big.Int), new(big.Int).SetBytes(p1.Bytes())
 }
 
-func (curve *Ed25519Curve) Hash(msg []byte) (*big.Int, *big.Int) {
+func (*Ed25519Curve) Hash(msg []byte) (*big.Int, *big.Int) {
 	data := new(curves.PointEd25519).Hash(msg).ToAffineCompressed()
 	pt, err := ed.NewIdentityPoint().SetBytes(data)
 	if err != nil {

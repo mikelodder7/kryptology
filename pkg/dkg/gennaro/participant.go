@@ -13,11 +13,11 @@ import (
 
 	"github.com/coinbase/kryptology/internal"
 	"github.com/coinbase/kryptology/pkg/core/curves"
-	"github.com/coinbase/kryptology/pkg/sharing/v1"
+	v1 "github.com/coinbase/kryptology/pkg/sharing/v1"
 )
 
 // Participant is a DKG player that contains information needed to perform DKG rounds
-// and yield a secret key share and public key when finished
+// and yield a secret key share and public key when finished.
 type Participant struct {
 	round                  int
 	curve                  elliptic.Curve
@@ -36,7 +36,7 @@ type Participant struct {
 // `threshold` is the minimum bound for the secret sharing scheme
 // `generator` is the blinding factor generator used by pedersen's verifiable secret sharing
 // `otherParticipants` is the integer value identifiers for the other participants
-// `id` and `otherParticipants` must be the set of integers 1,2,....,n
+// `id` and `otherParticipants` must be the set of integers 1,2,....,n.
 func NewParticipant(id, threshold uint32, generator *curves.EcPoint, scalar curves.EcScalar, otherParticipants ...uint32) (*Participant, error) {
 	if generator == nil || len(otherParticipants) == 0 {
 		return nil, internal.ErrNilArguments
@@ -84,7 +84,7 @@ func validIds(ids []uint32) error {
 	// Check
 	for i := 1; i <= len(ids); i++ {
 		if ok := idMap[uint32(i)]; !ok {
-			return fmt.Errorf("the ID list %v is invalid. Values must be 1,2,..,n.", ids)
+			return fmt.Errorf("the ID list %v is invalid. Values must be 1,2,..,n", ids)
 		}
 	}
 	return nil

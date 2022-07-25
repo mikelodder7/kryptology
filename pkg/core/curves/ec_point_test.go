@@ -206,7 +206,6 @@ func TestEcPointAddNeg(t *testing.T) {
 	p2, _ := NewScalarBaseMult(curve, num)
 
 	p3, err := p1.Add(p2)
-
 	if err != nil {
 		t.Errorf("EcPoint.Add failed: %v", err)
 	}

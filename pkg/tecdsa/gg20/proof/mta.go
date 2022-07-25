@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-// Package proof contains the multiplicative-to-additive (MtA) subprotocol from [spec] §7
+// Package proof contains the multiplicative-to-additive (MtA) subprotocol from [spec] §7.
 
 package proof
 
@@ -20,7 +20,7 @@ import (
 )
 
 // ResponseProofParams encapsulates the values over which a range proof (2) is computed.
-// [spec] §7.fig 8
+// [spec] §7.fig 8.
 type ResponseProofParams struct {
 	Curve        elliptic.Curve
 	DealerParams *dealer.ProofParams
@@ -30,7 +30,7 @@ type ResponseProofParams struct {
 }
 
 // ResponseVerifyParams encapsulates the values over which a range proof (2) is verified.
-// [spec] §7.fig 10
+// [spec] §7.fig 10.
 type ResponseVerifyParams struct {
 	Curve        elliptic.Curve
 	DealerParams *dealer.ProofParams
@@ -40,7 +40,7 @@ type ResponseVerifyParams struct {
 }
 
 // ResponseFinalizer captures the interface provided by a response proof
-// [spec] fig 13
+// [spec] fig 13.
 type ResponseFinalizer interface {
 	Finalize(vp *ResponseVerifyParams) (*big.Int, error)
 	FinalizeWc(vp *ResponseVerifyParams) (*big.Int, error)
@@ -48,14 +48,14 @@ type ResponseFinalizer interface {
 
 // ResponseProof encapsulates the values over which a range proof (2) is computed
 // and a portion of the random value is encrypted
-// [spec] §7.fig 8
+// [spec] §7.fig 8.
 type ResponseProof struct {
 	R2proof  *Range2Proof
 	C2, Beta *big.Int
 }
 
 // Proof1Params encapsulates the values over which a range proof (1) is computed.
-// [spec] fig 10
+// [spec] fig 10.
 type Proof1Params struct {
 	Curve        elliptic.Curve
 	Pk           *paillier.PublicKey
@@ -64,24 +64,24 @@ type Proof1Params struct {
 }
 
 // randProof1Params encapsulates the random values generated in proof (1)
-// [spec] fig 10
+// [spec] fig 10.
 type randProof1Params struct {
 	alpha, beta, gamma, rho *big.Int
 }
 
 // Range1Proof encapsulates the results returned in proof (1)
-// [spec] fig 10
+// [spec] fig 10.
 type Range1Proof struct {
 	z, e, s, s1, s2 *big.Int
 }
 
-// struct for JSON serialization
+// struct for JSON serialization.
 type range1ProofJSON struct {
 	Z, E, S, S1, S2 *big.Int
 }
 
 // proof2Params encapsulates the values over which a range proof (2) is computed.
-// [spec] fig 12
+// [spec] fig 12.
 type proof2Params struct {
 	curve           elliptic.Curve
 	dealerParams    *dealer.ProofParams
@@ -91,7 +91,7 @@ type proof2Params struct {
 }
 
 // verifyProof2Params encapsulates the values over which a range proof (2) is computed.
-// [spec] fig 12
+// [spec] fig 12.
 type verifyProof2Params struct {
 	curve        elliptic.Curve
 	dealerParams *dealer.ProofParams
@@ -101,26 +101,26 @@ type verifyProof2Params struct {
 }
 
 // Range2Proof encapsulates the results returned in proof (2)
-// [spec] fig 12
+// [spec] fig 12.
 type randProof2Params struct {
 	randProof1Params
 	rhoTick, sigma, tau *big.Int
 }
 
 // Range2Proof encapsulates the values over which a range proof (2) is computed.
-// [spec] fig 12
+// [spec] fig 12.
 type Range2Proof struct {
 	z, e, s, s1, s2 *big.Int
 	t, t1, t2       *big.Int
 }
 
-// JSON struct for serialization
+// JSON struct for serialization.
 type range2ProofJSON struct {
 	Z, E, S, S1, S2 *big.Int
 	T, T1, T2       *big.Int
 }
 
-// MarshalJSON converts Range1Proof into JSON
+// MarshalJSON converts Range1Proof into JSON.
 func (r Range1Proof) MarshalJSON() ([]byte, error) {
 	return json.Marshal(range1ProofJSON{
 		Z:  r.z,
@@ -131,7 +131,7 @@ func (r Range1Proof) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// UnmarshalJSON converts json into a Range1Proof
+// UnmarshalJSON converts json into a Range1Proof.
 func (r *Range1Proof) UnmarshalJSON(bytes []byte) error {
 	var proof range1ProofJSON
 	err := json.Unmarshal(bytes, &proof)
@@ -147,7 +147,7 @@ func (r *Range1Proof) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-// MarshalJSON converts Range2Proof into JSON format
+// MarshalJSON converts Range2Proof into JSON format.
 func (rP2 Range2Proof) MarshalJSON() ([]byte, error) {
 	data := range2ProofJSON{
 		Z:  rP2.z,
@@ -162,7 +162,7 @@ func (rP2 Range2Proof) MarshalJSON() ([]byte, error) {
 	return json.Marshal(data)
 }
 
-// UnmarshalJSON converts json into a Range2Proof
+// UnmarshalJSON converts json into a Range2Proof.
 func (rP2 *Range2Proof) UnmarshalJSON(bytes []byte) error {
 	data := new(range2ProofJSON)
 
@@ -184,20 +184,20 @@ func (rP2 *Range2Proof) UnmarshalJSON(bytes []byte) error {
 }
 
 // Prove computes a range proof over these parameters
-// [spec] fig 11: MtaResponse
-func (rp ResponseProofParams) Prove() (*ResponseProof, error) {
+// [spec] fig 11: MtaResponse.
+func (rp *ResponseProofParams) Prove() (*ResponseProof, error) {
 	return genResponseProof(rp, false)
 }
 
 // ProveWc computes:
-// [spec] fig 11: MtaResponse_wc
-func (rp ResponseProofParams) ProveWc() (*ResponseProof, error) {
+// [spec] fig 11: MtaResponse_wc.
+func (rp *ResponseProofParams) ProveWc() (*ResponseProof, error) {
 	return genResponseProof(rp, true)
 }
 
 // genResponseProof computes both
-// [spec] fig 11: MtAResponse and MtAResponse_wc
-func genResponseProof(rp ResponseProofParams, wc bool) (*ResponseProof, error) {
+// [spec] fig 11: MtAResponse and MtAResponse_wc.
+func genResponseProof(rp *ResponseProofParams, wc bool) (*ResponseProof, error) {
 	// 1. c_b = PaillierMultiply(SmallB, c_1)
 	cb, err := rp.Pk.Mul(rp.SmallB, rp.C1)
 	if err != nil {
@@ -264,7 +264,7 @@ func genResponseProof(rp ResponseProofParams, wc bool) (*ResponseProof, error) {
 }
 
 // Finalize checks a range (2) proof: [spec] fig 13: MtaFinalize
-// and returns the paillier encrypted random value
+// and returns the paillier encrypted random value.
 func (rp ResponseProof) Finalize(vp *ResponseVerifyParams) (*big.Int, error) {
 	v2Params := verifyProof2Params{
 		curve:        vp.Curve,
@@ -288,7 +288,7 @@ func (rp ResponseProof) Finalize(vp *ResponseVerifyParams) (*big.Int, error) {
 }
 
 // FinalizeWc checks a range (2) proof: [spec] fig 13: MtaFinalize_wc
-// and returns the paillier encrypted random value
+// and returns the paillier encrypted random value.
 func (rp ResponseProof) FinalizeWc(vp *ResponseVerifyParams) (*big.Int, error) {
 	v2Params := verifyProof2Params{
 		curve:        vp.Curve,
@@ -315,8 +315,8 @@ func (rp ResponseProof) FinalizeWc(vp *ResponseVerifyParams) (*big.Int, error) {
 }
 
 // Prove computes a range proof over these parameters
-// [spec] fig 10: MtaProveRange1
-func (pp Proof1Params) Prove() (*Range1Proof, error) {
+// [spec] fig 10: MtaProveRange1.
+func (pp *Proof1Params) Prove() (*Range1Proof, error) {
 	if err := core.In(pp.A, pp.Curve.Params().N); err != nil {
 		return nil, err
 	}
@@ -333,8 +333,8 @@ func (pp Proof1Params) Prove() (*Range1Proof, error) {
 }
 
 // Fetches random values for use in range proof
-// [spec] fig 10: MtaProveRange1
-func rand1(N, Ntilde, q *big.Int) (*randProof1Params, error) {
+// [spec] fig 10: MtaProveRange1.
+func rand1(capN, capNtilde, q *big.Int) (*randProof1Params, error) {
 	// Rings in which we'll operate
 	// q^3
 	q3, err := core.Exp(q, big.NewInt(3), nil)
@@ -342,14 +342,14 @@ func rand1(N, Ntilde, q *big.Int) (*randProof1Params, error) {
 		return nil, err
 	}
 
-	// q^3(N~)
-	q3Ntilde, err := core.Mul(q3, Ntilde, nil)
+	// q^3(capN~)
+	q3Ntilde, err := core.Mul(q3, capNtilde, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// q(N~)
-	qNtilde, err := core.Mul(q, Ntilde, nil)
+	// q(capN~)
+	qNtilde, err := core.Mul(q, capNtilde, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +362,7 @@ func rand1(N, Ntilde, q *big.Int) (*randProof1Params, error) {
 	}
 
 	// 2: \beta \getsr Z^*_N
-	beta, err := core.Rand(N)
+	beta, err := core.Rand(capN)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func rand1(N, Ntilde, q *big.Int) (*randProof1Params, error) {
 		return nil, err
 	}
 
-	// 4: \rho \getsr Z_{q^N~}
+	// 4: \rho \getsr Z_{q^capN~}
 	rho, err := core.Rand(qNtilde)
 	if err != nil {
 		return nil, err
@@ -386,8 +386,8 @@ func rand1(N, Ntilde, q *big.Int) (*randProof1Params, error) {
 }
 
 // genProof1 deterministically computes a range proof
-// [spec] fig 10: MtaProveRange1
-func genProof1(in Proof1Params, rp *randProof1Params) (*Range1Proof, error) {
+// [spec] fig 10: MtaProveRange1.
+func genProof1(in *Proof1Params, rp *randProof1Params) (*Range1Proof, error) {
 	// 6: z = h_1^a * h_2^\rho mod N~
 	z, err := pedersen(in.DealerParams.H1, in.DealerParams.H2, in.A, rp.rho, in.DealerParams.N)
 	if err != nil {
@@ -444,8 +444,8 @@ func genProof1(in Proof1Params, rp *randProof1Params) (*Range1Proof, error) {
 	return pi, nil
 }
 
-// Verify checks a range (1) proof: [spec] §7.fig 7: MtaVerifyRange1
-func (pi Range1Proof) Verify(pp *Proof1Params) error {
+// Verify checks a range (1) proof: [spec] §7.fig 7: MtaVerifyRange1.
+func (r *Range1Proof) Verify(pp *Proof1Params) error {
 	params := pp.Curve.Params()
 	// Rings in which we'll operate
 	q3, err := core.Exp(params.N, big.NewInt(3), nil) // q^3
@@ -456,31 +456,31 @@ func (pi Range1Proof) Verify(pp *Proof1Params) error {
 	// 1: Set N = pk.N
 
 	// 2: Check range. s_1 > q^3 => return false
-	if pi.s1.Cmp(q3) == 1 {
+	if r.s1.Cmp(q3) == 1 {
 		return fmt.Errorf("s1 > q3")
 	}
 
 	// step 3
-	uHat, err := pi.uHatConstruct(pp)
+	uHat, err := r.uHatConstruct(pp)
 	if err != nil {
 		return fmt.Errorf("u hat construction error: %w", err)
 	}
 
 	// step 4
-	wHat, err := pi.wHatConstruct(pp)
+	wHat, err := r.wHatConstruct(pp)
 	if err != nil {
 		return fmt.Errorf("w hat construction error: %w", err)
 	}
 
 	// 5: Compute e = H(g,q,Pk,N~,h_1,h_2,c,z,uHat,wHat)
-	bytes, err := core.FiatShamir(params.Gx, params.Gy, params.N, pp.Pk.N, pp.DealerParams.N, pp.DealerParams.H1, pp.DealerParams.H2, pp.C, pi.z, uHat, wHat)
+	bytes, err := core.FiatShamir(params.Gx, params.Gy, params.N, pp.Pk.N, pp.DealerParams.N, pp.DealerParams.H1, pp.DealerParams.H2, pp.C, r.z, uHat, wHat)
 	if err != nil {
 		return err
 	}
 	eHat := new(big.Int).SetBytes(bytes)
 
 	// 6: if e != eHat return false
-	if !core.ConstantTimeEq(pi.e, eHat) {
+	if !core.ConstantTimeEq(r.e, eHat) {
 		return fmt.Errorf("e != eHat")
 	}
 
@@ -488,10 +488,10 @@ func (pi Range1Proof) Verify(pp *Proof1Params) error {
 	return nil
 }
 
-func (pi Range1Proof) uHatConstruct(pp *Proof1Params) (*big.Int, error) {
+func (r *Range1Proof) uHatConstruct(pp *Proof1Params) (*big.Int, error) {
 	// 3: \hat{u} = (N+1)^{s_1}s^{N}c^{-e} mod N^2
 
-	x, err := inc(pi.s1, pi.s, pp.Pk.N) // x = (N+1)^{s_1}(S^N) mod N^2
+	x, err := inc(r.s1, r.s, pp.Pk.N) // x = (N+1)^{s_1}(S^N) mod N^2
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ func (pi Range1Proof) uHatConstruct(pp *Proof1Params) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	y, err := core.Exp(cInv, pi.e, pp.Pk.N2) // y = c^{-e} mod N^2
+	y, err := core.Exp(cInv, r.e, pp.Pk.N2) // y = c^{-e} mod N^2
 	if err != nil {
 		return nil, err
 	}
@@ -510,18 +510,18 @@ func (pi Range1Proof) uHatConstruct(pp *Proof1Params) (*big.Int, error) {
 	return uHat, nil
 }
 
-func (pi Range1Proof) wHatConstruct(pp *Proof1Params) (*big.Int, error) {
+func (r *Range1Proof) wHatConstruct(pp *Proof1Params) (*big.Int, error) {
 	// 4: \hat{w} = h_1^{s_1}*h_2^{s_2}*z^{-e} mod N~
 
-	a, err := pedersen(pp.DealerParams.H1, pp.DealerParams.H2, pi.s1, pi.s2, pp.DealerParams.N) // a = h_1^{s_1}*h_2^{s_2} mod N~
+	a, err := pedersen(pp.DealerParams.H1, pp.DealerParams.H2, r.s1, r.s2, pp.DealerParams.N) // a = h_1^{s_1}*h_2^{s_2} mod N~
 	if err != nil {
 		return nil, err
 	}
-	zInv, err := core.Inv(pi.z, pp.DealerParams.N) // zInv = z^{-1} mod N~
+	zInv, err := core.Inv(r.z, pp.DealerParams.N) // zInv = z^{-1} mod N~
 	if err != nil {
 		return nil, err
 	}
-	b, err := core.Exp(zInv, pi.e, pp.DealerParams.N) // SmallB = z^{-e} mod N~
+	b, err := core.Exp(zInv, r.e, pp.DealerParams.N) // SmallB = z^{-e} mod N~
 	if err != nil {
 		return nil, err
 	}
@@ -533,8 +533,8 @@ func (pi Range1Proof) wHatConstruct(pp *Proof1Params) (*big.Int, error) {
 }
 
 // Prove computes a range proof over these parameters
-// [spec] fig 12: MtaProveRange2
-func (pp proof2Params) Prove() (*Range2Proof, error) {
+// [spec] fig 12: MtaProveRange2.
+func (pp *proof2Params) Prove() (*Range2Proof, error) {
 	randParams, err := rand2(pp.pk.N, pp.dealerParams.N, pp.curve.Params().N)
 	if err != nil {
 		return nil, err
@@ -543,10 +543,10 @@ func (pp proof2Params) Prove() (*Range2Proof, error) {
 }
 
 // Prove computes a range proof over these parameters
-// [spec] fig 12: MtaProveRange2_wc
-func (pp proof2Params) ProveWc() (*Range2Proof, error) {
+// [spec] fig 12: MtaProveRange2_wc.
+func (pp *proof2Params) ProveWc() (*Range2Proof, error) {
 	if pp.X == nil {
-		return nil, fmt.Errorf("X must have a value")
+		return nil, fmt.Errorf("X must have a value") //nolint:revive // It's okay to start this error message with an error message.
 	}
 	randParams, err := rand2(pp.pk.N, pp.dealerParams.N, pp.curve.Params().N)
 	if err != nil {
@@ -555,8 +555,8 @@ func (pp proof2Params) ProveWc() (*Range2Proof, error) {
 	return genProof2(pp, randParams, true)
 }
 
-// genProof2 creates the proof for MtAProveRange2
-func genProof2(pp proof2Params, rp *randProof2Params, wc bool) (*Range2Proof, error) {
+// genProof2 creates the proof for MtAProveRange2.
+func genProof2(pp *proof2Params, rp *randProof2Params, wc bool) (*Range2Proof, error) {
 	curveParams := pp.curve.Params()
 	if err := core.In(pp.x, curveParams.N); err != nil {
 		return nil, fmt.Errorf("x is not in q")
@@ -565,11 +565,11 @@ func genProof2(pp proof2Params, rp *randProof2Params, wc bool) (*Range2Proof, er
 	// calls MtAResponse    (γi,g, q, pkj,nTilde, h1, h2, cj) or
 	// calls MtAResponse_wc (wi,g, q, pkj,nTilde, h1, h2, cj, Wi)
 	// receives MtAResponse (SmallB, g, q, Pk, nTilde, h1, h2, C1)
-	//1. Compute cb = PaillierMultiply(SmallB, C1 )
-	//2. Choose β′ ←$ ZN
-	//3. Compute (cβ,rβ) = PaillierEncryptAndReturnRandomness(Pk,β′)
-	//4. Compute C2 = PaillierAdd(cb , cβ )
-	//5. Compute β = −β′ mod q
+	// 1. Compute cb = PaillierMultiply(SmallB, C1 )
+	// 2. Choose β′ ←$ ZN
+	// 3. Compute (cβ,rβ) = PaillierEncryptAndReturnRandomness(Pk,β′)
+	// 4. Compute C2 = PaillierAdd(cb , cβ )
+	// 5. Compute β = −β′ mod q
 	// calls    MtAProveRange2    (g, q, Pk, nTilde, h1, h2, SmallB, β ,rβ,C1, C2)
 	// receives MtAProveRange2    (g, q, Pk, nTilde, h1, h2, x, y, r, C1, C2)
 	// receives MtAProveRange2_wc (g, q, Pk, nTilde, h1, h2, x, y, r, C1, C2, X)
@@ -682,17 +682,17 @@ func genProof2(pp proof2Params, rp *randProof2Params, wc bool) (*Range2Proof, er
 	}, nil
 }
 
-// Verify checks a range (2) proof: [spec] §7.fig 9: MtaVerifyRange2
-func (pi Range2Proof) Verify(pp *verifyProof2Params) error {
-	return verify2Proof(pi, pp, false)
+// Verify checks a range (2) proof: [spec] §7.fig 9: MtaVerifyRange2.
+func (rP2 *Range2Proof) Verify(pp *verifyProof2Params) error {
+	return verify2Proof(rP2, pp, false)
 }
 
-// VerifyWc checks a range (2) proof: [spec] §7.fig 9: MtaVerifyRange2_wc
-func (pi Range2Proof) VerifyWc(pp *verifyProof2Params) error {
-	return verify2Proof(pi, pp, true)
+// VerifyWc checks a range (2) proof: [spec] §7.fig 9: MtaVerifyRange2_wc.
+func (rP2 *Range2Proof) VerifyWc(pp *verifyProof2Params) error {
+	return verify2Proof(rP2, pp, true)
 }
 
-func verify2Proof(pi Range2Proof, pp *verifyProof2Params, wc bool) error {
+func verify2Proof(pi *Range2Proof, pp *verifyProof2Params, wc bool) error {
 	// 1: Set N = pk.N
 
 	// Rings in which we'll operate
@@ -772,9 +772,9 @@ func verify2Proof(pi Range2Proof, pp *verifyProof2Params, wc bool) error {
 	return nil
 }
 
-func (pi Range2Proof) uHatConstruct(pp *verifyProof2Params) (*curves.EcPoint, error) {
+func (rP2 *Range2Proof) uHatConstruct(pp *verifyProof2Params) (*curves.EcPoint, error) {
 	// 3. Compute s1' = s1 mod q
-	s1Tick := new(big.Int).Mod(pi.s1, pp.curve.Params().N)
+	s1Tick := new(big.Int).Mod(rP2.s1, pp.curve.Params().N)
 
 	// 4: \hat{u} = g^{s^\prime_1} . X^{-e} in G
 
@@ -783,7 +783,7 @@ func (pi Range2Proof) uHatConstruct(pp *verifyProof2Params) (*curves.EcPoint, er
 		return nil, err
 	}
 
-	negE := new(big.Int).Neg(pi.e)
+	negE := new(big.Int).Neg(rP2.e)
 
 	XnegE, err := pp.X.ScalarMult(negE)
 	if err != nil {
@@ -797,20 +797,20 @@ func (pi Range2Proof) uHatConstruct(pp *verifyProof2Params) (*curves.EcPoint, er
 	return uHat, err
 }
 
-func (pi Range2Proof) zHatTickConstruct(pp *verifyProof2Params) (*big.Int, error) {
+func (rP2 *Range2Proof) zHatTickConstruct(pp *verifyProof2Params) (*big.Int, error) {
 	// 5: \hat{z} = (h_1)^s_1 . (h_2)^{s_2}z^{-e} mod \tilde{N}
 
 	// h_1^s_1 . h_2^s_2 mod \tilde{N}
-	pedersenHS, err := pedersen(pp.dealerParams.H1, pp.dealerParams.H2, pi.s1, pi.s2, pp.dealerParams.N)
+	pedersenHS, err := pedersen(pp.dealerParams.H1, pp.dealerParams.H2, rP2.s1, rP2.s2, pp.dealerParams.N)
 	if err != nil {
 		return nil, err
 	}
 
-	zInv, err := core.Inv(pi.z, pp.dealerParams.N)
+	zInv, err := core.Inv(rP2.z, pp.dealerParams.N)
 	if err != nil {
 		return nil, err
 	}
-	zInvToE := new(big.Int).Exp(zInv, pi.e, pp.dealerParams.N)
+	zInvToE := new(big.Int).Exp(zInv, rP2.e, pp.dealerParams.N)
 
 	zHat, err := core.Mul(pedersenHS, zInvToE, pp.dealerParams.N)
 	if err != nil {
@@ -819,11 +819,11 @@ func (pi Range2Proof) zHatTickConstruct(pp *verifyProof2Params) (*big.Int, error
 	return zHat, err
 }
 
-func (pi Range2Proof) vHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
+func (rP2 *Range2Proof) vHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
 	// 6: \hat{v} = (c_1)^s_1 . s^N . (N+1)^t_1 . c^-e_2 mod N^2
 
 	// s^N . (N+1)^t_1
-	pedersenInc, err := inc(pi.t1, pi.s, pp.pk.N)
+	pedersenInc, err := inc(rP2.t1, rP2.s, pp.pk.N)
 	if err != nil {
 		return nil, err
 	}
@@ -834,7 +834,7 @@ func (pi Range2Proof) vHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
 	}
 
 	// c_1^s_1 . c^-e_2
-	pedersenCSCE, err := pedersen(pp.c1, c2Inv, pi.s1, pi.e, pp.pk.N2)
+	pedersenCSCE, err := pedersen(pp.c1, c2Inv, rP2.s1, rP2.e, pp.pk.N2)
 	if err != nil {
 		return nil, err
 	}
@@ -846,20 +846,20 @@ func (pi Range2Proof) vHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
 	return vHat, nil
 }
 
-func (pi Range2Proof) wHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
+func (rP2 *Range2Proof) wHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
 	// 7: \hat{w} = (h_1)^t_1 . (h_2)^t_2 . t^-e mod \tilde{N}
 
 	// h_1^t_1 . h_2^t_2 mod \tilde{N}
-	pedersenHT, err := pedersen(pp.dealerParams.H1, pp.dealerParams.H2, pi.t1, pi.t2, pp.dealerParams.N)
+	pedersenHT, err := pedersen(pp.dealerParams.H1, pp.dealerParams.H2, rP2.t1, rP2.t2, pp.dealerParams.N)
 	if err != nil {
 		return nil, err
 	}
 
-	tInv, err := core.Inv(pi.t, pp.dealerParams.N)
+	tInv, err := core.Inv(rP2.t, pp.dealerParams.N)
 	if err != nil {
 		return nil, err
 	}
-	tInvToE := new(big.Int).Exp(tInv, pi.e, pp.dealerParams.N)
+	tInvToE := new(big.Int).Exp(tInv, rP2.e, pp.dealerParams.N)
 
 	wHat, err := core.Mul(pedersenHT, tInvToE, pp.dealerParams.N)
 	if err != nil {
@@ -869,8 +869,8 @@ func (pi Range2Proof) wHatConstruct(pp *verifyProof2Params) (*big.Int, error) {
 }
 
 // Fetches random values for use in range proof
-// [spec] fig 12: MtaProveRange2
-func rand2(N, Ntilde, q *big.Int) (*randProof2Params, error) {
+// [spec] fig 12: MtaProveRange2.
+func rand2(capN, capNtilde, q *big.Int) (*randProof2Params, error) {
 	// Rings in which we'll operate
 	q3, err := core.Exp(q, big.NewInt(3), nil) // q^3
 	if err != nil {
@@ -880,11 +880,11 @@ func rand2(N, Ntilde, q *big.Int) (*randProof2Params, error) {
 	if err != nil {
 		return nil, err
 	}
-	q3Ntilde, err := core.Mul(q3, Ntilde, nil) // q^3(N~)
+	q3Ntilde, err := core.Mul(q3, capNtilde, nil) // q^3(capN~)
 	if err != nil {
 		return nil, err
 	}
-	qNtilde, err := core.Mul(q, Ntilde, nil) // q(N~)
+	qNtilde, err := core.Mul(q, capNtilde, nil) // q(capN~)
 	if err != nil {
 		return nil, err
 	}
@@ -905,7 +905,7 @@ func rand2(N, Ntilde, q *big.Int) (*randProof2Params, error) {
 	if err != nil {
 		return nil, err
 	}
-	beta, err := core.Rand(N)
+	beta, err := core.Rand(capN)
 	if err != nil {
 		return nil, err
 	}

@@ -7,10 +7,13 @@
 package mina
 
 import (
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/coinbase/kryptology/pkg/core/curves"
+	"github.com/coinbase/kryptology/pkg/core/curves/native"
 	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fq"
 )
 
@@ -25,10 +28,12 @@ func TestNewKeys(t *testing.T) {
 
 func TestSecretKeySignTransaction(t *testing.T) {
 	// See https://github.com/MinaProtocol/c-reference-signer/blob/master/reference_signer.c#L15
-	skValue := &fq.Fq{
+	skValue := fq.PastaFqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0xca14d6eed923f6e3, 0x61185a1b5e29e6b2, 0xe26d38de9c30753b, 0x3fdf0efb0a5714,
-	}
-	sk := &SecretKey{value: skValue}
+	})
+	s := new(curves.ScalarPallas)
+	s.Value = skValue
+	sk := &SecretKey{value: s}
 	/*
 	   This illustrates constructing and signing the following transaction.
 	   amounts are in nanocodas.
@@ -84,10 +89,12 @@ func TestSecretKeySignTransaction(t *testing.T) {
 
 func TestSecretKeySignMessage(t *testing.T) {
 	// See https://github.com/MinaProtocol/c-reference-signer/blob/master/reference_signer.c#L15
-	skValue := &fq.Fq{
+	skValue := fq.PastaFqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0xca14d6eed923f6e3, 0x61185a1b5e29e6b2, 0xe26d38de9c30753b, 0x3fdf0efb0a5714,
-	}
-	sk := &SecretKey{value: skValue}
+	})
+	s := new(curves.ScalarPallas)
+	s.Value = skValue
+	sk := &SecretKey{value: s}
 	sig, err := sk.SignMessage("A test message.")
 	require.NoError(t, err)
 	pk := sk.GetPublicKey()
@@ -96,10 +103,12 @@ func TestSecretKeySignMessage(t *testing.T) {
 
 func TestSecretKeySignTransactionStaking(t *testing.T) {
 	// https://github.com/MinaProtocol/c-reference-signer/blob/master/reference_signer.c#L128
-	skValue := &fq.Fq{
+	skValue := fq.PastaFqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0xca14d6eed923f6e3, 0x61185a1b5e29e6b2, 0xe26d38de9c30753b, 0x3fdf0efb0a5714,
-	}
-	sk := &SecretKey{value: skValue}
+	})
+	s := new(curves.ScalarPallas)
+	s.Value = skValue
+	sk := &SecretKey{value: s}
 
 	feePayerPk := new(PublicKey)
 	err := feePayerPk.ParseAddress("B62qiy32p8kAKnny8ZFwoMhYpBppM1DWVCqAPBYNcXnsAHhnfAAuXgg")
@@ -129,4 +138,35 @@ func TestSecretKeySignTransactionStaking(t *testing.T) {
 	require.NoError(t, err)
 	pk := sk.GetPublicKey()
 	require.NoError(t, pk.VerifyTransaction(sig, txn))
+}
+
+func TestKeyMarshal(t *testing.T) {
+	pk, sk, err := NewKeys()
+	require.NoError(t, err)
+	blob, err := sk.MarshalBinary()
+	require.NoError(t, err)
+	sk2 := new(SecretKey)
+	err = sk2.UnmarshalBinary(blob)
+	require.NoError(t, err)
+	require.Equal(t, sk, sk2)
+
+	blob, err = pk.MarshalBinary()
+	require.NoError(t, err)
+	pk2 := new(PublicKey)
+	err = pk2.UnmarshalBinary(blob)
+	require.NoError(t, err)
+	require.Equal(t, pk, pk2)
+
+	for i := range blob {
+		blob[i] = 0
+	}
+	err = pk2.UnmarshalBinary(blob)
+	require.Error(t, err)
+}
+
+func TestKeySetPallasPoint(t *testing.T) {
+	pt, _ := new(curves.PointPallas).Random(crand.Reader).(*curves.PointPallas)
+	pk := new(PublicKey)
+	pk.SetPointPallas(pt)
+	require.Equal(t, pk.value, pt)
 }

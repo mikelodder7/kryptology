@@ -19,8 +19,7 @@ type FeldmanVerifier struct {
 
 func (v FeldmanVerifier) Verify(share *ShamirShare) error {
 	curve := curves.GetCurveByName(v.Commitments[0].CurveName())
-	err := share.Validate(curve)
-	if err != nil {
+	if err := share.Validate(curve); err != nil {
 		return err
 	}
 	x := curve.Scalar.New(int(share.Id))

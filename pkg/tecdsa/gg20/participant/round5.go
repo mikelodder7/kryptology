@@ -15,21 +15,21 @@ import (
 )
 
 // Round5Bcast are the values to be broadcast to the other players at the conclusion
-// of signing round 5
+// of signing round 5.
 type Round5Bcast struct {
 	Rbar  *curves.EcPoint
 	Proof *proof.PdlProof
 }
 
 // Round5P2PSend are the values sent to each participant at the conclusion of
-// signing round 5
+// signing round 5.
 type Round5P2PSend = proof.PdlProof
 
 // SignRound5 performs the round 5 signing operation. It takes input
 // the Witness values broadcast from signers at the conclusion of
 // round 4.
 // Trusted Dealer Mode: see [spec] fig 7: SignRound5
-// DKG Mode: see [spec] fig 8: SignRound5
+// DKG Mode: see [spec] fig 8: SignRound5.
 func (signer *Signer) SignRound5(witnesses map[uint32]*Round4Bcast) (*Round5Bcast, map[uint32]*Round5P2PSend, error) {
 	if err := signer.verifyStateMap(5, witnesses); err != nil {
 		return nil, nil, err
@@ -107,7 +107,7 @@ func (signer *Signer) SignRound5(witnesses map[uint32]*Round4Bcast) (*Round5Bcas
 
 	if signer.state.keyGenType.IsTrustedDealer() {
 		// 10. TrustedDealer - Compute π^{kCONSIST}_i = ProvePDL(g, q, R, pk_i, N~, h1, h2, k_i, \overline{R_i}, c_i, r_i)
-		pdlParams.DealerParams = signer.state.keyGenType.GetProofParams(0) //note ID is ignored for trusted dealer
+		pdlParams.DealerParams = signer.state.keyGenType.GetProofParams(0) // note ID is ignored for trusted dealer
 		bcast.Proof, err = pdlParams.Prove()
 		if err != nil {
 			return nil, nil, err

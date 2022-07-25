@@ -24,7 +24,7 @@ func newRefreshProtocolMessage(payload []byte, round string, version uint) *prot
 
 func versionIsSupported(messageVersion uint) error {
 	if messageVersion < uint(protocol.Version1) {
-		return errors.New("only version 1 is supported.")
+		return errors.New("only version 1 is supported")
 	}
 	return nil
 }
@@ -33,7 +33,6 @@ func encodeRefreshRound1Output(seed curves.Scalar, version uint) (*protocol.Mess
 	if err := versionIsSupported(version); err != nil {
 		return nil, errors.Wrap(err, "version error")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(&seed); err != nil {
@@ -55,7 +54,7 @@ func decodeRefreshRound2Input(m *protocol.Message) (curves.Scalar, error) {
 	return *decoded, nil
 }
 
-func encodeRefreshRound2Output(output *refresh.RefreshRound2Output, version uint) (*protocol.Message, error) {
+func encodeRefreshRound2Output(output *refresh.Round2Output, version uint) (*protocol.Message, error) {
 	if err := versionIsSupported(version); err != nil {
 		return nil, errors.Wrap(err, "version error")
 	}
@@ -67,13 +66,13 @@ func encodeRefreshRound2Output(output *refresh.RefreshRound2Output, version uint
 	return newRefreshProtocolMessage(buf.Bytes(), "2", version), nil
 }
 
-func decodeRefreshRound3Input(m *protocol.Message) (*refresh.RefreshRound2Output, error) {
+func decodeRefreshRound3Input(m *protocol.Message) (*refresh.Round2Output, error) {
 	if err := versionIsSupported(m.Version); err != nil {
 		return nil, errors.Wrap(err, "version error")
 	}
 	buf := bytes.NewBuffer(m.Payloads[payloadKey])
 	dec := gob.NewDecoder(buf)
-	decoded := new(refresh.RefreshRound2Output)
+	decoded := new(refresh.Round2Output)
 	if err := dec.Decode(decoded); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -185,7 +184,6 @@ func EncodeAliceRefreshOutput(result *dkg.AliceOutput, version uint) (*protocol.
 	if err := versionIsSupported(version); err != nil {
 		return nil, errors.Wrap(err, "version error")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(result); err != nil {
@@ -199,7 +197,6 @@ func DecodeAliceRefreshResult(m *protocol.Message) (*dkg.AliceOutput, error) {
 	if err := versionIsSupported(m.Version); err != nil {
 		return nil, errors.Wrap(err, "version error")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer(m.Payloads[payloadKey])
 	dec := gob.NewDecoder(buf)
 	decoded := new(dkg.AliceOutput)
@@ -214,7 +211,6 @@ func EncodeBobRefreshOutput(result *dkg.BobOutput, version uint) (*protocol.Mess
 	if err := versionIsSupported(version); err != nil {
 		return nil, errors.Wrap(err, "version error")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(result); err != nil {

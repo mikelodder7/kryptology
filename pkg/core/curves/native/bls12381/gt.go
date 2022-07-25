@@ -7,13 +7,13 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves/native"
 )
 
-// GtFieldBytes is the number of bytes needed to represent this field
+// GtFieldBytes is the number of bytes needed to represent this field.
 const GtFieldBytes = 576
 
-// Gt is the target group
+// Gt is the target group.
 type Gt fp12
 
-// Random generates a random field element
+// Random generates a random field element.
 func (gt *Gt) Random(reader io.Reader) (*Gt, error) {
 	_, err := (*fp12)(gt).Random(reader)
 	return gt, err
@@ -70,30 +70,30 @@ func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
 	return gt
 }
 
-// IsZero returns 1 if gt == 0, 0 otherwise
+// IsZero returns 1 if gt == 0, 0 otherwise.
 func (gt *Gt) IsZero() int {
 	return (*fp12)(gt).IsZero()
 }
 
-// IsOne returns 1 if gt == 1, 0 otherwise
+// IsOne returns 1 if gt == 1, 0 otherwise.
 func (gt *Gt) IsOne() int {
 	return (*fp12)(gt).IsOne()
 }
 
-// SetOne gt = one
+// SetOne gt = one.
 func (gt *Gt) SetOne() *Gt {
 	(*fp12)(gt).SetOne()
 	return gt
 }
 
-// Set copies a into gt
+// Set copies a into gt.
 func (gt *Gt) Set(a *Gt) *Gt {
 	gt.A.Set(&a.A)
 	gt.B.Set(&a.B)
 	return gt
 }
 
-// Bytes returns the Gt field byte representation
+// Bytes returns the Gt field byte representation.
 func (gt *Gt) Bytes() [GtFieldBytes]byte {
 	var out [GtFieldBytes]byte
 	t := gt.A.A.A.Bytes()
@@ -162,12 +162,12 @@ func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (*Gt, int) {
 		valid[10] & valid[11]
 }
 
-// Equal returns 1 if gt == rhs, 0 otherwise
+// Equal returns 1 if gt == rhs, 0 otherwise.
 func (gt *Gt) Equal(rhs *Gt) int {
 	return (*fp12)(gt).Equal((*fp12)(rhs))
 }
 
-// Generator returns the base point
+// Generator returns the base point.
 func (gt *Gt) Generator() *Gt {
 	// pairing(&G1::generator(), &G2::generator())
 	gt.Set((*Gt)(&fp12{
@@ -293,13 +293,13 @@ func (gt *Gt) Add(arg1, arg2 *Gt) *Gt {
 	return gt
 }
 
-// Double this value
+// Double this value.
 func (gt *Gt) Double(a *Gt) *Gt {
 	(*fp12)(gt).Square((*fp12)(a))
 	return gt
 }
 
-// Sub subtracts the two values
+// Sub subtracts the two values.
 func (gt *Gt) Sub(arg1, arg2 *Gt) *Gt {
 	var t fp12
 	t.Conjugate((*fp12)(arg2))
@@ -307,13 +307,13 @@ func (gt *Gt) Sub(arg1, arg2 *Gt) *Gt {
 	return gt
 }
 
-// Neg negates this value
+// Neg negates this value.
 func (gt *Gt) Neg(a *Gt) *Gt {
 	(*fp12)(gt).Conjugate((*fp12)(a))
 	return gt
 }
 
-// Mul multiplies this value by the input scalar
+// Mul multiplies this value by the input scalar.
 func (gt *Gt) Mul(a *Gt, s *native.Field) *Gt {
 	var f, p fp12
 	f.Set((*fp12)(a))
@@ -337,13 +337,13 @@ func (gt *Gt) Mul(a *Gt, s *native.Field) *Gt {
 	return gt
 }
 
-// Square this value
+// Square this value.
 func (gt *Gt) Square(a *Gt) *Gt {
 	(*fp12)(gt).cyclotomicSquare((*fp12)(a))
 	return gt
 }
 
-// Invert this value
+// Invert this value.
 func (gt *Gt) Invert(a *Gt) (*Gt, int) {
 	_, wasInverted := (*fp12)(gt).Invert((*fp12)(a))
 	return gt, wasInverted

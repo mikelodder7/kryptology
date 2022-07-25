@@ -44,32 +44,34 @@ package fq
 
 import "math/bits"
 
-type fiat_pasta_fq_uint1 uint64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
-type fiat_pasta_fq_int1 int64   // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
+type (
+	fiatPastaFqUint1 uint64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
+	fiatPastaFqInt1  int64  // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
+)
 
-// The type fiat_pasta_fq_montgomery_domain_field_element is a field element in the Montgomery domain.
+// The type fiatPastaFqMontgomeryDomainFieldElement is a field element in the Montgomery domain.
 //
-// Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-type fiat_pasta_fq_montgomery_domain_field_element [4]uint64
+// Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]].
+type fiatPastaFqMontgomeryDomainFieldElement [4]uint64
 
-// The type fiat_pasta_fq_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain.
+// The type fiatPastaFqNonMontgomeryDomainFieldElement is a field element NOT in the Montgomery domain.
 //
-// Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-type fiat_pasta_fq_non_montgomery_domain_field_element [4]uint64
+// Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]].
+type fiatPastaFqNonMontgomeryDomainFieldElement [4]uint64
 
-// The function fiat_pasta_fq_addcarryx_u64 is a thin wrapper around bits.Add64 that uses fiat_pasta_fq_uint1 rather than uint64
-func fiat_pasta_fq_addcarryx_u64(x uint64, y uint64, carry fiat_pasta_fq_uint1) (uint64, fiat_pasta_fq_uint1) {
+// The function fiatPastaFqAddcarryxU64 is a thin wrapper around bits.Add64 that uses fiat_pasta_fq_uint1 rather than uint64.
+func fiatPastaFqAddcarryxU64(x, y uint64, carry fiatPastaFqUint1) (uint64, fiatPastaFqUint1) {
 	sum, carryOut := bits.Add64(x, y, uint64(carry))
-	return sum, fiat_pasta_fq_uint1(carryOut)
+	return sum, fiatPastaFqUint1(carryOut)
 }
 
-// The function fiat_pasta_fq_subborrowx_u64 is a thin wrapper around bits.Sub64 that uses fiat_pasta_fq_uint1 rather than uint64
-func fiat_pasta_fq_subborrowx_u64(x uint64, y uint64, carry fiat_pasta_fq_uint1) (uint64, fiat_pasta_fq_uint1) {
+// The function fiatPastaFqSubborrowxU64 is a thin wrapper around bits.Sub64 that uses fiat_pasta_fq_uint1 rather than uint64.
+func fiatPastaFqSubborrowxU64(x, y uint64, carry fiatPastaFqUint1) (uint64, fiatPastaFqUint1) {
 	sum, carryOut := bits.Sub64(x, y, uint64(carry))
-	return sum, fiat_pasta_fq_uint1(carryOut)
+	return sum, fiatPastaFqUint1(carryOut)
 }
 
-// The function fiat_pasta_fq_cmovznz_u64 is a single-word conditional move.
+// The function fiatPastaFqCmovznzU64 is a single-word conditional move.
 //
 // Postconditions:
 //   out1 = (if arg1 = 0 then arg2 else arg3)
@@ -80,14 +82,14 @@ func fiat_pasta_fq_subborrowx_u64(x uint64, y uint64, carry fiat_pasta_fq_uint1)
 //   arg3: [0x0 ~> 0xffffffffffffffff]
 // Output Bounds:
 //   out1: [0x0 ~> 0xffffffffffffffff]
-func fiat_pasta_fq_cmovznz_u64(out1 *uint64, arg1 fiat_pasta_fq_uint1, arg2 uint64, arg3 uint64) {
+func fiatPastaFqCmovznzU64(out1 *uint64, arg1 fiatPastaFqUint1, arg2, arg3 uint64) {
 	x1 := arg1
-	x2 := (uint64((fiat_pasta_fq_int1(0x0) - fiat_pasta_fq_int1(x1))) & 0xffffffffffffffff)
+	x2 := (uint64((fiatPastaFqInt1(0x0) - fiatPastaFqInt1(x1))) & 0xffffffffffffffff)
 	x3 := ((x2 & arg3) | ((^x2) & arg2))
 	*out1 = x3
 }
 
-// The function fiat_pasta_fq_mul multiplies two field elements in the Montgomery domain.
+// The function fiatPastaFqMul multiplies two field elements in the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -96,7 +98,7 @@ func fiat_pasta_fq_cmovznz_u64(out1 *uint64, arg1 fiat_pasta_fq_uint1, arg2 uint
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1 *fiat_pasta_fq_montgomery_domain_field_element, arg2 *fiat_pasta_fq_montgomery_domain_field_element) {
+func fiatPastaFqMul(out1, arg1, arg2 *fiatPastaFqMontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -114,14 +116,14 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x12 uint64
 	x12, x11 = bits.Mul64(x4, arg2[0])
 	var x13 uint64
-	var x14 fiat_pasta_fq_uint1
-	x13, x14 = fiat_pasta_fq_addcarryx_u64(x12, x9, 0x0)
+	var x14 fiatPastaFqUint1
+	x13, x14 = fiatPastaFqAddcarryxU64(x12, x9, 0x0)
 	var x15 uint64
-	var x16 fiat_pasta_fq_uint1
-	x15, x16 = fiat_pasta_fq_addcarryx_u64(x10, x7, x14)
+	var x16 fiatPastaFqUint1
+	x15, x16 = fiatPastaFqAddcarryxU64(x10, x7, x14)
 	var x17 uint64
-	var x18 fiat_pasta_fq_uint1
-	x17, x18 = fiat_pasta_fq_addcarryx_u64(x8, x5, x16)
+	var x18 fiatPastaFqUint1
+	x17, x18 = fiatPastaFqAddcarryxU64(x8, x5, x16)
 	x19 := (uint64(x18) + x6)
 	var x20 uint64
 	_, x20 = bits.Mul64(x11, 0x8c46eb20ffffffff)
@@ -135,23 +137,23 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x27 uint64
 	x27, x26 = bits.Mul64(x20, 0x8c46eb2100000001)
 	var x28 uint64
-	var x29 fiat_pasta_fq_uint1
-	x28, x29 = fiat_pasta_fq_addcarryx_u64(x27, x24, 0x0)
+	var x29 fiatPastaFqUint1
+	x28, x29 = fiatPastaFqAddcarryxU64(x27, x24, 0x0)
 	x30 := (uint64(x29) + x25)
-	var x32 fiat_pasta_fq_uint1
-	_, x32 = fiat_pasta_fq_addcarryx_u64(x11, x26, 0x0)
+	var x32 fiatPastaFqUint1
+	_, x32 = fiatPastaFqAddcarryxU64(x11, x26, 0x0)
 	var x33 uint64
-	var x34 fiat_pasta_fq_uint1
-	x33, x34 = fiat_pasta_fq_addcarryx_u64(x13, x28, x32)
+	var x34 fiatPastaFqUint1
+	x33, x34 = fiatPastaFqAddcarryxU64(x13, x28, x32)
 	var x35 uint64
-	var x36 fiat_pasta_fq_uint1
-	x35, x36 = fiat_pasta_fq_addcarryx_u64(x15, x30, x34)
+	var x36 fiatPastaFqUint1
+	x35, x36 = fiatPastaFqAddcarryxU64(x15, x30, x34)
 	var x37 uint64
-	var x38 fiat_pasta_fq_uint1
-	x37, x38 = fiat_pasta_fq_addcarryx_u64(x17, x22, x36)
+	var x38 fiatPastaFqUint1
+	x37, x38 = fiatPastaFqAddcarryxU64(x17, x22, x36)
 	var x39 uint64
-	var x40 fiat_pasta_fq_uint1
-	x39, x40 = fiat_pasta_fq_addcarryx_u64(x19, x23, x38)
+	var x40 fiatPastaFqUint1
+	x39, x40 = fiatPastaFqAddcarryxU64(x19, x23, x38)
 	var x41 uint64
 	var x42 uint64
 	x42, x41 = bits.Mul64(x1, arg2[3])
@@ -165,30 +167,30 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x48 uint64
 	x48, x47 = bits.Mul64(x1, arg2[0])
 	var x49 uint64
-	var x50 fiat_pasta_fq_uint1
-	x49, x50 = fiat_pasta_fq_addcarryx_u64(x48, x45, 0x0)
+	var x50 fiatPastaFqUint1
+	x49, x50 = fiatPastaFqAddcarryxU64(x48, x45, 0x0)
 	var x51 uint64
-	var x52 fiat_pasta_fq_uint1
-	x51, x52 = fiat_pasta_fq_addcarryx_u64(x46, x43, x50)
+	var x52 fiatPastaFqUint1
+	x51, x52 = fiatPastaFqAddcarryxU64(x46, x43, x50)
 	var x53 uint64
-	var x54 fiat_pasta_fq_uint1
-	x53, x54 = fiat_pasta_fq_addcarryx_u64(x44, x41, x52)
+	var x54 fiatPastaFqUint1
+	x53, x54 = fiatPastaFqAddcarryxU64(x44, x41, x52)
 	x55 := (uint64(x54) + x42)
 	var x56 uint64
-	var x57 fiat_pasta_fq_uint1
-	x56, x57 = fiat_pasta_fq_addcarryx_u64(x33, x47, 0x0)
+	var x57 fiatPastaFqUint1
+	x56, x57 = fiatPastaFqAddcarryxU64(x33, x47, 0x0)
 	var x58 uint64
-	var x59 fiat_pasta_fq_uint1
-	x58, x59 = fiat_pasta_fq_addcarryx_u64(x35, x49, x57)
+	var x59 fiatPastaFqUint1
+	x58, x59 = fiatPastaFqAddcarryxU64(x35, x49, x57)
 	var x60 uint64
-	var x61 fiat_pasta_fq_uint1
-	x60, x61 = fiat_pasta_fq_addcarryx_u64(x37, x51, x59)
+	var x61 fiatPastaFqUint1
+	x60, x61 = fiatPastaFqAddcarryxU64(x37, x51, x59)
 	var x62 uint64
-	var x63 fiat_pasta_fq_uint1
-	x62, x63 = fiat_pasta_fq_addcarryx_u64(x39, x53, x61)
+	var x63 fiatPastaFqUint1
+	x62, x63 = fiatPastaFqAddcarryxU64(x39, x53, x61)
 	var x64 uint64
-	var x65 fiat_pasta_fq_uint1
-	x64, x65 = fiat_pasta_fq_addcarryx_u64(uint64(x40), x55, x63)
+	var x65 fiatPastaFqUint1
+	x64, x65 = fiatPastaFqAddcarryxU64(uint64(x40), x55, x63)
 	var x66 uint64
 	_, x66 = bits.Mul64(x56, 0x8c46eb20ffffffff)
 	var x68 uint64
@@ -201,23 +203,23 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x73 uint64
 	x73, x72 = bits.Mul64(x66, 0x8c46eb2100000001)
 	var x74 uint64
-	var x75 fiat_pasta_fq_uint1
-	x74, x75 = fiat_pasta_fq_addcarryx_u64(x73, x70, 0x0)
+	var x75 fiatPastaFqUint1
+	x74, x75 = fiatPastaFqAddcarryxU64(x73, x70, 0x0)
 	x76 := (uint64(x75) + x71)
-	var x78 fiat_pasta_fq_uint1
-	_, x78 = fiat_pasta_fq_addcarryx_u64(x56, x72, 0x0)
+	var x78 fiatPastaFqUint1
+	_, x78 = fiatPastaFqAddcarryxU64(x56, x72, 0x0)
 	var x79 uint64
-	var x80 fiat_pasta_fq_uint1
-	x79, x80 = fiat_pasta_fq_addcarryx_u64(x58, x74, x78)
+	var x80 fiatPastaFqUint1
+	x79, x80 = fiatPastaFqAddcarryxU64(x58, x74, x78)
 	var x81 uint64
-	var x82 fiat_pasta_fq_uint1
-	x81, x82 = fiat_pasta_fq_addcarryx_u64(x60, x76, x80)
+	var x82 fiatPastaFqUint1
+	x81, x82 = fiatPastaFqAddcarryxU64(x60, x76, x80)
 	var x83 uint64
-	var x84 fiat_pasta_fq_uint1
-	x83, x84 = fiat_pasta_fq_addcarryx_u64(x62, x68, x82)
+	var x84 fiatPastaFqUint1
+	x83, x84 = fiatPastaFqAddcarryxU64(x62, x68, x82)
 	var x85 uint64
-	var x86 fiat_pasta_fq_uint1
-	x85, x86 = fiat_pasta_fq_addcarryx_u64(x64, x69, x84)
+	var x86 fiatPastaFqUint1
+	x85, x86 = fiatPastaFqAddcarryxU64(x64, x69, x84)
 	x87 := (uint64(x86) + uint64(x65))
 	var x88 uint64
 	var x89 uint64
@@ -232,30 +234,30 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x95 uint64
 	x95, x94 = bits.Mul64(x2, arg2[0])
 	var x96 uint64
-	var x97 fiat_pasta_fq_uint1
-	x96, x97 = fiat_pasta_fq_addcarryx_u64(x95, x92, 0x0)
+	var x97 fiatPastaFqUint1
+	x96, x97 = fiatPastaFqAddcarryxU64(x95, x92, 0x0)
 	var x98 uint64
-	var x99 fiat_pasta_fq_uint1
-	x98, x99 = fiat_pasta_fq_addcarryx_u64(x93, x90, x97)
+	var x99 fiatPastaFqUint1
+	x98, x99 = fiatPastaFqAddcarryxU64(x93, x90, x97)
 	var x100 uint64
-	var x101 fiat_pasta_fq_uint1
-	x100, x101 = fiat_pasta_fq_addcarryx_u64(x91, x88, x99)
+	var x101 fiatPastaFqUint1
+	x100, x101 = fiatPastaFqAddcarryxU64(x91, x88, x99)
 	x102 := (uint64(x101) + x89)
 	var x103 uint64
-	var x104 fiat_pasta_fq_uint1
-	x103, x104 = fiat_pasta_fq_addcarryx_u64(x79, x94, 0x0)
+	var x104 fiatPastaFqUint1
+	x103, x104 = fiatPastaFqAddcarryxU64(x79, x94, 0x0)
 	var x105 uint64
-	var x106 fiat_pasta_fq_uint1
-	x105, x106 = fiat_pasta_fq_addcarryx_u64(x81, x96, x104)
+	var x106 fiatPastaFqUint1
+	x105, x106 = fiatPastaFqAddcarryxU64(x81, x96, x104)
 	var x107 uint64
-	var x108 fiat_pasta_fq_uint1
-	x107, x108 = fiat_pasta_fq_addcarryx_u64(x83, x98, x106)
+	var x108 fiatPastaFqUint1
+	x107, x108 = fiatPastaFqAddcarryxU64(x83, x98, x106)
 	var x109 uint64
-	var x110 fiat_pasta_fq_uint1
-	x109, x110 = fiat_pasta_fq_addcarryx_u64(x85, x100, x108)
+	var x110 fiatPastaFqUint1
+	x109, x110 = fiatPastaFqAddcarryxU64(x85, x100, x108)
 	var x111 uint64
-	var x112 fiat_pasta_fq_uint1
-	x111, x112 = fiat_pasta_fq_addcarryx_u64(x87, x102, x110)
+	var x112 fiatPastaFqUint1
+	x111, x112 = fiatPastaFqAddcarryxU64(x87, x102, x110)
 	var x113 uint64
 	_, x113 = bits.Mul64(x103, 0x8c46eb20ffffffff)
 	var x115 uint64
@@ -268,23 +270,23 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x120 uint64
 	x120, x119 = bits.Mul64(x113, 0x8c46eb2100000001)
 	var x121 uint64
-	var x122 fiat_pasta_fq_uint1
-	x121, x122 = fiat_pasta_fq_addcarryx_u64(x120, x117, 0x0)
+	var x122 fiatPastaFqUint1
+	x121, x122 = fiatPastaFqAddcarryxU64(x120, x117, 0x0)
 	x123 := (uint64(x122) + x118)
-	var x125 fiat_pasta_fq_uint1
-	_, x125 = fiat_pasta_fq_addcarryx_u64(x103, x119, 0x0)
+	var x125 fiatPastaFqUint1
+	_, x125 = fiatPastaFqAddcarryxU64(x103, x119, 0x0)
 	var x126 uint64
-	var x127 fiat_pasta_fq_uint1
-	x126, x127 = fiat_pasta_fq_addcarryx_u64(x105, x121, x125)
+	var x127 fiatPastaFqUint1
+	x126, x127 = fiatPastaFqAddcarryxU64(x105, x121, x125)
 	var x128 uint64
-	var x129 fiat_pasta_fq_uint1
-	x128, x129 = fiat_pasta_fq_addcarryx_u64(x107, x123, x127)
+	var x129 fiatPastaFqUint1
+	x128, x129 = fiatPastaFqAddcarryxU64(x107, x123, x127)
 	var x130 uint64
-	var x131 fiat_pasta_fq_uint1
-	x130, x131 = fiat_pasta_fq_addcarryx_u64(x109, x115, x129)
+	var x131 fiatPastaFqUint1
+	x130, x131 = fiatPastaFqAddcarryxU64(x109, x115, x129)
 	var x132 uint64
-	var x133 fiat_pasta_fq_uint1
-	x132, x133 = fiat_pasta_fq_addcarryx_u64(x111, x116, x131)
+	var x133 fiatPastaFqUint1
+	x132, x133 = fiatPastaFqAddcarryxU64(x111, x116, x131)
 	x134 := (uint64(x133) + uint64(x112))
 	var x135 uint64
 	var x136 uint64
@@ -299,30 +301,30 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x142 uint64
 	x142, x141 = bits.Mul64(x3, arg2[0])
 	var x143 uint64
-	var x144 fiat_pasta_fq_uint1
-	x143, x144 = fiat_pasta_fq_addcarryx_u64(x142, x139, 0x0)
+	var x144 fiatPastaFqUint1
+	x143, x144 = fiatPastaFqAddcarryxU64(x142, x139, 0x0)
 	var x145 uint64
-	var x146 fiat_pasta_fq_uint1
-	x145, x146 = fiat_pasta_fq_addcarryx_u64(x140, x137, x144)
+	var x146 fiatPastaFqUint1
+	x145, x146 = fiatPastaFqAddcarryxU64(x140, x137, x144)
 	var x147 uint64
-	var x148 fiat_pasta_fq_uint1
-	x147, x148 = fiat_pasta_fq_addcarryx_u64(x138, x135, x146)
+	var x148 fiatPastaFqUint1
+	x147, x148 = fiatPastaFqAddcarryxU64(x138, x135, x146)
 	x149 := (uint64(x148) + x136)
 	var x150 uint64
-	var x151 fiat_pasta_fq_uint1
-	x150, x151 = fiat_pasta_fq_addcarryx_u64(x126, x141, 0x0)
+	var x151 fiatPastaFqUint1
+	x150, x151 = fiatPastaFqAddcarryxU64(x126, x141, 0x0)
 	var x152 uint64
-	var x153 fiat_pasta_fq_uint1
-	x152, x153 = fiat_pasta_fq_addcarryx_u64(x128, x143, x151)
+	var x153 fiatPastaFqUint1
+	x152, x153 = fiatPastaFqAddcarryxU64(x128, x143, x151)
 	var x154 uint64
-	var x155 fiat_pasta_fq_uint1
-	x154, x155 = fiat_pasta_fq_addcarryx_u64(x130, x145, x153)
+	var x155 fiatPastaFqUint1
+	x154, x155 = fiatPastaFqAddcarryxU64(x130, x145, x153)
 	var x156 uint64
-	var x157 fiat_pasta_fq_uint1
-	x156, x157 = fiat_pasta_fq_addcarryx_u64(x132, x147, x155)
+	var x157 fiatPastaFqUint1
+	x156, x157 = fiatPastaFqAddcarryxU64(x132, x147, x155)
 	var x158 uint64
-	var x159 fiat_pasta_fq_uint1
-	x158, x159 = fiat_pasta_fq_addcarryx_u64(x134, x149, x157)
+	var x159 fiatPastaFqUint1
+	x158, x159 = fiatPastaFqAddcarryxU64(x134, x149, x157)
 	var x160 uint64
 	_, x160 = bits.Mul64(x150, 0x8c46eb20ffffffff)
 	var x162 uint64
@@ -335,53 +337,53 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 	var x167 uint64
 	x167, x166 = bits.Mul64(x160, 0x8c46eb2100000001)
 	var x168 uint64
-	var x169 fiat_pasta_fq_uint1
-	x168, x169 = fiat_pasta_fq_addcarryx_u64(x167, x164, 0x0)
+	var x169 fiatPastaFqUint1
+	x168, x169 = fiatPastaFqAddcarryxU64(x167, x164, 0x0)
 	x170 := (uint64(x169) + x165)
-	var x172 fiat_pasta_fq_uint1
-	_, x172 = fiat_pasta_fq_addcarryx_u64(x150, x166, 0x0)
+	var x172 fiatPastaFqUint1
+	_, x172 = fiatPastaFqAddcarryxU64(x150, x166, 0x0)
 	var x173 uint64
-	var x174 fiat_pasta_fq_uint1
-	x173, x174 = fiat_pasta_fq_addcarryx_u64(x152, x168, x172)
+	var x174 fiatPastaFqUint1
+	x173, x174 = fiatPastaFqAddcarryxU64(x152, x168, x172)
 	var x175 uint64
-	var x176 fiat_pasta_fq_uint1
-	x175, x176 = fiat_pasta_fq_addcarryx_u64(x154, x170, x174)
+	var x176 fiatPastaFqUint1
+	x175, x176 = fiatPastaFqAddcarryxU64(x154, x170, x174)
 	var x177 uint64
-	var x178 fiat_pasta_fq_uint1
-	x177, x178 = fiat_pasta_fq_addcarryx_u64(x156, x162, x176)
+	var x178 fiatPastaFqUint1
+	x177, x178 = fiatPastaFqAddcarryxU64(x156, x162, x176)
 	var x179 uint64
-	var x180 fiat_pasta_fq_uint1
-	x179, x180 = fiat_pasta_fq_addcarryx_u64(x158, x163, x178)
+	var x180 fiatPastaFqUint1
+	x179, x180 = fiatPastaFqAddcarryxU64(x158, x163, x178)
 	x181 := (uint64(x180) + uint64(x159))
 	var x182 uint64
-	var x183 fiat_pasta_fq_uint1
-	x182, x183 = fiat_pasta_fq_subborrowx_u64(x173, 0x8c46eb2100000001, 0x0)
+	var x183 fiatPastaFqUint1
+	x182, x183 = fiatPastaFqSubborrowxU64(x173, 0x8c46eb2100000001, 0x0)
 	var x184 uint64
-	var x185 fiat_pasta_fq_uint1
-	x184, x185 = fiat_pasta_fq_subborrowx_u64(x175, 0x224698fc0994a8dd, x183)
+	var x185 fiatPastaFqUint1
+	x184, x185 = fiatPastaFqSubborrowxU64(x175, 0x224698fc0994a8dd, x183)
 	var x186 uint64
-	var x187 fiat_pasta_fq_uint1
-	x186, x187 = fiat_pasta_fq_subborrowx_u64(x177, uint64(0x0), x185)
+	var x187 fiatPastaFqUint1
+	x186, x187 = fiatPastaFqSubborrowxU64(x177, uint64(0x0), x185)
 	var x188 uint64
-	var x189 fiat_pasta_fq_uint1
-	x188, x189 = fiat_pasta_fq_subborrowx_u64(x179, 0x4000000000000000, x187)
-	var x191 fiat_pasta_fq_uint1
-	_, x191 = fiat_pasta_fq_subborrowx_u64(x181, uint64(0x0), x189)
+	var x189 fiatPastaFqUint1
+	x188, x189 = fiatPastaFqSubborrowxU64(x179, 0x4000000000000000, x187)
+	var x191 fiatPastaFqUint1
+	_, x191 = fiatPastaFqSubborrowxU64(x181, uint64(0x0), x189)
 	var x192 uint64
-	fiat_pasta_fq_cmovznz_u64(&x192, x191, x182, x173)
+	fiatPastaFqCmovznzU64(&x192, x191, x182, x173)
 	var x193 uint64
-	fiat_pasta_fq_cmovznz_u64(&x193, x191, x184, x175)
+	fiatPastaFqCmovznzU64(&x193, x191, x184, x175)
 	var x194 uint64
-	fiat_pasta_fq_cmovznz_u64(&x194, x191, x186, x177)
+	fiatPastaFqCmovznzU64(&x194, x191, x186, x177)
 	var x195 uint64
-	fiat_pasta_fq_cmovznz_u64(&x195, x191, x188, x179)
+	fiatPastaFqCmovznzU64(&x195, x191, x188, x179)
 	out1[0] = x192
 	out1[1] = x193
 	out1[2] = x194
 	out1[3] = x195
 }
 
-// The function fiat_pasta_fq_square squares a field element in the Montgomery domain.
+// The function fiatPastaFqSquare squares a field element in the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -389,7 +391,7 @@ func fiat_pasta_fq_mul(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1 *fiat_pasta_fq_montgomery_domain_field_element) {
+func fiatPastaFqSquare(out1, arg1 *fiatPastaFqMontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -407,14 +409,14 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x12 uint64
 	x12, x11 = bits.Mul64(x4, arg1[0])
 	var x13 uint64
-	var x14 fiat_pasta_fq_uint1
-	x13, x14 = fiat_pasta_fq_addcarryx_u64(x12, x9, 0x0)
+	var x14 fiatPastaFqUint1
+	x13, x14 = fiatPastaFqAddcarryxU64(x12, x9, 0x0)
 	var x15 uint64
-	var x16 fiat_pasta_fq_uint1
-	x15, x16 = fiat_pasta_fq_addcarryx_u64(x10, x7, x14)
+	var x16 fiatPastaFqUint1
+	x15, x16 = fiatPastaFqAddcarryxU64(x10, x7, x14)
 	var x17 uint64
-	var x18 fiat_pasta_fq_uint1
-	x17, x18 = fiat_pasta_fq_addcarryx_u64(x8, x5, x16)
+	var x18 fiatPastaFqUint1
+	x17, x18 = fiatPastaFqAddcarryxU64(x8, x5, x16)
 	x19 := (uint64(x18) + x6)
 	var x20 uint64
 	_, x20 = bits.Mul64(x11, 0x8c46eb20ffffffff)
@@ -428,23 +430,23 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x27 uint64
 	x27, x26 = bits.Mul64(x20, 0x8c46eb2100000001)
 	var x28 uint64
-	var x29 fiat_pasta_fq_uint1
-	x28, x29 = fiat_pasta_fq_addcarryx_u64(x27, x24, 0x0)
+	var x29 fiatPastaFqUint1
+	x28, x29 = fiatPastaFqAddcarryxU64(x27, x24, 0x0)
 	x30 := (uint64(x29) + x25)
-	var x32 fiat_pasta_fq_uint1
-	_, x32 = fiat_pasta_fq_addcarryx_u64(x11, x26, 0x0)
+	var x32 fiatPastaFqUint1
+	_, x32 = fiatPastaFqAddcarryxU64(x11, x26, 0x0)
 	var x33 uint64
-	var x34 fiat_pasta_fq_uint1
-	x33, x34 = fiat_pasta_fq_addcarryx_u64(x13, x28, x32)
+	var x34 fiatPastaFqUint1
+	x33, x34 = fiatPastaFqAddcarryxU64(x13, x28, x32)
 	var x35 uint64
-	var x36 fiat_pasta_fq_uint1
-	x35, x36 = fiat_pasta_fq_addcarryx_u64(x15, x30, x34)
+	var x36 fiatPastaFqUint1
+	x35, x36 = fiatPastaFqAddcarryxU64(x15, x30, x34)
 	var x37 uint64
-	var x38 fiat_pasta_fq_uint1
-	x37, x38 = fiat_pasta_fq_addcarryx_u64(x17, x22, x36)
+	var x38 fiatPastaFqUint1
+	x37, x38 = fiatPastaFqAddcarryxU64(x17, x22, x36)
 	var x39 uint64
-	var x40 fiat_pasta_fq_uint1
-	x39, x40 = fiat_pasta_fq_addcarryx_u64(x19, x23, x38)
+	var x40 fiatPastaFqUint1
+	x39, x40 = fiatPastaFqAddcarryxU64(x19, x23, x38)
 	var x41 uint64
 	var x42 uint64
 	x42, x41 = bits.Mul64(x1, arg1[3])
@@ -458,30 +460,30 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x48 uint64
 	x48, x47 = bits.Mul64(x1, arg1[0])
 	var x49 uint64
-	var x50 fiat_pasta_fq_uint1
-	x49, x50 = fiat_pasta_fq_addcarryx_u64(x48, x45, 0x0)
+	var x50 fiatPastaFqUint1
+	x49, x50 = fiatPastaFqAddcarryxU64(x48, x45, 0x0)
 	var x51 uint64
-	var x52 fiat_pasta_fq_uint1
-	x51, x52 = fiat_pasta_fq_addcarryx_u64(x46, x43, x50)
+	var x52 fiatPastaFqUint1
+	x51, x52 = fiatPastaFqAddcarryxU64(x46, x43, x50)
 	var x53 uint64
-	var x54 fiat_pasta_fq_uint1
-	x53, x54 = fiat_pasta_fq_addcarryx_u64(x44, x41, x52)
+	var x54 fiatPastaFqUint1
+	x53, x54 = fiatPastaFqAddcarryxU64(x44, x41, x52)
 	x55 := (uint64(x54) + x42)
 	var x56 uint64
-	var x57 fiat_pasta_fq_uint1
-	x56, x57 = fiat_pasta_fq_addcarryx_u64(x33, x47, 0x0)
+	var x57 fiatPastaFqUint1
+	x56, x57 = fiatPastaFqAddcarryxU64(x33, x47, 0x0)
 	var x58 uint64
-	var x59 fiat_pasta_fq_uint1
-	x58, x59 = fiat_pasta_fq_addcarryx_u64(x35, x49, x57)
+	var x59 fiatPastaFqUint1
+	x58, x59 = fiatPastaFqAddcarryxU64(x35, x49, x57)
 	var x60 uint64
-	var x61 fiat_pasta_fq_uint1
-	x60, x61 = fiat_pasta_fq_addcarryx_u64(x37, x51, x59)
+	var x61 fiatPastaFqUint1
+	x60, x61 = fiatPastaFqAddcarryxU64(x37, x51, x59)
 	var x62 uint64
-	var x63 fiat_pasta_fq_uint1
-	x62, x63 = fiat_pasta_fq_addcarryx_u64(x39, x53, x61)
+	var x63 fiatPastaFqUint1
+	x62, x63 = fiatPastaFqAddcarryxU64(x39, x53, x61)
 	var x64 uint64
-	var x65 fiat_pasta_fq_uint1
-	x64, x65 = fiat_pasta_fq_addcarryx_u64(uint64(x40), x55, x63)
+	var x65 fiatPastaFqUint1
+	x64, x65 = fiatPastaFqAddcarryxU64(uint64(x40), x55, x63)
 	var x66 uint64
 	_, x66 = bits.Mul64(x56, 0x8c46eb20ffffffff)
 	var x68 uint64
@@ -494,23 +496,23 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x73 uint64
 	x73, x72 = bits.Mul64(x66, 0x8c46eb2100000001)
 	var x74 uint64
-	var x75 fiat_pasta_fq_uint1
-	x74, x75 = fiat_pasta_fq_addcarryx_u64(x73, x70, 0x0)
+	var x75 fiatPastaFqUint1
+	x74, x75 = fiatPastaFqAddcarryxU64(x73, x70, 0x0)
 	x76 := (uint64(x75) + x71)
-	var x78 fiat_pasta_fq_uint1
-	_, x78 = fiat_pasta_fq_addcarryx_u64(x56, x72, 0x0)
+	var x78 fiatPastaFqUint1
+	_, x78 = fiatPastaFqAddcarryxU64(x56, x72, 0x0)
 	var x79 uint64
-	var x80 fiat_pasta_fq_uint1
-	x79, x80 = fiat_pasta_fq_addcarryx_u64(x58, x74, x78)
+	var x80 fiatPastaFqUint1
+	x79, x80 = fiatPastaFqAddcarryxU64(x58, x74, x78)
 	var x81 uint64
-	var x82 fiat_pasta_fq_uint1
-	x81, x82 = fiat_pasta_fq_addcarryx_u64(x60, x76, x80)
+	var x82 fiatPastaFqUint1
+	x81, x82 = fiatPastaFqAddcarryxU64(x60, x76, x80)
 	var x83 uint64
-	var x84 fiat_pasta_fq_uint1
-	x83, x84 = fiat_pasta_fq_addcarryx_u64(x62, x68, x82)
+	var x84 fiatPastaFqUint1
+	x83, x84 = fiatPastaFqAddcarryxU64(x62, x68, x82)
 	var x85 uint64
-	var x86 fiat_pasta_fq_uint1
-	x85, x86 = fiat_pasta_fq_addcarryx_u64(x64, x69, x84)
+	var x86 fiatPastaFqUint1
+	x85, x86 = fiatPastaFqAddcarryxU64(x64, x69, x84)
 	x87 := (uint64(x86) + uint64(x65))
 	var x88 uint64
 	var x89 uint64
@@ -525,30 +527,30 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x95 uint64
 	x95, x94 = bits.Mul64(x2, arg1[0])
 	var x96 uint64
-	var x97 fiat_pasta_fq_uint1
-	x96, x97 = fiat_pasta_fq_addcarryx_u64(x95, x92, 0x0)
+	var x97 fiatPastaFqUint1
+	x96, x97 = fiatPastaFqAddcarryxU64(x95, x92, 0x0)
 	var x98 uint64
-	var x99 fiat_pasta_fq_uint1
-	x98, x99 = fiat_pasta_fq_addcarryx_u64(x93, x90, x97)
+	var x99 fiatPastaFqUint1
+	x98, x99 = fiatPastaFqAddcarryxU64(x93, x90, x97)
 	var x100 uint64
-	var x101 fiat_pasta_fq_uint1
-	x100, x101 = fiat_pasta_fq_addcarryx_u64(x91, x88, x99)
+	var x101 fiatPastaFqUint1
+	x100, x101 = fiatPastaFqAddcarryxU64(x91, x88, x99)
 	x102 := (uint64(x101) + x89)
 	var x103 uint64
-	var x104 fiat_pasta_fq_uint1
-	x103, x104 = fiat_pasta_fq_addcarryx_u64(x79, x94, 0x0)
+	var x104 fiatPastaFqUint1
+	x103, x104 = fiatPastaFqAddcarryxU64(x79, x94, 0x0)
 	var x105 uint64
-	var x106 fiat_pasta_fq_uint1
-	x105, x106 = fiat_pasta_fq_addcarryx_u64(x81, x96, x104)
+	var x106 fiatPastaFqUint1
+	x105, x106 = fiatPastaFqAddcarryxU64(x81, x96, x104)
 	var x107 uint64
-	var x108 fiat_pasta_fq_uint1
-	x107, x108 = fiat_pasta_fq_addcarryx_u64(x83, x98, x106)
+	var x108 fiatPastaFqUint1
+	x107, x108 = fiatPastaFqAddcarryxU64(x83, x98, x106)
 	var x109 uint64
-	var x110 fiat_pasta_fq_uint1
-	x109, x110 = fiat_pasta_fq_addcarryx_u64(x85, x100, x108)
+	var x110 fiatPastaFqUint1
+	x109, x110 = fiatPastaFqAddcarryxU64(x85, x100, x108)
 	var x111 uint64
-	var x112 fiat_pasta_fq_uint1
-	x111, x112 = fiat_pasta_fq_addcarryx_u64(x87, x102, x110)
+	var x112 fiatPastaFqUint1
+	x111, x112 = fiatPastaFqAddcarryxU64(x87, x102, x110)
 	var x113 uint64
 	_, x113 = bits.Mul64(x103, 0x8c46eb20ffffffff)
 	var x115 uint64
@@ -561,23 +563,23 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x120 uint64
 	x120, x119 = bits.Mul64(x113, 0x8c46eb2100000001)
 	var x121 uint64
-	var x122 fiat_pasta_fq_uint1
-	x121, x122 = fiat_pasta_fq_addcarryx_u64(x120, x117, 0x0)
+	var x122 fiatPastaFqUint1
+	x121, x122 = fiatPastaFqAddcarryxU64(x120, x117, 0x0)
 	x123 := (uint64(x122) + x118)
-	var x125 fiat_pasta_fq_uint1
-	_, x125 = fiat_pasta_fq_addcarryx_u64(x103, x119, 0x0)
+	var x125 fiatPastaFqUint1
+	_, x125 = fiatPastaFqAddcarryxU64(x103, x119, 0x0)
 	var x126 uint64
-	var x127 fiat_pasta_fq_uint1
-	x126, x127 = fiat_pasta_fq_addcarryx_u64(x105, x121, x125)
+	var x127 fiatPastaFqUint1
+	x126, x127 = fiatPastaFqAddcarryxU64(x105, x121, x125)
 	var x128 uint64
-	var x129 fiat_pasta_fq_uint1
-	x128, x129 = fiat_pasta_fq_addcarryx_u64(x107, x123, x127)
+	var x129 fiatPastaFqUint1
+	x128, x129 = fiatPastaFqAddcarryxU64(x107, x123, x127)
 	var x130 uint64
-	var x131 fiat_pasta_fq_uint1
-	x130, x131 = fiat_pasta_fq_addcarryx_u64(x109, x115, x129)
+	var x131 fiatPastaFqUint1
+	x130, x131 = fiatPastaFqAddcarryxU64(x109, x115, x129)
 	var x132 uint64
-	var x133 fiat_pasta_fq_uint1
-	x132, x133 = fiat_pasta_fq_addcarryx_u64(x111, x116, x131)
+	var x133 fiatPastaFqUint1
+	x132, x133 = fiatPastaFqAddcarryxU64(x111, x116, x131)
 	x134 := (uint64(x133) + uint64(x112))
 	var x135 uint64
 	var x136 uint64
@@ -592,30 +594,30 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x142 uint64
 	x142, x141 = bits.Mul64(x3, arg1[0])
 	var x143 uint64
-	var x144 fiat_pasta_fq_uint1
-	x143, x144 = fiat_pasta_fq_addcarryx_u64(x142, x139, 0x0)
+	var x144 fiatPastaFqUint1
+	x143, x144 = fiatPastaFqAddcarryxU64(x142, x139, 0x0)
 	var x145 uint64
-	var x146 fiat_pasta_fq_uint1
-	x145, x146 = fiat_pasta_fq_addcarryx_u64(x140, x137, x144)
+	var x146 fiatPastaFqUint1
+	x145, x146 = fiatPastaFqAddcarryxU64(x140, x137, x144)
 	var x147 uint64
-	var x148 fiat_pasta_fq_uint1
-	x147, x148 = fiat_pasta_fq_addcarryx_u64(x138, x135, x146)
+	var x148 fiatPastaFqUint1
+	x147, x148 = fiatPastaFqAddcarryxU64(x138, x135, x146)
 	x149 := (uint64(x148) + x136)
 	var x150 uint64
-	var x151 fiat_pasta_fq_uint1
-	x150, x151 = fiat_pasta_fq_addcarryx_u64(x126, x141, 0x0)
+	var x151 fiatPastaFqUint1
+	x150, x151 = fiatPastaFqAddcarryxU64(x126, x141, 0x0)
 	var x152 uint64
-	var x153 fiat_pasta_fq_uint1
-	x152, x153 = fiat_pasta_fq_addcarryx_u64(x128, x143, x151)
+	var x153 fiatPastaFqUint1
+	x152, x153 = fiatPastaFqAddcarryxU64(x128, x143, x151)
 	var x154 uint64
-	var x155 fiat_pasta_fq_uint1
-	x154, x155 = fiat_pasta_fq_addcarryx_u64(x130, x145, x153)
+	var x155 fiatPastaFqUint1
+	x154, x155 = fiatPastaFqAddcarryxU64(x130, x145, x153)
 	var x156 uint64
-	var x157 fiat_pasta_fq_uint1
-	x156, x157 = fiat_pasta_fq_addcarryx_u64(x132, x147, x155)
+	var x157 fiatPastaFqUint1
+	x156, x157 = fiatPastaFqAddcarryxU64(x132, x147, x155)
 	var x158 uint64
-	var x159 fiat_pasta_fq_uint1
-	x158, x159 = fiat_pasta_fq_addcarryx_u64(x134, x149, x157)
+	var x159 fiatPastaFqUint1
+	x158, x159 = fiatPastaFqAddcarryxU64(x134, x149, x157)
 	var x160 uint64
 	_, x160 = bits.Mul64(x150, 0x8c46eb20ffffffff)
 	var x162 uint64
@@ -628,53 +630,53 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 	var x167 uint64
 	x167, x166 = bits.Mul64(x160, 0x8c46eb2100000001)
 	var x168 uint64
-	var x169 fiat_pasta_fq_uint1
-	x168, x169 = fiat_pasta_fq_addcarryx_u64(x167, x164, 0x0)
+	var x169 fiatPastaFqUint1
+	x168, x169 = fiatPastaFqAddcarryxU64(x167, x164, 0x0)
 	x170 := (uint64(x169) + x165)
-	var x172 fiat_pasta_fq_uint1
-	_, x172 = fiat_pasta_fq_addcarryx_u64(x150, x166, 0x0)
+	var x172 fiatPastaFqUint1
+	_, x172 = fiatPastaFqAddcarryxU64(x150, x166, 0x0)
 	var x173 uint64
-	var x174 fiat_pasta_fq_uint1
-	x173, x174 = fiat_pasta_fq_addcarryx_u64(x152, x168, x172)
+	var x174 fiatPastaFqUint1
+	x173, x174 = fiatPastaFqAddcarryxU64(x152, x168, x172)
 	var x175 uint64
-	var x176 fiat_pasta_fq_uint1
-	x175, x176 = fiat_pasta_fq_addcarryx_u64(x154, x170, x174)
+	var x176 fiatPastaFqUint1
+	x175, x176 = fiatPastaFqAddcarryxU64(x154, x170, x174)
 	var x177 uint64
-	var x178 fiat_pasta_fq_uint1
-	x177, x178 = fiat_pasta_fq_addcarryx_u64(x156, x162, x176)
+	var x178 fiatPastaFqUint1
+	x177, x178 = fiatPastaFqAddcarryxU64(x156, x162, x176)
 	var x179 uint64
-	var x180 fiat_pasta_fq_uint1
-	x179, x180 = fiat_pasta_fq_addcarryx_u64(x158, x163, x178)
+	var x180 fiatPastaFqUint1
+	x179, x180 = fiatPastaFqAddcarryxU64(x158, x163, x178)
 	x181 := (uint64(x180) + uint64(x159))
 	var x182 uint64
-	var x183 fiat_pasta_fq_uint1
-	x182, x183 = fiat_pasta_fq_subborrowx_u64(x173, 0x8c46eb2100000001, 0x0)
+	var x183 fiatPastaFqUint1
+	x182, x183 = fiatPastaFqSubborrowxU64(x173, 0x8c46eb2100000001, 0x0)
 	var x184 uint64
-	var x185 fiat_pasta_fq_uint1
-	x184, x185 = fiat_pasta_fq_subborrowx_u64(x175, 0x224698fc0994a8dd, x183)
+	var x185 fiatPastaFqUint1
+	x184, x185 = fiatPastaFqSubborrowxU64(x175, 0x224698fc0994a8dd, x183)
 	var x186 uint64
-	var x187 fiat_pasta_fq_uint1
-	x186, x187 = fiat_pasta_fq_subborrowx_u64(x177, uint64(0x0), x185)
+	var x187 fiatPastaFqUint1
+	x186, x187 = fiatPastaFqSubborrowxU64(x177, uint64(0x0), x185)
 	var x188 uint64
-	var x189 fiat_pasta_fq_uint1
-	x188, x189 = fiat_pasta_fq_subborrowx_u64(x179, 0x4000000000000000, x187)
-	var x191 fiat_pasta_fq_uint1
-	_, x191 = fiat_pasta_fq_subborrowx_u64(x181, uint64(0x0), x189)
+	var x189 fiatPastaFqUint1
+	x188, x189 = fiatPastaFqSubborrowxU64(x179, 0x4000000000000000, x187)
+	var x191 fiatPastaFqUint1
+	_, x191 = fiatPastaFqSubborrowxU64(x181, uint64(0x0), x189)
 	var x192 uint64
-	fiat_pasta_fq_cmovznz_u64(&x192, x191, x182, x173)
+	fiatPastaFqCmovznzU64(&x192, x191, x182, x173)
 	var x193 uint64
-	fiat_pasta_fq_cmovznz_u64(&x193, x191, x184, x175)
+	fiatPastaFqCmovznzU64(&x193, x191, x184, x175)
 	var x194 uint64
-	fiat_pasta_fq_cmovznz_u64(&x194, x191, x186, x177)
+	fiatPastaFqCmovznzU64(&x194, x191, x186, x177)
 	var x195 uint64
-	fiat_pasta_fq_cmovznz_u64(&x195, x191, x188, x179)
+	fiatPastaFqCmovznzU64(&x195, x191, x188, x179)
 	out1[0] = x192
 	out1[1] = x193
 	out1[2] = x194
 	out1[3] = x195
 }
 
-// The function fiat_pasta_fq_add adds two field elements in the Montgomery domain.
+// The function fiatPastaFqAdd adds two field elements in the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -683,48 +685,48 @@ func fiat_pasta_fq_square(out1 *fiat_pasta_fq_montgomery_domain_field_element, a
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_add(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1 *fiat_pasta_fq_montgomery_domain_field_element, arg2 *fiat_pasta_fq_montgomery_domain_field_element) {
+func fiatPastaFqAdd(out1, arg1, arg2 *fiatPastaFqMontgomeryDomainFieldElement) {
 	var x1 uint64
-	var x2 fiat_pasta_fq_uint1
-	x1, x2 = fiat_pasta_fq_addcarryx_u64(arg1[0], arg2[0], 0x0)
+	var x2 fiatPastaFqUint1
+	x1, x2 = fiatPastaFqAddcarryxU64(arg1[0], arg2[0], 0x0)
 	var x3 uint64
-	var x4 fiat_pasta_fq_uint1
-	x3, x4 = fiat_pasta_fq_addcarryx_u64(arg1[1], arg2[1], x2)
+	var x4 fiatPastaFqUint1
+	x3, x4 = fiatPastaFqAddcarryxU64(arg1[1], arg2[1], x2)
 	var x5 uint64
-	var x6 fiat_pasta_fq_uint1
-	x5, x6 = fiat_pasta_fq_addcarryx_u64(arg1[2], arg2[2], x4)
+	var x6 fiatPastaFqUint1
+	x5, x6 = fiatPastaFqAddcarryxU64(arg1[2], arg2[2], x4)
 	var x7 uint64
-	var x8 fiat_pasta_fq_uint1
-	x7, x8 = fiat_pasta_fq_addcarryx_u64(arg1[3], arg2[3], x6)
+	var x8 fiatPastaFqUint1
+	x7, x8 = fiatPastaFqAddcarryxU64(arg1[3], arg2[3], x6)
 	var x9 uint64
-	var x10 fiat_pasta_fq_uint1
-	x9, x10 = fiat_pasta_fq_subborrowx_u64(x1, 0x8c46eb2100000001, 0x0)
+	var x10 fiatPastaFqUint1
+	x9, x10 = fiatPastaFqSubborrowxU64(x1, 0x8c46eb2100000001, 0x0)
 	var x11 uint64
-	var x12 fiat_pasta_fq_uint1
-	x11, x12 = fiat_pasta_fq_subborrowx_u64(x3, 0x224698fc0994a8dd, x10)
+	var x12 fiatPastaFqUint1
+	x11, x12 = fiatPastaFqSubborrowxU64(x3, 0x224698fc0994a8dd, x10)
 	var x13 uint64
-	var x14 fiat_pasta_fq_uint1
-	x13, x14 = fiat_pasta_fq_subborrowx_u64(x5, uint64(0x0), x12)
+	var x14 fiatPastaFqUint1
+	x13, x14 = fiatPastaFqSubborrowxU64(x5, uint64(0x0), x12)
 	var x15 uint64
-	var x16 fiat_pasta_fq_uint1
-	x15, x16 = fiat_pasta_fq_subborrowx_u64(x7, 0x4000000000000000, x14)
-	var x18 fiat_pasta_fq_uint1
-	_, x18 = fiat_pasta_fq_subborrowx_u64(uint64(x8), uint64(0x0), x16)
+	var x16 fiatPastaFqUint1
+	x15, x16 = fiatPastaFqSubborrowxU64(x7, 0x4000000000000000, x14)
+	var x18 fiatPastaFqUint1
+	_, x18 = fiatPastaFqSubborrowxU64(uint64(x8), uint64(0x0), x16)
 	var x19 uint64
-	fiat_pasta_fq_cmovznz_u64(&x19, x18, x9, x1)
+	fiatPastaFqCmovznzU64(&x19, x18, x9, x1)
 	var x20 uint64
-	fiat_pasta_fq_cmovznz_u64(&x20, x18, x11, x3)
+	fiatPastaFqCmovznzU64(&x20, x18, x11, x3)
 	var x21 uint64
-	fiat_pasta_fq_cmovznz_u64(&x21, x18, x13, x5)
+	fiatPastaFqCmovznzU64(&x21, x18, x13, x5)
 	var x22 uint64
-	fiat_pasta_fq_cmovznz_u64(&x22, x18, x15, x7)
+	fiatPastaFqCmovznzU64(&x22, x18, x15, x7)
 	out1[0] = x19
 	out1[1] = x20
 	out1[2] = x21
 	out1[3] = x22
 }
 
-// The function fiat_pasta_fq_sub subtracts two field elements in the Montgomery domain.
+// The function fiatPastaFqSub subtracts two field elements in the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -733,39 +735,39 @@ func fiat_pasta_fq_add(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_sub(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1 *fiat_pasta_fq_montgomery_domain_field_element, arg2 *fiat_pasta_fq_montgomery_domain_field_element) {
+func fiatPastaFqSub(out1, arg1, arg2 *fiatPastaFqMontgomeryDomainFieldElement) {
 	var x1 uint64
-	var x2 fiat_pasta_fq_uint1
-	x1, x2 = fiat_pasta_fq_subborrowx_u64(arg1[0], arg2[0], 0x0)
+	var x2 fiatPastaFqUint1
+	x1, x2 = fiatPastaFqSubborrowxU64(arg1[0], arg2[0], 0x0)
 	var x3 uint64
-	var x4 fiat_pasta_fq_uint1
-	x3, x4 = fiat_pasta_fq_subborrowx_u64(arg1[1], arg2[1], x2)
+	var x4 fiatPastaFqUint1
+	x3, x4 = fiatPastaFqSubborrowxU64(arg1[1], arg2[1], x2)
 	var x5 uint64
-	var x6 fiat_pasta_fq_uint1
-	x5, x6 = fiat_pasta_fq_subborrowx_u64(arg1[2], arg2[2], x4)
+	var x6 fiatPastaFqUint1
+	x5, x6 = fiatPastaFqSubborrowxU64(arg1[2], arg2[2], x4)
 	var x7 uint64
-	var x8 fiat_pasta_fq_uint1
-	x7, x8 = fiat_pasta_fq_subborrowx_u64(arg1[3], arg2[3], x6)
+	var x8 fiatPastaFqUint1
+	x7, x8 = fiatPastaFqSubborrowxU64(arg1[3], arg2[3], x6)
 	var x9 uint64
-	fiat_pasta_fq_cmovznz_u64(&x9, x8, uint64(0x0), 0xffffffffffffffff)
+	fiatPastaFqCmovznzU64(&x9, x8, uint64(0x0), 0xffffffffffffffff)
 	var x10 uint64
-	var x11 fiat_pasta_fq_uint1
-	x10, x11 = fiat_pasta_fq_addcarryx_u64(x1, (x9 & 0x8c46eb2100000001), 0x0)
+	var x11 fiatPastaFqUint1
+	x10, x11 = fiatPastaFqAddcarryxU64(x1, (x9 & 0x8c46eb2100000001), 0x0)
 	var x12 uint64
-	var x13 fiat_pasta_fq_uint1
-	x12, x13 = fiat_pasta_fq_addcarryx_u64(x3, (x9 & 0x224698fc0994a8dd), x11)
+	var x13 fiatPastaFqUint1
+	x12, x13 = fiatPastaFqAddcarryxU64(x3, (x9 & 0x224698fc0994a8dd), x11)
 	var x14 uint64
-	var x15 fiat_pasta_fq_uint1
-	x14, x15 = fiat_pasta_fq_addcarryx_u64(x5, uint64(0x0), x13)
+	var x15 fiatPastaFqUint1
+	x14, x15 = fiatPastaFqAddcarryxU64(x5, uint64(0x0), x13)
 	var x16 uint64
-	x16, _ = fiat_pasta_fq_addcarryx_u64(x7, (x9 & 0x4000000000000000), x15)
+	x16, _ = fiatPastaFqAddcarryxU64(x7, (x9 & 0x4000000000000000), x15)
 	out1[0] = x10
 	out1[1] = x12
 	out1[2] = x14
 	out1[3] = x16
 }
 
-// The function fiat_pasta_fq_opp negates a field element in the Montgomery domain.
+// The function fiatPastaFqOpp negates a field element in the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -773,39 +775,39 @@ func fiat_pasta_fq_sub(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 //   eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_opp(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1 *fiat_pasta_fq_montgomery_domain_field_element) {
+func fiatPastaFqOpp(out1, arg1 *fiatPastaFqMontgomeryDomainFieldElement) {
 	var x1 uint64
-	var x2 fiat_pasta_fq_uint1
-	x1, x2 = fiat_pasta_fq_subborrowx_u64(uint64(0x0), arg1[0], 0x0)
+	var x2 fiatPastaFqUint1
+	x1, x2 = fiatPastaFqSubborrowxU64(uint64(0x0), arg1[0], 0x0)
 	var x3 uint64
-	var x4 fiat_pasta_fq_uint1
-	x3, x4 = fiat_pasta_fq_subborrowx_u64(uint64(0x0), arg1[1], x2)
+	var x4 fiatPastaFqUint1
+	x3, x4 = fiatPastaFqSubborrowxU64(uint64(0x0), arg1[1], x2)
 	var x5 uint64
-	var x6 fiat_pasta_fq_uint1
-	x5, x6 = fiat_pasta_fq_subborrowx_u64(uint64(0x0), arg1[2], x4)
+	var x6 fiatPastaFqUint1
+	x5, x6 = fiatPastaFqSubborrowxU64(uint64(0x0), arg1[2], x4)
 	var x7 uint64
-	var x8 fiat_pasta_fq_uint1
-	x7, x8 = fiat_pasta_fq_subborrowx_u64(uint64(0x0), arg1[3], x6)
+	var x8 fiatPastaFqUint1
+	x7, x8 = fiatPastaFqSubborrowxU64(uint64(0x0), arg1[3], x6)
 	var x9 uint64
-	fiat_pasta_fq_cmovznz_u64(&x9, x8, uint64(0x0), 0xffffffffffffffff)
+	fiatPastaFqCmovznzU64(&x9, x8, uint64(0x0), 0xffffffffffffffff)
 	var x10 uint64
-	var x11 fiat_pasta_fq_uint1
-	x10, x11 = fiat_pasta_fq_addcarryx_u64(x1, (x9 & 0x8c46eb2100000001), 0x0)
+	var x11 fiatPastaFqUint1
+	x10, x11 = fiatPastaFqAddcarryxU64(x1, (x9 & 0x8c46eb2100000001), 0x0)
 	var x12 uint64
-	var x13 fiat_pasta_fq_uint1
-	x12, x13 = fiat_pasta_fq_addcarryx_u64(x3, (x9 & 0x224698fc0994a8dd), x11)
+	var x13 fiatPastaFqUint1
+	x12, x13 = fiatPastaFqAddcarryxU64(x3, (x9 & 0x224698fc0994a8dd), x11)
 	var x14 uint64
-	var x15 fiat_pasta_fq_uint1
-	x14, x15 = fiat_pasta_fq_addcarryx_u64(x5, uint64(0x0), x13)
+	var x15 fiatPastaFqUint1
+	x14, x15 = fiatPastaFqAddcarryxU64(x5, uint64(0x0), x13)
 	var x16 uint64
-	x16, _ = fiat_pasta_fq_addcarryx_u64(x7, (x9 & 0x4000000000000000), x15)
+	x16, _ = fiatPastaFqAddcarryxU64(x7, (x9 & 0x4000000000000000), x15)
 	out1[0] = x10
 	out1[1] = x12
 	out1[2] = x14
 	out1[3] = x16
 }
 
-// The function fiat_pasta_fq_from_montgomery translates a field element out of the Montgomery domain.
+// The function fiatPastaFqFromMontgomery translates a field element out of the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -813,7 +815,7 @@ func fiat_pasta_fq_opp(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1
 //   eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^4) mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_from_montgomery(out1 *fiat_pasta_fq_non_montgomery_domain_field_element, arg1 *fiat_pasta_fq_montgomery_domain_field_element) {
+func fiatPastaFqFromMontgomery(out1 *fiatPastaFqNonMontgomeryDomainFieldElement, arg1 *fiatPastaFqMontgomeryDomainFieldElement) {
 	x1 := arg1[0]
 	var x2 uint64
 	_, x2 = bits.Mul64(x1, 0x8c46eb20ffffffff)
@@ -827,16 +829,16 @@ func fiat_pasta_fq_from_montgomery(out1 *fiat_pasta_fq_non_montgomery_domain_fie
 	var x9 uint64
 	x9, x8 = bits.Mul64(x2, 0x8c46eb2100000001)
 	var x10 uint64
-	var x11 fiat_pasta_fq_uint1
-	x10, x11 = fiat_pasta_fq_addcarryx_u64(x9, x6, 0x0)
-	var x13 fiat_pasta_fq_uint1
-	_, x13 = fiat_pasta_fq_addcarryx_u64(x1, x8, 0x0)
+	var x11 fiatPastaFqUint1
+	x10, x11 = fiatPastaFqAddcarryxU64(x9, x6, 0x0)
+	var x13 fiatPastaFqUint1
+	_, x13 = fiatPastaFqAddcarryxU64(x1, x8, 0x0)
 	var x14 uint64
-	var x15 fiat_pasta_fq_uint1
-	x14, x15 = fiat_pasta_fq_addcarryx_u64(uint64(0x0), x10, x13)
+	var x15 fiatPastaFqUint1
+	x14, x15 = fiatPastaFqAddcarryxU64(uint64(0x0), x10, x13)
 	var x16 uint64
-	var x17 fiat_pasta_fq_uint1
-	x16, x17 = fiat_pasta_fq_addcarryx_u64(x14, arg1[1], 0x0)
+	var x17 fiatPastaFqUint1
+	x16, x17 = fiatPastaFqAddcarryxU64(x14, arg1[1], 0x0)
 	var x18 uint64
 	_, x18 = bits.Mul64(x16, 0x8c46eb20ffffffff)
 	var x20 uint64
@@ -849,28 +851,28 @@ func fiat_pasta_fq_from_montgomery(out1 *fiat_pasta_fq_non_montgomery_domain_fie
 	var x25 uint64
 	x25, x24 = bits.Mul64(x18, 0x8c46eb2100000001)
 	var x26 uint64
-	var x27 fiat_pasta_fq_uint1
-	x26, x27 = fiat_pasta_fq_addcarryx_u64(x25, x22, 0x0)
-	var x29 fiat_pasta_fq_uint1
-	_, x29 = fiat_pasta_fq_addcarryx_u64(x16, x24, 0x0)
+	var x27 fiatPastaFqUint1
+	x26, x27 = fiatPastaFqAddcarryxU64(x25, x22, 0x0)
+	var x29 fiatPastaFqUint1
+	_, x29 = fiatPastaFqAddcarryxU64(x16, x24, 0x0)
 	var x30 uint64
-	var x31 fiat_pasta_fq_uint1
-	x30, x31 = fiat_pasta_fq_addcarryx_u64((uint64(x17) + (uint64(x15) + (uint64(x11) + x7))), x26, x29)
+	var x31 fiatPastaFqUint1
+	x30, x31 = fiatPastaFqAddcarryxU64((uint64(x17) + (uint64(x15) + (uint64(x11) + x7))), x26, x29)
 	var x32 uint64
-	var x33 fiat_pasta_fq_uint1
-	x32, x33 = fiat_pasta_fq_addcarryx_u64(x4, (uint64(x27) + x23), x31)
+	var x33 fiatPastaFqUint1
+	x32, x33 = fiatPastaFqAddcarryxU64(x4, (uint64(x27) + x23), x31)
 	var x34 uint64
-	var x35 fiat_pasta_fq_uint1
-	x34, x35 = fiat_pasta_fq_addcarryx_u64(x5, x20, x33)
+	var x35 fiatPastaFqUint1
+	x34, x35 = fiatPastaFqAddcarryxU64(x5, x20, x33)
 	var x36 uint64
-	var x37 fiat_pasta_fq_uint1
-	x36, x37 = fiat_pasta_fq_addcarryx_u64(x30, arg1[2], 0x0)
+	var x37 fiatPastaFqUint1
+	x36, x37 = fiatPastaFqAddcarryxU64(x30, arg1[2], 0x0)
 	var x38 uint64
-	var x39 fiat_pasta_fq_uint1
-	x38, x39 = fiat_pasta_fq_addcarryx_u64(x32, uint64(0x0), x37)
+	var x39 fiatPastaFqUint1
+	x38, x39 = fiatPastaFqAddcarryxU64(x32, uint64(0x0), x37)
 	var x40 uint64
-	var x41 fiat_pasta_fq_uint1
-	x40, x41 = fiat_pasta_fq_addcarryx_u64(x34, uint64(0x0), x39)
+	var x41 fiatPastaFqUint1
+	x40, x41 = fiatPastaFqAddcarryxU64(x34, uint64(0x0), x39)
 	var x42 uint64
 	_, x42 = bits.Mul64(x36, 0x8c46eb20ffffffff)
 	var x44 uint64
@@ -883,28 +885,28 @@ func fiat_pasta_fq_from_montgomery(out1 *fiat_pasta_fq_non_montgomery_domain_fie
 	var x49 uint64
 	x49, x48 = bits.Mul64(x42, 0x8c46eb2100000001)
 	var x50 uint64
-	var x51 fiat_pasta_fq_uint1
-	x50, x51 = fiat_pasta_fq_addcarryx_u64(x49, x46, 0x0)
-	var x53 fiat_pasta_fq_uint1
-	_, x53 = fiat_pasta_fq_addcarryx_u64(x36, x48, 0x0)
+	var x51 fiatPastaFqUint1
+	x50, x51 = fiatPastaFqAddcarryxU64(x49, x46, 0x0)
+	var x53 fiatPastaFqUint1
+	_, x53 = fiatPastaFqAddcarryxU64(x36, x48, 0x0)
 	var x54 uint64
-	var x55 fiat_pasta_fq_uint1
-	x54, x55 = fiat_pasta_fq_addcarryx_u64(x38, x50, x53)
+	var x55 fiatPastaFqUint1
+	x54, x55 = fiatPastaFqAddcarryxU64(x38, x50, x53)
 	var x56 uint64
-	var x57 fiat_pasta_fq_uint1
-	x56, x57 = fiat_pasta_fq_addcarryx_u64(x40, (uint64(x51) + x47), x55)
+	var x57 fiatPastaFqUint1
+	x56, x57 = fiatPastaFqAddcarryxU64(x40, (uint64(x51) + x47), x55)
 	var x58 uint64
-	var x59 fiat_pasta_fq_uint1
-	x58, x59 = fiat_pasta_fq_addcarryx_u64((uint64(x41) + (uint64(x35) + x21)), x44, x57)
+	var x59 fiatPastaFqUint1
+	x58, x59 = fiatPastaFqAddcarryxU64((uint64(x41) + (uint64(x35) + x21)), x44, x57)
 	var x60 uint64
-	var x61 fiat_pasta_fq_uint1
-	x60, x61 = fiat_pasta_fq_addcarryx_u64(x54, arg1[3], 0x0)
+	var x61 fiatPastaFqUint1
+	x60, x61 = fiatPastaFqAddcarryxU64(x54, arg1[3], 0x0)
 	var x62 uint64
-	var x63 fiat_pasta_fq_uint1
-	x62, x63 = fiat_pasta_fq_addcarryx_u64(x56, uint64(0x0), x61)
+	var x63 fiatPastaFqUint1
+	x62, x63 = fiatPastaFqAddcarryxU64(x56, uint64(0x0), x61)
 	var x64 uint64
-	var x65 fiat_pasta_fq_uint1
-	x64, x65 = fiat_pasta_fq_addcarryx_u64(x58, uint64(0x0), x63)
+	var x65 fiatPastaFqUint1
+	x64, x65 = fiatPastaFqAddcarryxU64(x58, uint64(0x0), x63)
 	var x66 uint64
 	_, x66 = bits.Mul64(x60, 0x8c46eb20ffffffff)
 	var x68 uint64
@@ -917,49 +919,49 @@ func fiat_pasta_fq_from_montgomery(out1 *fiat_pasta_fq_non_montgomery_domain_fie
 	var x73 uint64
 	x73, x72 = bits.Mul64(x66, 0x8c46eb2100000001)
 	var x74 uint64
-	var x75 fiat_pasta_fq_uint1
-	x74, x75 = fiat_pasta_fq_addcarryx_u64(x73, x70, 0x0)
-	var x77 fiat_pasta_fq_uint1
-	_, x77 = fiat_pasta_fq_addcarryx_u64(x60, x72, 0x0)
+	var x75 fiatPastaFqUint1
+	x74, x75 = fiatPastaFqAddcarryxU64(x73, x70, 0x0)
+	var x77 fiatPastaFqUint1
+	_, x77 = fiatPastaFqAddcarryxU64(x60, x72, 0x0)
 	var x78 uint64
-	var x79 fiat_pasta_fq_uint1
-	x78, x79 = fiat_pasta_fq_addcarryx_u64(x62, x74, x77)
+	var x79 fiatPastaFqUint1
+	x78, x79 = fiatPastaFqAddcarryxU64(x62, x74, x77)
 	var x80 uint64
-	var x81 fiat_pasta_fq_uint1
-	x80, x81 = fiat_pasta_fq_addcarryx_u64(x64, (uint64(x75) + x71), x79)
+	var x81 fiatPastaFqUint1
+	x80, x81 = fiatPastaFqAddcarryxU64(x64, (uint64(x75) + x71), x79)
 	var x82 uint64
-	var x83 fiat_pasta_fq_uint1
-	x82, x83 = fiat_pasta_fq_addcarryx_u64((uint64(x65) + (uint64(x59) + x45)), x68, x81)
+	var x83 fiatPastaFqUint1
+	x82, x83 = fiatPastaFqAddcarryxU64((uint64(x65) + (uint64(x59) + x45)), x68, x81)
 	x84 := (uint64(x83) + x69)
 	var x85 uint64
-	var x86 fiat_pasta_fq_uint1
-	x85, x86 = fiat_pasta_fq_subborrowx_u64(x78, 0x8c46eb2100000001, 0x0)
+	var x86 fiatPastaFqUint1
+	x85, x86 = fiatPastaFqSubborrowxU64(x78, 0x8c46eb2100000001, 0x0)
 	var x87 uint64
-	var x88 fiat_pasta_fq_uint1
-	x87, x88 = fiat_pasta_fq_subborrowx_u64(x80, 0x224698fc0994a8dd, x86)
+	var x88 fiatPastaFqUint1
+	x87, x88 = fiatPastaFqSubborrowxU64(x80, 0x224698fc0994a8dd, x86)
 	var x89 uint64
-	var x90 fiat_pasta_fq_uint1
-	x89, x90 = fiat_pasta_fq_subborrowx_u64(x82, uint64(0x0), x88)
+	var x90 fiatPastaFqUint1
+	x89, x90 = fiatPastaFqSubborrowxU64(x82, uint64(0x0), x88)
 	var x91 uint64
-	var x92 fiat_pasta_fq_uint1
-	x91, x92 = fiat_pasta_fq_subborrowx_u64(x84, 0x4000000000000000, x90)
-	var x94 fiat_pasta_fq_uint1
-	_, x94 = fiat_pasta_fq_subborrowx_u64(uint64(0x0), uint64(0x0), x92)
+	var x92 fiatPastaFqUint1
+	x91, x92 = fiatPastaFqSubborrowxU64(x84, 0x4000000000000000, x90)
+	var x94 fiatPastaFqUint1
+	_, x94 = fiatPastaFqSubborrowxU64(uint64(0x0), uint64(0x0), x92)
 	var x95 uint64
-	fiat_pasta_fq_cmovznz_u64(&x95, x94, x85, x78)
+	fiatPastaFqCmovznzU64(&x95, x94, x85, x78)
 	var x96 uint64
-	fiat_pasta_fq_cmovznz_u64(&x96, x94, x87, x80)
+	fiatPastaFqCmovznzU64(&x96, x94, x87, x80)
 	var x97 uint64
-	fiat_pasta_fq_cmovznz_u64(&x97, x94, x89, x82)
+	fiatPastaFqCmovznzU64(&x97, x94, x89, x82)
 	var x98 uint64
-	fiat_pasta_fq_cmovznz_u64(&x98, x94, x91, x84)
+	fiatPastaFqCmovznzU64(&x98, x94, x91, x84)
 	out1[0] = x95
 	out1[1] = x96
 	out1[2] = x97
 	out1[3] = x98
 }
 
-// The function fiat_pasta_fq_to_montgomery translates a field element into the Montgomery domain.
+// The function fiatPastaFqToMontgomery translates a field element into the Montgomery domain.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -967,7 +969,7 @@ func fiat_pasta_fq_from_montgomery(out1 *fiat_pasta_fq_non_montgomery_domain_fie
 //   eval (from_montgomery out1) mod m = eval arg1 mod m
 //   0 ≤ eval out1 < m
 //
-func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_element, arg1 *fiat_pasta_fq_non_montgomery_domain_field_element) {
+func fiatPastaFqToMontgomery(out1 *fiatPastaFqMontgomeryDomainFieldElement, arg1 *fiatPastaFqNonMontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -985,14 +987,14 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x12 uint64
 	x12, x11 = bits.Mul64(x4, 0xfc9678ff0000000f)
 	var x13 uint64
-	var x14 fiat_pasta_fq_uint1
-	x13, x14 = fiat_pasta_fq_addcarryx_u64(x12, x9, 0x0)
+	var x14 fiatPastaFqUint1
+	x13, x14 = fiatPastaFqAddcarryxU64(x12, x9, 0x0)
 	var x15 uint64
-	var x16 fiat_pasta_fq_uint1
-	x15, x16 = fiat_pasta_fq_addcarryx_u64(x10, x7, x14)
+	var x16 fiatPastaFqUint1
+	x15, x16 = fiatPastaFqAddcarryxU64(x10, x7, x14)
 	var x17 uint64
-	var x18 fiat_pasta_fq_uint1
-	x17, x18 = fiat_pasta_fq_addcarryx_u64(x8, x5, x16)
+	var x18 fiatPastaFqUint1
+	x17, x18 = fiatPastaFqAddcarryxU64(x8, x5, x16)
 	var x19 uint64
 	_, x19 = bits.Mul64(x11, 0x8c46eb20ffffffff)
 	var x21 uint64
@@ -1005,19 +1007,19 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x26 uint64
 	x26, x25 = bits.Mul64(x19, 0x8c46eb2100000001)
 	var x27 uint64
-	var x28 fiat_pasta_fq_uint1
-	x27, x28 = fiat_pasta_fq_addcarryx_u64(x26, x23, 0x0)
-	var x30 fiat_pasta_fq_uint1
-	_, x30 = fiat_pasta_fq_addcarryx_u64(x11, x25, 0x0)
+	var x28 fiatPastaFqUint1
+	x27, x28 = fiatPastaFqAddcarryxU64(x26, x23, 0x0)
+	var x30 fiatPastaFqUint1
+	_, x30 = fiatPastaFqAddcarryxU64(x11, x25, 0x0)
 	var x31 uint64
-	var x32 fiat_pasta_fq_uint1
-	x31, x32 = fiat_pasta_fq_addcarryx_u64(x13, x27, x30)
+	var x32 fiatPastaFqUint1
+	x31, x32 = fiatPastaFqAddcarryxU64(x13, x27, x30)
 	var x33 uint64
-	var x34 fiat_pasta_fq_uint1
-	x33, x34 = fiat_pasta_fq_addcarryx_u64(x15, (uint64(x28) + x24), x32)
+	var x34 fiatPastaFqUint1
+	x33, x34 = fiatPastaFqAddcarryxU64(x15, (uint64(x28) + x24), x32)
 	var x35 uint64
-	var x36 fiat_pasta_fq_uint1
-	x35, x36 = fiat_pasta_fq_addcarryx_u64(x17, x21, x34)
+	var x36 fiatPastaFqUint1
+	x35, x36 = fiatPastaFqAddcarryxU64(x17, x21, x34)
 	var x37 uint64
 	var x38 uint64
 	x38, x37 = bits.Mul64(x1, 0x96d41af7ccfdaa9)
@@ -1031,26 +1033,26 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x44 uint64
 	x44, x43 = bits.Mul64(x1, 0xfc9678ff0000000f)
 	var x45 uint64
-	var x46 fiat_pasta_fq_uint1
-	x45, x46 = fiat_pasta_fq_addcarryx_u64(x44, x41, 0x0)
+	var x46 fiatPastaFqUint1
+	x45, x46 = fiatPastaFqAddcarryxU64(x44, x41, 0x0)
 	var x47 uint64
-	var x48 fiat_pasta_fq_uint1
-	x47, x48 = fiat_pasta_fq_addcarryx_u64(x42, x39, x46)
+	var x48 fiatPastaFqUint1
+	x47, x48 = fiatPastaFqAddcarryxU64(x42, x39, x46)
 	var x49 uint64
-	var x50 fiat_pasta_fq_uint1
-	x49, x50 = fiat_pasta_fq_addcarryx_u64(x40, x37, x48)
+	var x50 fiatPastaFqUint1
+	x49, x50 = fiatPastaFqAddcarryxU64(x40, x37, x48)
 	var x51 uint64
-	var x52 fiat_pasta_fq_uint1
-	x51, x52 = fiat_pasta_fq_addcarryx_u64(x31, x43, 0x0)
+	var x52 fiatPastaFqUint1
+	x51, x52 = fiatPastaFqAddcarryxU64(x31, x43, 0x0)
 	var x53 uint64
-	var x54 fiat_pasta_fq_uint1
-	x53, x54 = fiat_pasta_fq_addcarryx_u64(x33, x45, x52)
+	var x54 fiatPastaFqUint1
+	x53, x54 = fiatPastaFqAddcarryxU64(x33, x45, x52)
 	var x55 uint64
-	var x56 fiat_pasta_fq_uint1
-	x55, x56 = fiat_pasta_fq_addcarryx_u64(x35, x47, x54)
+	var x56 fiatPastaFqUint1
+	x55, x56 = fiatPastaFqAddcarryxU64(x35, x47, x54)
 	var x57 uint64
-	var x58 fiat_pasta_fq_uint1
-	x57, x58 = fiat_pasta_fq_addcarryx_u64(((uint64(x36) + (uint64(x18) + x6)) + x22), x49, x56)
+	var x58 fiatPastaFqUint1
+	x57, x58 = fiatPastaFqAddcarryxU64(((uint64(x36) + (uint64(x18) + x6)) + x22), x49, x56)
 	var x59 uint64
 	_, x59 = bits.Mul64(x51, 0x8c46eb20ffffffff)
 	var x61 uint64
@@ -1063,19 +1065,19 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x66 uint64
 	x66, x65 = bits.Mul64(x59, 0x8c46eb2100000001)
 	var x67 uint64
-	var x68 fiat_pasta_fq_uint1
-	x67, x68 = fiat_pasta_fq_addcarryx_u64(x66, x63, 0x0)
-	var x70 fiat_pasta_fq_uint1
-	_, x70 = fiat_pasta_fq_addcarryx_u64(x51, x65, 0x0)
+	var x68 fiatPastaFqUint1
+	x67, x68 = fiatPastaFqAddcarryxU64(x66, x63, 0x0)
+	var x70 fiatPastaFqUint1
+	_, x70 = fiatPastaFqAddcarryxU64(x51, x65, 0x0)
 	var x71 uint64
-	var x72 fiat_pasta_fq_uint1
-	x71, x72 = fiat_pasta_fq_addcarryx_u64(x53, x67, x70)
+	var x72 fiatPastaFqUint1
+	x71, x72 = fiatPastaFqAddcarryxU64(x53, x67, x70)
 	var x73 uint64
-	var x74 fiat_pasta_fq_uint1
-	x73, x74 = fiat_pasta_fq_addcarryx_u64(x55, (uint64(x68) + x64), x72)
+	var x74 fiatPastaFqUint1
+	x73, x74 = fiatPastaFqAddcarryxU64(x55, (uint64(x68) + x64), x72)
 	var x75 uint64
-	var x76 fiat_pasta_fq_uint1
-	x75, x76 = fiat_pasta_fq_addcarryx_u64(x57, x61, x74)
+	var x76 fiatPastaFqUint1
+	x75, x76 = fiatPastaFqAddcarryxU64(x57, x61, x74)
 	var x77 uint64
 	var x78 uint64
 	x78, x77 = bits.Mul64(x2, 0x96d41af7ccfdaa9)
@@ -1089,26 +1091,26 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x84 uint64
 	x84, x83 = bits.Mul64(x2, 0xfc9678ff0000000f)
 	var x85 uint64
-	var x86 fiat_pasta_fq_uint1
-	x85, x86 = fiat_pasta_fq_addcarryx_u64(x84, x81, 0x0)
+	var x86 fiatPastaFqUint1
+	x85, x86 = fiatPastaFqAddcarryxU64(x84, x81, 0x0)
 	var x87 uint64
-	var x88 fiat_pasta_fq_uint1
-	x87, x88 = fiat_pasta_fq_addcarryx_u64(x82, x79, x86)
+	var x88 fiatPastaFqUint1
+	x87, x88 = fiatPastaFqAddcarryxU64(x82, x79, x86)
 	var x89 uint64
-	var x90 fiat_pasta_fq_uint1
-	x89, x90 = fiat_pasta_fq_addcarryx_u64(x80, x77, x88)
+	var x90 fiatPastaFqUint1
+	x89, x90 = fiatPastaFqAddcarryxU64(x80, x77, x88)
 	var x91 uint64
-	var x92 fiat_pasta_fq_uint1
-	x91, x92 = fiat_pasta_fq_addcarryx_u64(x71, x83, 0x0)
+	var x92 fiatPastaFqUint1
+	x91, x92 = fiatPastaFqAddcarryxU64(x71, x83, 0x0)
 	var x93 uint64
-	var x94 fiat_pasta_fq_uint1
-	x93, x94 = fiat_pasta_fq_addcarryx_u64(x73, x85, x92)
+	var x94 fiatPastaFqUint1
+	x93, x94 = fiatPastaFqAddcarryxU64(x73, x85, x92)
 	var x95 uint64
-	var x96 fiat_pasta_fq_uint1
-	x95, x96 = fiat_pasta_fq_addcarryx_u64(x75, x87, x94)
+	var x96 fiatPastaFqUint1
+	x95, x96 = fiatPastaFqAddcarryxU64(x75, x87, x94)
 	var x97 uint64
-	var x98 fiat_pasta_fq_uint1
-	x97, x98 = fiat_pasta_fq_addcarryx_u64(((uint64(x76) + (uint64(x58) + (uint64(x50) + x38))) + x62), x89, x96)
+	var x98 fiatPastaFqUint1
+	x97, x98 = fiatPastaFqAddcarryxU64(((uint64(x76) + (uint64(x58) + (uint64(x50) + x38))) + x62), x89, x96)
 	var x99 uint64
 	_, x99 = bits.Mul64(x91, 0x8c46eb20ffffffff)
 	var x101 uint64
@@ -1121,19 +1123,19 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x106 uint64
 	x106, x105 = bits.Mul64(x99, 0x8c46eb2100000001)
 	var x107 uint64
-	var x108 fiat_pasta_fq_uint1
-	x107, x108 = fiat_pasta_fq_addcarryx_u64(x106, x103, 0x0)
-	var x110 fiat_pasta_fq_uint1
-	_, x110 = fiat_pasta_fq_addcarryx_u64(x91, x105, 0x0)
+	var x108 fiatPastaFqUint1
+	x107, x108 = fiatPastaFqAddcarryxU64(x106, x103, 0x0)
+	var x110 fiatPastaFqUint1
+	_, x110 = fiatPastaFqAddcarryxU64(x91, x105, 0x0)
 	var x111 uint64
-	var x112 fiat_pasta_fq_uint1
-	x111, x112 = fiat_pasta_fq_addcarryx_u64(x93, x107, x110)
+	var x112 fiatPastaFqUint1
+	x111, x112 = fiatPastaFqAddcarryxU64(x93, x107, x110)
 	var x113 uint64
-	var x114 fiat_pasta_fq_uint1
-	x113, x114 = fiat_pasta_fq_addcarryx_u64(x95, (uint64(x108) + x104), x112)
+	var x114 fiatPastaFqUint1
+	x113, x114 = fiatPastaFqAddcarryxU64(x95, (uint64(x108) + x104), x112)
 	var x115 uint64
-	var x116 fiat_pasta_fq_uint1
-	x115, x116 = fiat_pasta_fq_addcarryx_u64(x97, x101, x114)
+	var x116 fiatPastaFqUint1
+	x115, x116 = fiatPastaFqAddcarryxU64(x97, x101, x114)
 	var x117 uint64
 	var x118 uint64
 	x118, x117 = bits.Mul64(x3, 0x96d41af7ccfdaa9)
@@ -1147,26 +1149,26 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x124 uint64
 	x124, x123 = bits.Mul64(x3, 0xfc9678ff0000000f)
 	var x125 uint64
-	var x126 fiat_pasta_fq_uint1
-	x125, x126 = fiat_pasta_fq_addcarryx_u64(x124, x121, 0x0)
+	var x126 fiatPastaFqUint1
+	x125, x126 = fiatPastaFqAddcarryxU64(x124, x121, 0x0)
 	var x127 uint64
-	var x128 fiat_pasta_fq_uint1
-	x127, x128 = fiat_pasta_fq_addcarryx_u64(x122, x119, x126)
+	var x128 fiatPastaFqUint1
+	x127, x128 = fiatPastaFqAddcarryxU64(x122, x119, x126)
 	var x129 uint64
-	var x130 fiat_pasta_fq_uint1
-	x129, x130 = fiat_pasta_fq_addcarryx_u64(x120, x117, x128)
+	var x130 fiatPastaFqUint1
+	x129, x130 = fiatPastaFqAddcarryxU64(x120, x117, x128)
 	var x131 uint64
-	var x132 fiat_pasta_fq_uint1
-	x131, x132 = fiat_pasta_fq_addcarryx_u64(x111, x123, 0x0)
+	var x132 fiatPastaFqUint1
+	x131, x132 = fiatPastaFqAddcarryxU64(x111, x123, 0x0)
 	var x133 uint64
-	var x134 fiat_pasta_fq_uint1
-	x133, x134 = fiat_pasta_fq_addcarryx_u64(x113, x125, x132)
+	var x134 fiatPastaFqUint1
+	x133, x134 = fiatPastaFqAddcarryxU64(x113, x125, x132)
 	var x135 uint64
-	var x136 fiat_pasta_fq_uint1
-	x135, x136 = fiat_pasta_fq_addcarryx_u64(x115, x127, x134)
+	var x136 fiatPastaFqUint1
+	x135, x136 = fiatPastaFqAddcarryxU64(x115, x127, x134)
 	var x137 uint64
-	var x138 fiat_pasta_fq_uint1
-	x137, x138 = fiat_pasta_fq_addcarryx_u64(((uint64(x116) + (uint64(x98) + (uint64(x90) + x78))) + x102), x129, x136)
+	var x138 fiatPastaFqUint1
+	x137, x138 = fiatPastaFqAddcarryxU64(((uint64(x116) + (uint64(x98) + (uint64(x90) + x78))) + x102), x129, x136)
 	var x139 uint64
 	_, x139 = bits.Mul64(x131, 0x8c46eb20ffffffff)
 	var x141 uint64
@@ -1179,49 +1181,49 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 	var x146 uint64
 	x146, x145 = bits.Mul64(x139, 0x8c46eb2100000001)
 	var x147 uint64
-	var x148 fiat_pasta_fq_uint1
-	x147, x148 = fiat_pasta_fq_addcarryx_u64(x146, x143, 0x0)
-	var x150 fiat_pasta_fq_uint1
-	_, x150 = fiat_pasta_fq_addcarryx_u64(x131, x145, 0x0)
+	var x148 fiatPastaFqUint1
+	x147, x148 = fiatPastaFqAddcarryxU64(x146, x143, 0x0)
+	var x150 fiatPastaFqUint1
+	_, x150 = fiatPastaFqAddcarryxU64(x131, x145, 0x0)
 	var x151 uint64
-	var x152 fiat_pasta_fq_uint1
-	x151, x152 = fiat_pasta_fq_addcarryx_u64(x133, x147, x150)
+	var x152 fiatPastaFqUint1
+	x151, x152 = fiatPastaFqAddcarryxU64(x133, x147, x150)
 	var x153 uint64
-	var x154 fiat_pasta_fq_uint1
-	x153, x154 = fiat_pasta_fq_addcarryx_u64(x135, (uint64(x148) + x144), x152)
+	var x154 fiatPastaFqUint1
+	x153, x154 = fiatPastaFqAddcarryxU64(x135, (uint64(x148) + x144), x152)
 	var x155 uint64
-	var x156 fiat_pasta_fq_uint1
-	x155, x156 = fiat_pasta_fq_addcarryx_u64(x137, x141, x154)
+	var x156 fiatPastaFqUint1
+	x155, x156 = fiatPastaFqAddcarryxU64(x137, x141, x154)
 	x157 := ((uint64(x156) + (uint64(x138) + (uint64(x130) + x118))) + x142)
 	var x158 uint64
-	var x159 fiat_pasta_fq_uint1
-	x158, x159 = fiat_pasta_fq_subborrowx_u64(x151, 0x8c46eb2100000001, 0x0)
+	var x159 fiatPastaFqUint1
+	x158, x159 = fiatPastaFqSubborrowxU64(x151, 0x8c46eb2100000001, 0x0)
 	var x160 uint64
-	var x161 fiat_pasta_fq_uint1
-	x160, x161 = fiat_pasta_fq_subborrowx_u64(x153, 0x224698fc0994a8dd, x159)
+	var x161 fiatPastaFqUint1
+	x160, x161 = fiatPastaFqSubborrowxU64(x153, 0x224698fc0994a8dd, x159)
 	var x162 uint64
-	var x163 fiat_pasta_fq_uint1
-	x162, x163 = fiat_pasta_fq_subborrowx_u64(x155, uint64(0x0), x161)
+	var x163 fiatPastaFqUint1
+	x162, x163 = fiatPastaFqSubborrowxU64(x155, uint64(0x0), x161)
 	var x164 uint64
-	var x165 fiat_pasta_fq_uint1
-	x164, x165 = fiat_pasta_fq_subborrowx_u64(x157, 0x4000000000000000, x163)
-	var x167 fiat_pasta_fq_uint1
-	_, x167 = fiat_pasta_fq_subborrowx_u64(uint64(0x0), uint64(0x0), x165)
+	var x165 fiatPastaFqUint1
+	x164, x165 = fiatPastaFqSubborrowxU64(x157, 0x4000000000000000, x163)
+	var x167 fiatPastaFqUint1
+	_, x167 = fiatPastaFqSubborrowxU64(uint64(0x0), uint64(0x0), x165)
 	var x168 uint64
-	fiat_pasta_fq_cmovznz_u64(&x168, x167, x158, x151)
+	fiatPastaFqCmovznzU64(&x168, x167, x158, x151)
 	var x169 uint64
-	fiat_pasta_fq_cmovznz_u64(&x169, x167, x160, x153)
+	fiatPastaFqCmovznzU64(&x169, x167, x160, x153)
 	var x170 uint64
-	fiat_pasta_fq_cmovznz_u64(&x170, x167, x162, x155)
+	fiatPastaFqCmovznzU64(&x170, x167, x162, x155)
 	var x171 uint64
-	fiat_pasta_fq_cmovznz_u64(&x171, x167, x164, x157)
+	fiatPastaFqCmovznzU64(&x171, x167, x164, x157)
 	out1[0] = x168
 	out1[1] = x169
 	out1[2] = x170
 	out1[3] = x171
 }
 
-// The function fiat_pasta_fq_selectznz is a multi-limb conditional select.
+// The function fiatPastaFqSelectznz is a multi-limb conditional select.
 //
 // Postconditions:
 //   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
@@ -1232,22 +1234,22 @@ func fiat_pasta_fq_to_montgomery(out1 *fiat_pasta_fq_montgomery_domain_field_ele
 //   arg3: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func fiat_pasta_fq_selectznz(out1 *[4]uint64, arg1 fiat_pasta_fq_uint1, arg2 *[4]uint64, arg3 *[4]uint64) {
+func fiatPastaFqSelectznz(out1 *[4]uint64, arg1 fiatPastaFqUint1, arg2, arg3 *[4]uint64) {
 	var x1 uint64
-	fiat_pasta_fq_cmovznz_u64(&x1, arg1, arg2[0], arg3[0])
+	fiatPastaFqCmovznzU64(&x1, arg1, arg2[0], arg3[0])
 	var x2 uint64
-	fiat_pasta_fq_cmovznz_u64(&x2, arg1, arg2[1], arg3[1])
+	fiatPastaFqCmovznzU64(&x2, arg1, arg2[1], arg3[1])
 	var x3 uint64
-	fiat_pasta_fq_cmovznz_u64(&x3, arg1, arg2[2], arg3[2])
+	fiatPastaFqCmovznzU64(&x3, arg1, arg2[2], arg3[2])
 	var x4 uint64
-	fiat_pasta_fq_cmovznz_u64(&x4, arg1, arg2[3], arg3[3])
+	fiatPastaFqCmovznzU64(&x4, arg1, arg2[3], arg3[3])
 	out1[0] = x1
 	out1[1] = x2
 	out1[2] = x3
 	out1[3] = x4
 }
 
-// The function fiat_pasta_fq_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+// The function fiatPastaFqToBytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
 //
 // Preconditions:
 //   0 ≤ eval arg1 < m
@@ -1258,7 +1260,7 @@ func fiat_pasta_fq_selectznz(out1 *[4]uint64, arg1 fiat_pasta_fq_uint1, arg2 *[4
 //   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0x7fffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
-func fiat_pasta_fq_to_bytes(out1 *[32]uint8, arg1 *[4]uint64) {
+func fiatPastaFqToBytes(out1 *[32]uint8, arg1 *[4]uint64) {
 	x1 := arg1[3]
 	x2 := arg1[2]
 	x3 := arg1[1]
@@ -1353,7 +1355,7 @@ func fiat_pasta_fq_to_bytes(out1 *[32]uint8, arg1 *[4]uint64) {
 	out1[31] = x60
 }
 
-// The function fiat_pasta_fq_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+// The function fiatPastaFqFromBytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
 //
 // Preconditions:
 //   0 ≤ bytes_eval arg1 < m
@@ -1365,7 +1367,7 @@ func fiat_pasta_fq_to_bytes(out1 *[32]uint8, arg1 *[4]uint64) {
 //   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0x7fffffffffffffff]]
-func fiat_pasta_fq_from_bytes(out1 *[4]uint64, arg1 *[32]uint8) {
+func fiatPastaFqFromBytes(out1 *[4]uint64, arg1 *[32]uint8) {
 	x1 := (uint64(arg1[31]) << 56)
 	x2 := (uint64(arg1[30]) << 48)
 	x3 := (uint64(arg1[29]) << 40)

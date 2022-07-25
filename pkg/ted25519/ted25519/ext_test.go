@@ -18,8 +18,10 @@ import (
 	v1 "github.com/coinbase/kryptology/pkg/sharing/v1"
 )
 
-const expectedSeedHex = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
-const expectedPrivKeyHex = "307c83864f2833cb427a2ef1c00a013cfdff2768d980c0a3a520f006904de94f"
+const (
+	expectedSeedHex    = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
+	expectedPrivKeyHex = "307c83864f2833cb427a2ef1c00a013cfdff2768d980c0a3a520f006904de94f"
+)
 
 func TestExpandSeed(t *testing.T) {
 	seedBytes, err := hex.DecodeString(expectedSeedHex)
@@ -97,7 +99,7 @@ func TestThresholdSign_invalid_secrets(t *testing.T) {
 	)
 }
 
-// generateKey is the same as generateSharableKey, but used only for testing
+// generateKey is the same as generateSharableKey, but used only for testing.
 func generateKey() (PublicKey, []byte, error) {
 	pub, priv, err := GenerateKey(rand.Reader)
 	if err != nil {

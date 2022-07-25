@@ -12,7 +12,7 @@ import (
 	"github.com/coinbase/kryptology/internal"
 	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/paillier"
-	"github.com/coinbase/kryptology/pkg/sharing/v1"
+	v1 "github.com/coinbase/kryptology/pkg/sharing/v1"
 	"github.com/coinbase/kryptology/pkg/tecdsa/gg20/dealer"
 	"github.com/coinbase/kryptology/pkg/tecdsa/gg20/proof"
 )
@@ -22,13 +22,13 @@ type DkgRound2Bcast struct {
 	Di *core.Witness
 }
 
-// DkgRound2P2PSend contains value that will be P2PSend to all other player Pj
+// DkgRound2P2PSend contains value that will be P2PSend to all other player Pj.
 type DkgRound2P2PSend struct {
 	xij *v1.ShamirShare
 }
 
 // DkgRound2 implements distributed key generation round 2
-// [spec] fig 5: DistKeyGenRound2
+// [spec] fig 5: DistKeyGenRound2.
 func (dp *DkgParticipant) DkgRound2(params map[uint32]*DkgRound1Bcast) (*DkgRound2Bcast, map[uint32]*DkgRound2P2PSend, error) {
 	// Make sure dkg participant is not empty
 	if dp == nil || dp.Curve == nil {
@@ -83,6 +83,7 @@ func (dp *DkgParticipant) DkgRound2(params map[uint32]*DkgRound1Bcast) (*DkgRoun
 		bitlen := param.Pki.N.BitLen()
 		if bitlen != expKeySize &&
 			bitlen != expKeySize-1 {
+
 			return nil, nil, fmt.Errorf("invalid paillier keys")
 		}
 
@@ -104,8 +105,8 @@ func (dp *DkgParticipant) DkgRound2(params map[uint32]*DkgRound1Bcast) (*DkgRoun
 		}
 
 		// P2PSend xij to player Pj
-		if dp.state.X == nil || dp.state.X[id-1] == nil {
-			return nil, nil, fmt.Errorf("Missing Shamir share to P2P send")
+		if dp.state.X == nil || len(dp.state.X) != int(dp.state.Limit) || dp.state.X[id-1] == nil {
+			return nil, nil, fmt.Errorf("missing Shamir share to P2P send")
 		}
 		p2PSend[id] = &DkgRound2P2PSend{
 			xij: dp.state.X[id-1],
@@ -130,5 +131,4 @@ func (dp *DkgParticipant) DkgRound2(params map[uint32]*DkgRound1Bcast) (*DkgRoun
 	return &DkgRound2Bcast{
 		Di: dp.state.D,
 	}, p2PSend, nil
-
 }

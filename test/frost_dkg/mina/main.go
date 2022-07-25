@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 	dkg "github.com/coinbase/kryptology/pkg/dkg/frost"
 	"github.com/coinbase/kryptology/pkg/sharing"
@@ -17,9 +18,10 @@ import (
 	"github.com/coinbase/kryptology/pkg/ted25519/frost"
 )
 
-const LIMIT = 4
-const THRESHOLD = 2
-const Ctx = "string to prevent replay attack"
+const (
+	LIMIT     = 4
+	THRESHOLD = 2
+)
 
 func main() {
 	var threshold int
@@ -42,13 +44,13 @@ func main() {
 	fmt.Printf("Total participants is %d\n", limit)
 
 	// DEMO doing FROST DKG and that signers can compute a signature
-	participants := createDkgParticipants(threshold, limit)
+	participants, openings := createDkgParticipantsAndPrepareOpenings(threshold, limit)
 
 	// DKG Round 1
-	rnd1Bcast, rnd1P2p := round1(participants)
+	rnd3Bcast, rnd3P2p := dkgRound3(participants, openings)
 
 	// DKG Round 2
-	verificationKey, signingShares := round2(participants, rnd1Bcast, rnd1P2p)
+	verificationKey, signingShares := dkgRound4(participants, rnd3Bcast, rnd3P2p)
 
 	// Signing common setup for all participants
 	curve := curves.PALLAS()
@@ -58,7 +60,7 @@ func main() {
 		panic(err)
 	}
 	skC := new(mina.SecretKey)
-	skC.SetFq(sk.(*curves.ScalarPallas).GetFq())
+	skC.SetField(sk.(*curves.ScalarPallas).Value)
 	vk := skC.GetPublicKey()
 	pk := new(mina.PublicKey)
 	pk.SetPointPallas(verificationKey.(*curves.PointPallas))
@@ -98,11 +100,11 @@ func main() {
 		panic(err)
 	}
 	signers := make(map[uint32]*frost.Signer, 2)
-	signers[1], err = frost.NewSigner(participants[1], 1, uint32(threshold), lcs, []uint32{1, 2}, &mina.MinaTSchnorrHandler{})
+	signers[1], err = frost.NewSigner(participants[1], 1, uint32(threshold), lcs, []uint32{1, 2}, frost.DeriveMinaChallenge)
 	if err != nil {
 		panic(err)
 	}
-	signers[2], err = frost.NewSigner(participants[2], 2, uint32(threshold), lcs, []uint32{1, 2}, &mina.MinaTSchnorrHandler{})
+	signers[2], err = frost.NewSigner(participants[2], 2, uint32(threshold), lcs, []uint32{1, 2}, frost.DeriveMinaChallenge)
 	if err != nil {
 		panic(err)
 	}
@@ -117,23 +119,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	sigRng2BCast := make(map[uint32]*frost.Round2Bcast, 2)
-	sigRng2BCast[1], err = signers[1].SignRound2(msg, sigRnd1Bcast)
+	sigRnd2BCast := make(map[uint32]*frost.Round2Bcast, 2)
+	sigRnd2BCast[1], err = signers[1].SignRound2(msg, sigRnd1Bcast)
 	if err != nil {
 		panic(err)
 	}
-	sigRng2BCast[2], err = signers[2].SignRound2(msg, sigRnd1Bcast)
+	sigRnd2BCast[2], err = signers[2].SignRound2(msg, sigRnd1Bcast)
 	if err != nil {
 		panic(err)
 	}
-	sigRng3BCast, err := signers[1].SignRound3(sigRng2BCast)
+	sigRnd3BCast, err := signers[1].SignRound3(sigRnd2BCast)
 	if err != nil {
 		panic(err)
 	}
 
 	secSig := &mina.Signature{
-		R: sigRng3BCast.R.(*curves.PointPallas).X(),
-		S: sigRng3BCast.Z.(*curves.ScalarPallas).GetFq(),
+		R: sigRnd3BCast.R.(*curves.PointPallas).X(),
+		S: sigRnd3BCast.Z.(*curves.ScalarPallas).Value,
 	}
 
 	ok = pk.VerifyTransaction(secSig, txn)
@@ -142,12 +144,12 @@ func main() {
 	fmt.Printf("Threshold Signature verification - %v\n", ok == nil)
 }
 
-func round1(participants map[uint32]*dkg.DkgParticipant) (map[uint32]*dkg.Round1Bcast, map[uint32]dkg.Round1P2PSend) {
-	// DKG Round 1
-	rnd1Bcast := make(map[uint32]*dkg.Round1Bcast, len(participants))
-	rnd1P2p := make(map[uint32]dkg.Round1P2PSend, len(participants))
+func dkgRound3(participants map[uint32]*dkg.DkgParticipant, openings map[uint32]*core.Witness) (map[uint32]*dkg.Round3Bcast, map[uint32]dkg.Round3P2PSend) {
+	// DKG Round 3
+	rnd1Bcast := make(map[uint32]*dkg.Round3Bcast, len(participants))
+	rnd1P2p := make(map[uint32]dkg.Round3P2PSend, len(participants))
 	for id, p := range participants {
-		bcast, p2psend, err := p.Round1(nil)
+		bcast, p2psend, err := p.Round3FrostDkgFirstRound(nil, openings)
 		if err != nil {
 			panic(err)
 		}
@@ -157,22 +159,22 @@ func round1(participants map[uint32]*dkg.DkgParticipant) (map[uint32]*dkg.Round1
 	return rnd1Bcast, rnd1P2p
 }
 
-func round2(participants map[uint32]*dkg.DkgParticipant,
-	rnd1Bcast map[uint32]*dkg.Round1Bcast,
-	rnd1P2p map[uint32]dkg.Round1P2PSend,
+func dkgRound4(participants map[uint32]*dkg.DkgParticipant,
+	rnd3Bcast map[uint32]*dkg.Round3Bcast,
+	rnd3P2p map[uint32]dkg.Round3P2PSend,
 ) (curves.Point, map[uint32]*sharing.ShamirShare) {
 	signingShares := make(map[uint32]*sharing.ShamirShare, len(participants))
 	var verificationKey curves.Point
-	for id := range rnd1Bcast {
-		fmt.Printf("Computing DKG Round 2 for participant %d\n", id)
+	for id := range rnd3Bcast {
+		fmt.Printf("Computing DKG Round 4 for participant %d\n", id)
 		rnd1P2pForP := make(map[uint32]*sharing.ShamirShare)
-		for jid := range rnd1P2p {
+		for jid := range rnd3P2p {
 			if jid == id {
 				continue
 			}
-			rnd1P2pForP[jid] = rnd1P2p[jid][id]
+			rnd1P2pForP[jid] = rnd3P2p[jid][id]
 		}
-		rnd2Out, err := participants[id].Round2(rnd1Bcast, rnd1P2pForP)
+		rnd2Out, err := participants[id].Round4FrostDkgSecondRound(rnd3Bcast, rnd1P2pForP)
 		if err != nil {
 			panic(err)
 		}
@@ -186,26 +188,45 @@ func round2(participants map[uint32]*dkg.DkgParticipant,
 	return verificationKey, signingShares
 }
 
-func createDkgParticipants(thresh, limit int) map[uint32]*dkg.DkgParticipant {
+func createDkgParticipantsAndPrepareOpenings(thresh, limit int) (map[uint32]*dkg.DkgParticipant, map[uint32]*core.Witness) {
 	curve := curves.PALLAS()
+	// Prepare DKG participants
 	participants := make(map[uint32]*dkg.DkgParticipant, limit)
 	for i := 1; i <= limit; i++ {
-		otherIds := make([]uint32, limit-1)
-		idx := 0
-		for j := 1; j <= limit; j++ {
-			if i == j {
-				continue
-			}
-			otherIds[idx] = uint32(j)
-			idx++
+		participantIds := make([]uint32, limit)
+		for j := 0; j < limit; j++ {
+			participantIds[j] = uint32(j + 1)
 		}
-		p, err := dkg.NewDkgParticipant(uint32(i), uint32(thresh), Ctx, curve, otherIds...)
+		p, err := dkg.NewDkgParticipant(uint32(i), uint32(thresh), curve, participantIds)
 		if err != nil {
 			panic(err)
 		}
+
 		participants[uint32(i)] = p
 	}
-	return participants
+
+	// Prepare the fixed string used to prevent replay attack
+	// Commit
+	commitments := make(map[uint32]*core.Commitment, limit)
+	for _, participant := range participants {
+		commitment, err := participant.Round1Commit()
+		if err != nil {
+			panic(err)
+		}
+		commitments[participant.Id] = commitment
+	}
+
+	// Open
+	openings := make(map[uint32]*core.Witness, limit)
+	for _, participant := range participants {
+		opening, err := participant.Round2Open(commitments)
+		if err != nil {
+			panic(err)
+		}
+		openings[participant.Id] = opening
+	}
+
+	return participants, openings
 }
 
 func printHelp() {

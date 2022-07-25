@@ -37,7 +37,7 @@ type EcScalar interface {
 
 type K256Scalar struct{}
 
-// Static interface assertion
+// Static interface assertion.
 var _ EcScalar = (*K256Scalar)(nil)
 
 // warning: the Euclidean alg which Mod uses is not constant-time.
@@ -46,25 +46,25 @@ func NewK256Scalar() *K256Scalar {
 	return &K256Scalar{}
 }
 
-func (k K256Scalar) Add(x, y *big.Int) *big.Int {
+func (K256Scalar) Add(x, y *big.Int) *big.Int {
 	v := new(big.Int).Add(x, y)
 	v.Mod(v, btcec.S256().N)
 	return v
 }
 
-func (k K256Scalar) Sub(x, y *big.Int) *big.Int {
+func (K256Scalar) Sub(x, y *big.Int) *big.Int {
 	v := new(big.Int).Sub(x, y)
 	v.Mod(v, btcec.S256().N)
 	return v
 }
 
-func (k K256Scalar) Neg(x *big.Int) *big.Int {
+func (K256Scalar) Neg(x *big.Int) *big.Int {
 	v := new(big.Int).Sub(btcec.S256().N, x)
 	v.Mod(v, btcec.S256().N)
 	return v
 }
 
-func (k K256Scalar) Mul(x, y *big.Int) *big.Int {
+func (K256Scalar) Mul(x, y *big.Int) *big.Int {
 	v := new(big.Int).Mul(x, y)
 	v.Mod(v, btcec.S256().N)
 	return v
@@ -75,11 +75,11 @@ func (k K256Scalar) Div(x, y *big.Int) *big.Int {
 	return k.Mul(x, t)
 }
 
-func (k K256Scalar) Hash(input []byte) *big.Int {
+func (K256Scalar) Hash(input []byte) *big.Int {
 	return new(ScalarK256).Hash(input).BigInt()
 }
 
-func (k K256Scalar) Random() (*big.Int, error) {
+func (K256Scalar) Random() (*big.Int, error) {
 	b := make([]byte, 48)
 	n, err := crand.Read(b)
 	if err != nil {
@@ -93,11 +93,11 @@ func (k K256Scalar) Random() (*big.Int, error) {
 	return v, nil
 }
 
-func (k K256Scalar) IsValid(x *big.Int) bool {
+func (K256Scalar) IsValid(x *big.Int) bool {
 	return core.In(x, btcec.S256().N) == nil
 }
 
-func (k K256Scalar) Bytes(x *big.Int) []byte {
+func (K256Scalar) Bytes(x *big.Int) []byte {
 	bytes := make([]byte, 32)
 	x.FillBytes(bytes) // big-endian; will left-pad.
 	return bytes
@@ -105,32 +105,32 @@ func (k K256Scalar) Bytes(x *big.Int) []byte {
 
 type P256Scalar struct{}
 
-// Static interface assertion
+// Static interface assertion.
 var _ EcScalar = (*P256Scalar)(nil)
 
 func NewP256Scalar() *P256Scalar {
 	return &P256Scalar{}
 }
 
-func (k P256Scalar) Add(x, y *big.Int) *big.Int {
+func (P256Scalar) Add(x, y *big.Int) *big.Int {
 	v := new(big.Int).Add(x, y)
 	v.Mod(v, elliptic.P256().Params().N)
 	return v
 }
 
-func (k P256Scalar) Sub(x, y *big.Int) *big.Int {
+func (P256Scalar) Sub(x, y *big.Int) *big.Int {
 	v := new(big.Int).Sub(x, y)
 	v.Mod(v, elliptic.P256().Params().N)
 	return v
 }
 
-func (k P256Scalar) Neg(x *big.Int) *big.Int {
+func (P256Scalar) Neg(x *big.Int) *big.Int {
 	v := new(big.Int).Sub(elliptic.P256().Params().N, x)
 	v.Mod(v, elliptic.P256().Params().N)
 	return v
 }
 
-func (k P256Scalar) Mul(x, y *big.Int) *big.Int {
+func (P256Scalar) Mul(x, y *big.Int) *big.Int {
 	v := new(big.Int).Mul(x, y)
 	v.Mod(v, elliptic.P256().Params().N)
 	return v
@@ -141,11 +141,11 @@ func (k P256Scalar) Div(x, y *big.Int) *big.Int {
 	return k.Mul(x, t)
 }
 
-func (k P256Scalar) Hash(input []byte) *big.Int {
+func (P256Scalar) Hash(input []byte) *big.Int {
 	return new(ScalarP256).Hash(input).BigInt()
 }
 
-func (k P256Scalar) Random() (*big.Int, error) {
+func (P256Scalar) Random() (*big.Int, error) {
 	b := make([]byte, 48)
 	n, err := crand.Read(b)
 	if err != nil {
@@ -159,11 +159,11 @@ func (k P256Scalar) Random() (*big.Int, error) {
 	return v, nil
 }
 
-func (k P256Scalar) IsValid(x *big.Int) bool {
+func (P256Scalar) IsValid(x *big.Int) bool {
 	return core.In(x, elliptic.P256().Params().N) == nil
 }
 
-func (k P256Scalar) Bytes(x *big.Int) []byte {
+func (P256Scalar) Bytes(x *big.Int) []byte {
 	bytes := make([]byte, 32)
 	x.FillBytes(bytes) // big-endian; will left-pad.
 	return bytes
@@ -171,51 +171,51 @@ func (k P256Scalar) Bytes(x *big.Int) []byte {
 
 type Bls12381Scalar struct{}
 
-// Static interface assertion
+// Static interface assertion.
 var _ EcScalar = (*Bls12381Scalar)(nil)
 
 func NewBls12381Scalar() *Bls12381Scalar {
 	return &Bls12381Scalar{}
 }
 
-func (k Bls12381Scalar) Add(x, y *big.Int) *big.Int {
-	a := bls12381.Bls12381FqNew().SetBigInt(x)
-	b := bls12381.Bls12381FqNew().SetBigInt(y)
+func (Bls12381Scalar) Add(x, y *big.Int) *big.Int {
+	a := bls12381.FqNew().SetBigInt(x)
+	b := bls12381.FqNew().SetBigInt(y)
 	return a.Add(a, b).BigInt()
 }
 
-func (k Bls12381Scalar) Sub(x, y *big.Int) *big.Int {
-	a := bls12381.Bls12381FqNew().SetBigInt(x)
-	b := bls12381.Bls12381FqNew().SetBigInt(y)
+func (Bls12381Scalar) Sub(x, y *big.Int) *big.Int {
+	a := bls12381.FqNew().SetBigInt(x)
+	b := bls12381.FqNew().SetBigInt(y)
 	return a.Sub(a, b).BigInt()
 }
 
-func (k Bls12381Scalar) Neg(x *big.Int) *big.Int {
-	a := bls12381.Bls12381FqNew().SetBigInt(x)
+func (Bls12381Scalar) Neg(x *big.Int) *big.Int {
+	a := bls12381.FqNew().SetBigInt(x)
 	return a.Neg(a).BigInt()
 }
 
-func (k Bls12381Scalar) Mul(x, y *big.Int) *big.Int {
-	a := bls12381.Bls12381FqNew().SetBigInt(x)
-	b := bls12381.Bls12381FqNew().SetBigInt(y)
+func (Bls12381Scalar) Mul(x, y *big.Int) *big.Int {
+	a := bls12381.FqNew().SetBigInt(x)
+	b := bls12381.FqNew().SetBigInt(y)
 	return a.Mul(a, b).BigInt()
 }
 
-func (k Bls12381Scalar) Div(x, y *big.Int) *big.Int {
-	c := bls12381.Bls12381FqNew()
-	a := bls12381.Bls12381FqNew().SetBigInt(x)
-	b := bls12381.Bls12381FqNew().SetBigInt(y)
+func (Bls12381Scalar) Div(x, y *big.Int) *big.Int {
+	c := bls12381.FqNew()
+	a := bls12381.FqNew().SetBigInt(x)
+	b := bls12381.FqNew().SetBigInt(y)
 	_, wasInverted := c.Invert(b)
 	c.Mul(a, c)
 	tt := map[bool]int{false: 0, true: 1}
 	return a.CMove(a, c, tt[wasInverted]).BigInt()
 }
 
-func (k Bls12381Scalar) Hash(input []byte) *big.Int {
+func (Bls12381Scalar) Hash(input []byte) *big.Int {
 	return new(ScalarBls12381).Hash(input).BigInt()
 }
 
-func (k Bls12381Scalar) Random() (*big.Int, error) {
+func (Bls12381Scalar) Random() (*big.Int, error) {
 	a := BLS12381G1().NewScalar().Random(crand.Reader)
 	if a == nil {
 		return nil, fmt.Errorf("invalid random value")
@@ -223,14 +223,14 @@ func (k Bls12381Scalar) Random() (*big.Int, error) {
 	return a.BigInt(), nil
 }
 
-func (k Bls12381Scalar) Bytes(x *big.Int) []byte {
+func (Bls12381Scalar) Bytes(x *big.Int) []byte {
 	bytes := make([]byte, 32)
 	x.FillBytes(bytes) // big-endian; will left-pad.
 	return bytes
 }
 
-func (k Bls12381Scalar) IsValid(x *big.Int) bool {
-	a := bls12381.Bls12381FqNew().SetBigInt(x)
+func (Bls12381Scalar) IsValid(x *big.Int) bool {
+	a := bls12381.FqNew().SetBigInt(x)
 	return a.BigInt().Cmp(x) == 0
 }
 
@@ -239,14 +239,14 @@ var ed25519N, _ = new(big.Int).SetString("1000000000000000000000000000000014DEF9
 
 type Ed25519Scalar struct{}
 
-// Static interface assertion
+// Static interface assertion.
 var _ EcScalar = (*Ed25519Scalar)(nil)
 
 func NewEd25519Scalar() *Ed25519Scalar {
 	return &Ed25519Scalar{}
 }
 
-func (k Ed25519Scalar) Add(x, y *big.Int) *big.Int {
+func (Ed25519Scalar) Add(x, y *big.Int) *big.Int {
 	a, err := internal.BigInt2Ed25519Scalar(x)
 	if err != nil {
 		panic(err)
@@ -259,7 +259,7 @@ func (k Ed25519Scalar) Add(x, y *big.Int) *big.Int {
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(a.Bytes()))
 }
 
-func (k Ed25519Scalar) Sub(x, y *big.Int) *big.Int {
+func (Ed25519Scalar) Sub(x, y *big.Int) *big.Int {
 	a, err := internal.BigInt2Ed25519Scalar(x)
 	if err != nil {
 		panic(err)
@@ -272,7 +272,7 @@ func (k Ed25519Scalar) Sub(x, y *big.Int) *big.Int {
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(a.Bytes()))
 }
 
-func (k Ed25519Scalar) Neg(x *big.Int) *big.Int {
+func (Ed25519Scalar) Neg(x *big.Int) *big.Int {
 	a, err := internal.BigInt2Ed25519Scalar(x)
 	if err != nil {
 		panic(err)
@@ -281,7 +281,7 @@ func (k Ed25519Scalar) Neg(x *big.Int) *big.Int {
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(a.Bytes()))
 }
 
-func (k Ed25519Scalar) Mul(x, y *big.Int) *big.Int {
+func (Ed25519Scalar) Mul(x, y *big.Int) *big.Int {
 	a, err := internal.BigInt2Ed25519Scalar(x)
 	if err != nil {
 		panic(err)
@@ -294,7 +294,7 @@ func (k Ed25519Scalar) Mul(x, y *big.Int) *big.Int {
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(a.Bytes()))
 }
 
-func (k Ed25519Scalar) Div(x, y *big.Int) *big.Int {
+func (Ed25519Scalar) Div(x, y *big.Int) *big.Int {
 	b, err := internal.BigInt2Ed25519Scalar(y)
 	if err != nil {
 		panic(err)
@@ -308,14 +308,14 @@ func (k Ed25519Scalar) Div(x, y *big.Int) *big.Int {
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(a.Bytes()))
 }
 
-func (k Ed25519Scalar) Hash(input []byte) *big.Int {
+func (Ed25519Scalar) Hash(input []byte) *big.Int {
 	v := new(ristretto.Scalar).Derive(input)
 	var data [32]byte
 	v.BytesInto(&data)
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(data[:]))
 }
 
-func (k Ed25519Scalar) Bytes(x *big.Int) []byte {
+func (Ed25519Scalar) Bytes(x *big.Int) []byte {
 	a, err := internal.BigInt2Ed25519Scalar(x)
 	if err != nil {
 		panic(err)
@@ -327,7 +327,7 @@ func (k Ed25519Scalar) Random() (*big.Int, error) {
 	return k.RandomWithReader(crand.Reader)
 }
 
-func (k Ed25519Scalar) RandomWithReader(r io.Reader) (*big.Int, error) {
+func (Ed25519Scalar) RandomWithReader(r io.Reader) (*big.Int, error) {
 	b := make([]byte, 64)
 	n, err := r.Read(b)
 	if err != nil {
@@ -346,6 +346,6 @@ func (k Ed25519Scalar) RandomWithReader(r io.Reader) (*big.Int, error) {
 	return new(big.Int).SetBytes(internal.ReverseScalarBytes(s.Bytes())), nil
 }
 
-func (k Ed25519Scalar) IsValid(x *big.Int) bool {
+func (Ed25519Scalar) IsValid(x *big.Int) bool {
 	return x.Cmp(ed25519N) == -1
 }

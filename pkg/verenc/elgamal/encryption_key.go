@@ -13,16 +13,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"git.sr.ht/~sircmpwn/go-bare"
-
 	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
-
-type encryptionKeyMarshal struct {
-	Value []byte `bare:"value"`
-	Curve string `bare:"curve"`
-}
 
 // EncryptParams is all the options for doing verifiable encryption.
 // Message must be supplied and is the value to be encrypted.
@@ -45,12 +38,12 @@ type EncryptParams struct {
 }
 
 // EncryptionKey encrypts a message to a ciphertext from which
-// zero-knowledge proofs can be derived
+// zero-knowledge proofs can be derived.
 type EncryptionKey struct {
 	Value curves.Point
 }
 
-// NewKeys creates a new key pair for El-Gamal encryption
+// NewKeys creates a new key pair for El-Gamal encryption.
 func NewKeys(curve *curves.Curve) (*EncryptionKey, *DecryptionKey, error) {
 	if curve == nil {
 		return nil, nil, fmt.Errorf("invalid curve")
@@ -66,26 +59,14 @@ func NewKeys(curve *curves.Curve) (*EncryptionKey, *DecryptionKey, error) {
 	return &EncryptionKey{value}, &DecryptionKey{x}, nil
 }
 
-// MarshalBinary serializes a key to bytes
+// MarshalBinary serializes a key to bytes.
 func (ek EncryptionKey) MarshalBinary() ([]byte, error) {
-	tv := new(encryptionKeyMarshal)
-	tv.Curve = ek.Value.CurveName()
-	tv.Value = ek.Value.ToAffineCompressed()
-	return bare.Marshal(tv)
+	return curves.PointMarshalBinary(ek.Value)
 }
 
-// UnmarshalBinary deserializes a key from bytes
+// UnmarshalBinary deserializes a key from bytes.
 func (ek *EncryptionKey) UnmarshalBinary(data []byte) error {
-	tv := new(encryptionKeyMarshal)
-	err := bare.Unmarshal(data, tv)
-	if err != nil {
-		return err
-	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("unknown curve")
-	}
-	value, err := curve.Point.FromAffineCompressed(tv.Value)
+	value, err := curves.PointUnmarshalBinary(data)
 	if err != nil {
 		return err
 	}
@@ -143,7 +124,7 @@ func (ek EncryptionKey) encryptWithRandNonce(msg []byte, msgIsHashed bool, r cur
 	}, nil
 }
 
-func (ek EncryptionKey) genNonce() []byte {
+func (EncryptionKey) genNonce() []byte {
 	var nonce [12]byte
 	n, err := crand.Read(nonce[:])
 	if err != nil {

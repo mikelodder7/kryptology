@@ -39,11 +39,11 @@ func parseCmdArgs() (io.Reader, io.Reader, error) {
 	flag.Parse()
 	cBytes, err := ioutil.ReadFile(*cFlag)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading current log file %v", err)
+		return nil, nil, fmt.Errorf("reading current log file %w", err)
 	}
 	nBytes, err := ioutil.ReadFile(*nFlag)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading new log file %v", err)
+		return nil, nil, fmt.Errorf("reading new log file %w", err)
 	}
 
 	return bytes.NewBuffer(cBytes), bytes.NewBuffer(nBytes), nil
@@ -62,13 +62,12 @@ func Compare(currBench, newBench io.Reader) error {
 		if _, ok := n[bench]; !ok {
 			// New benchmark, skipping
 			continue
-		} else {
-			currB := c[bench]
-			newB := n[bench]
-			err = compareBenches(currB, newB)
-			if err != nil {
-				perfDeviations = append(perfDeviations, fmt.Sprintf("%v", err))
-			}
+		}
+		currB := c[bench]
+		newB := n[bench]
+		err = compareBenches(currB, newB)
+		if err != nil {
+			perfDeviations = append(perfDeviations, fmt.Errorf("%w", err).Error())
 		}
 	}
 
@@ -106,29 +105,29 @@ func compareBenches(currB, newB []*parse.Benchmark) error {
 		if _, ok := newMap[name]; ok {
 			compare := []struct {
 				current float64
-				new     float64
+				next    float64
 			}{
 				{
 					current: float64(currMap[name].AllocedBytesPerOp),
-					new:     float64(newMap[name].AllocedBytesPerOp),
+					next:    float64(newMap[name].AllocedBytesPerOp),
 				},
 				{
 					current: float64(currMap[name].AllocsPerOp),
-					new:     float64(newMap[name].AllocsPerOp),
+					next:    float64(newMap[name].AllocsPerOp),
 				},
 				{
 					current: currMap[name].NsPerOp,
-					new:     newMap[name].NsPerOp,
+					next:    newMap[name].NsPerOp,
 				},
 				{
 					current: currMap[name].MBPerS,
-					new:     newMap[name].MBPerS,
+					next:    newMap[name].MBPerS,
 				},
 			}
 			for _, t := range compare {
-				if t.new > t.current*THRESHOLD {
-					percent := (t.new - t.current) * 100 / t.current
-					return fmt.Errorf("benchmark %s exceeded previous benchmark by %0.2f percent. Current: %0.2f, New: %0.2f", name, percent, t.current, t.new)
+				if t.next > t.current*THRESHOLD {
+					percent := (t.next - t.current) * 100 / t.current
+					return fmt.Errorf("benchmark %s exceeded previous benchmark by %0.2f percent. Current: %0.2f, New: %0.2f", name, percent, t.current, t.next)
 				}
 			}
 		}

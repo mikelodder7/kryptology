@@ -63,6 +63,7 @@ func TestExpandMessageXmd(t *testing.T) {
 		})
 	}
 }
+
 func TestFiatShamirDeterministic(t *testing.T) {
 	a := big.NewInt(1)
 	hash, err := FiatShamir(a)

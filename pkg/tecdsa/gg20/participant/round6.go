@@ -17,11 +17,11 @@ import (
 )
 
 // Round6FullBcast are the values to be broadcast to the other players
-// This is the s_i value from §5.fig 5.SignRound6.step 9
+// This is the s_i value from §5.fig 5.SignRound6.step 9.
 type (
 	Round6FullBcast struct {
 		// Note that sElement is some element of the entire s vector.
-		// In this round, it's s_i. For the recepients of this message in the final
+		// In this round, it's s_i. For the recipients of this message in the final
 		// sign output round, this will be s_j
 		sElement *big.Int
 		// The reason we can't do something straightforward like `type BetterRound6FullBcast *big.int`
@@ -52,7 +52,7 @@ func (r6b *Round6FullBcast) UnmarshalJSON(data []byte) error {
 
 // SignRound6Full performs the round 6 signing operation according to
 // Trusted Dealer Mode: see [spec] fig 7: SignRound6
-// DKG Mode: see [spec] fig 8: SignRound6
+// DKG Mode: see [spec] fig 8: SignRound6.
 func (signer *Signer) SignRound6Full(hash []byte, in map[uint32]*Round5Bcast, p2p map[uint32]*Round5P2PSend) (*Round6FullBcast, error) {
 	if err := signer.verifyStateMap(6, in); err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (signer *Signer) SignRound6Full(hash []byte, in map[uint32]*Round5Bcast, p2
 
 // signRound6Offline performs the round 6 signing operation according to
 // [spec] §6.fig 6
-// Verifies the accumulated computed values before signing the final result
+// Verifies the accumulated computed values before signing the final result.
 func (signer *Signer) signRound6Offline(in map[uint32]*Round5Bcast, p2p map[uint32]*Round5P2PSend) error {
 	// FUTURE: determine round state variables to accommodate on/offline modes
 	// before this function is exported
@@ -121,7 +121,7 @@ func (signer *Signer) signRound6Offline(in map[uint32]*Round5Bcast, p2p map[uint
 	}
 	// 6 If V != g, Abort
 	if !v.IsBasePoint() {
-		return fmt.Errorf("V != g")
+		return fmt.Errorf("V != g") //nolint:revive // It's okay to start this error message with a capital letter.
 	}
 	// 7. return r, k, \sigma,
 	// These are already stored
@@ -130,7 +130,7 @@ func (signer *Signer) signRound6Offline(in map[uint32]*Round5Bcast, p2p map[uint
 
 // SignRound6Online performs the round 6 signing operation according to
 // [spec] §6.fig 6.SignRound6Online
-// func (p Participant) SignRound6Online(msg []byte, k, r, sigma *big.Int, curve elliptic.Curve) (*Round6FullBcast, *Round6FullOut, error) {
+// func (p Participant) SignRound6Online(msg []byte, k, r, sigma *big.Int, curve elliptic.Curve) (*Round6FullBcast, *Round6FullOut, error) {.
 func (signer *Signer) signRound6Online(hash []byte) (*Round6FullBcast, error) {
 	// FUTURE: check the current round state if allowed to be called separately
 
@@ -167,15 +167,15 @@ func (signer *Signer) signRound6Online(hash []byte) (*Round6FullBcast, error) {
 }
 
 // SignOutput performs the signature aggregation step in
-// [spec] §5.fig 5
+// [spec] §5.fig 5.
 func (signer *Signer) SignOutput(in map[uint32]*Round6FullBcast) (*curves.EcdsaSignature, error) {
-	var err error
-	if err = signer.verifyStateMap(7, in); err != nil {
+	if err := signer.verifyStateMap(7, in); err != nil {
 		return nil, err
 	}
 	// 1. Set s = s_i
 	s := new(big.Int).Set(signer.state.si)
 
+	var err error
 	// 2. For j = [1,...,t+1]
 	for j, sj := range in {
 		// 3. If i = j, continue
@@ -210,7 +210,7 @@ func (signer *Signer) SignOutput(in map[uint32]*Round6FullBcast) (*curves.EcdsaS
 	return sigma, nil
 }
 
-func (signer Signer) normalizeS(s *big.Int) *big.Int {
+func (signer *Signer) normalizeS(s *big.Int) *big.Int {
 	// Normalize the signature to a "low S" form. In ECDSA, signatures are
 	// of the form (r, s) where r and s are numbers lying in some finite
 	// field. The verification equation will pass for (r, s) iff it passes

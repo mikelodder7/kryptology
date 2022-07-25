@@ -57,9 +57,9 @@ func TestCOTExtension(t *testing.T) {
 				require.NoError(t, err)
 			}
 		}
-		firstMessage, err := receiver.Round1Initialize(uniqueSessionId, choice)
+		firstMessage, err := receiver.Round1Initialize(uniqueSessionId, &choice)
 		require.NoError(t, err)
-		responseTau, err := sender.Round2Transfer(uniqueSessionId, input, firstMessage)
+		responseTau, err := sender.Round2Transfer(uniqueSessionId, &input, firstMessage)
 		require.NoError(t, err)
 		err = receiver.Round3Transfer(responseTau)
 		require.NoError(t, err)
@@ -119,10 +119,10 @@ func TestCOTExtensionStreaming(t *testing.T) {
 
 	// now actually run it, stream-wise
 	go func() {
-		errorsChannel <- SenderStreamCOtRun(sender, hashKeySeed, input, receiverPipe)
+		errorsChannel <- SenderStreamCOtRun(sender, hashKeySeed, &input, receiverPipe)
 	}()
 	go func() {
-		errorsChannel <- ReceiverStreamCOtRun(receiver, hashKeySeed, choice, senderPipe)
+		errorsChannel <- ReceiverStreamCOtRun(receiver, hashKeySeed, &choice, senderPipe)
 	}()
 	for i := 0; i < 2; i++ {
 		require.Nil(t, <-errorsChannel)

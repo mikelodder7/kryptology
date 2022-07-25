@@ -29,7 +29,7 @@ const (
 	serverId = 2
 )
 
-// Benchmark full DKG including blind selection and setup
+// Benchmark full DKG including blind selection and setup.
 func BenchmarkDkg(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping test in short mode.")
@@ -41,7 +41,7 @@ func BenchmarkDkg(b *testing.B) {
 	}
 }
 
-// Run a DKG and reports the client/server results
+// Run a DKG and reports the client/server results.
 func dkg() (*DkgResult, *DkgResult, error) {
 	// Create client/server
 	blind, _ := newBlind(curveScalar, curve)
@@ -92,7 +92,7 @@ func dkg() (*DkgResult, *DkgResult, error) {
 	return clientResult, serverResult, nil
 }
 
-// Run a full DKG and verify the absence of errors and valid results
+// Run a full DKG and verify the absence of errors and valid results.
 func TestDkg(t *testing.T) {
 	// Setup and ensure no errors
 	clientResult, serverResult, err := dkg()
@@ -123,7 +123,7 @@ func TestDkg(t *testing.T) {
 	})
 }
 
-// Reconstruct the pubkey from 2 shares
+// Reconstruct the pubkey from 2 shares.
 func reconstructPubkey(s1, s2 *v1.ShamirShare, curve elliptic.Curve) (*curves.EcPoint, error) {
 	s, err := v1.NewShamir(2, 2, s1.Value.Field())
 	if err != nil {
@@ -143,7 +143,7 @@ func reconstructPubkey(s1, s2 *v1.ShamirShare, curve elliptic.Curve) (*curves.Ec
 	}, nil
 }
 
-// Test blind generator helper function produces a value on the expected curve
+// Test blind generator helper function produces a value on the expected curve.
 func TestNewBlindOnCurve(t *testing.T) {
 	const n = 1024
 	for i := 0; i < n; i++ {

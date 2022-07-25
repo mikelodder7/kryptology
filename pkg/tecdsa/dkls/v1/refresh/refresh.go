@@ -60,7 +60,7 @@ type Bob struct {
 	transcript *merlin.Transcript
 }
 
-type RefreshRound2Output struct {
+type Round2Output struct {
 	SeedOTRound1Output *schnorr.Proof
 	BobMultiplier      curves.Scalar
 }
@@ -91,7 +91,7 @@ func (alice *Alice) Round1RefreshGenerateSeed() curves.Scalar {
 	return refreshSeed
 }
 
-func (bob *Bob) Round2RefreshProduceSeedAndMultiplyAndStartOT(aliceSeed curves.Scalar) (*RefreshRound2Output, error) {
+func (bob *Bob) Round2RefreshProduceSeedAndMultiplyAndStartOT(aliceSeed curves.Scalar) (*Round2Output, error) {
 	bob.transcript.AppendMessage([]byte("alice refresh seed"), aliceSeed.Bytes())
 	bobSeed := bob.curve.Scalar.Random(rand.Reader)
 	bob.transcript.AppendMessage([]byte("bob refresh seed"), bobSeed.Bytes())
@@ -114,13 +114,13 @@ func (bob *Bob) Round2RefreshProduceSeedAndMultiplyAndStartOT(aliceSeed curves.S
 		return nil, errors.Wrap(err, "bob computing round 1 of seed OT within refresh round 2")
 	}
 
-	return &RefreshRound2Output{
+	return &Round2Output{
 		SeedOTRound1Output: seedOTRound1Output,
 		BobMultiplier:      bobSeed,
 	}, nil
 }
 
-func (alice *Alice) Round3RefreshMultiplyRound2Ot(input *RefreshRound2Output) ([]simplest.ReceiversMaskedChoices, error) {
+func (alice *Alice) Round3RefreshMultiplyRound2Ot(input *Round2Output) ([]simplest.ReceiversMaskedChoices, error) {
 	alice.transcript.AppendMessage([]byte("bob refresh seed"), input.BobMultiplier.Bytes())
 	k, err := alice.curve.NewScalar().SetBytes(
 		alice.transcript.ExtractBytes([]byte("secret key share multiplier"), simplest.DigestSize),

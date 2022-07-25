@@ -19,8 +19,10 @@ import (
 	"github.com/coinbase/kryptology/pkg/sharing/v1"
 )
 
-const LIMIT = 4
-const THRESHOLD = 2
+const (
+	LIMIT     = 4
+	THRESHOLD = 2
+)
 
 func main() {
 	var threshold int
@@ -74,7 +76,7 @@ func main() {
 
 	sk = internal.ReverseScalarBytes(sk)
 	var ska [32]byte
-	copy(ska[:], sk[:])
+	copy(ska[:], sk)
 
 	skC, err := edwards25519.NewScalar().SetCanonicalBytes(ska[:])
 	if err != nil {

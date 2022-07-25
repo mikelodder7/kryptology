@@ -16,8 +16,10 @@ import (
 	"sync"
 )
 
-var ed25519SubGroupOrderOnce sync.Once
-var ed25519SubGroupOrder *big.Int
+var (
+	ed25519SubGroupOrderOnce sync.Once
+	ed25519SubGroupOrder     *big.Int
+)
 
 // Field is a finite field.
 type Field struct {
@@ -38,7 +40,7 @@ type ElementJSON struct {
 	Value   string `json:"value"`
 }
 
-// Marshal Element to JSON
+// Marshal Element to JSON.
 func (x *Element) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ElementJSON{
 		Modulus: x.Modulus.String(),
@@ -89,7 +91,7 @@ func newElement(field *Field, value *big.Int) *Element {
 	return &Element{field, value}
 }
 
-// IsValid returns whether or not the value is within [0, modulus)
+// IsValid returns whether or not the value is within [0, modulus).
 func (f Field) IsValid(value *big.Int) bool {
 	// value < modulus && value >= 0
 	return value.Cmp(f.Int) < 0 && value.Sign() >= 0
@@ -130,7 +132,7 @@ func (f Field) RandomElement(r io.Reader) (*Element, error) {
 	return newElement(&f, randInt), nil
 }
 
-// ElementFromBytes initializes a new field element from big-endian bytes
+// ElementFromBytes initializes a new field element from big-endian bytes.
 func (f Field) ElementFromBytes(bytes []byte) *Element {
 	return newElement(&f, new(big.Int).SetBytes(bytes))
 }
@@ -170,7 +172,7 @@ func (x Element) Field() *Field {
 	return x.Modulus
 }
 
-// Add returns the sum x+y
+// Add returns the sum x+y.
 func (x Element) Add(y *Element) *Element {
 	x.validateFields(y)
 
@@ -179,7 +181,7 @@ func (x Element) Add(y *Element) *Element {
 	return newElement(x.Modulus, sum)
 }
 
-// Sub returns the difference x-y
+// Sub returns the difference x-y.
 func (x Element) Sub(y *Element) *Element {
 	x.validateFields(y)
 
@@ -188,14 +190,14 @@ func (x Element) Sub(y *Element) *Element {
 	return newElement(x.Modulus, difference)
 }
 
-// Neg returns the field negation
+// Neg returns the field negation.
 func (x Element) Neg() *Element {
 	z := new(big.Int).Neg(x.Value)
 	z.Mod(z, x.Modulus.Int)
 	return newElement(x.Modulus, z)
 }
 
-// Mul returns the product x*y
+// Mul returns the product x*y.
 func (x Element) Mul(y *Element) *Element {
 	x.validateFields(y)
 
@@ -204,7 +206,7 @@ func (x Element) Mul(y *Element) *Element {
 	return newElement(x.Modulus, product)
 }
 
-// Div returns the quotient x/y
+// Div returns the quotient x/y.
 func (x Element) Div(y *Element) *Element {
 	x.validateFields(y)
 
@@ -214,7 +216,7 @@ func (x Element) Div(y *Element) *Element {
 	return newElement(x.Modulus, quotient)
 }
 
-// Pow computes x^y reduced by the modulus
+// Pow computes x^y reduced by the modulus.
 func (x Element) Pow(y *Element) *Element {
 	x.validateFields(y)
 
@@ -229,17 +231,17 @@ func (x Element) Sqrt() *Element {
 	return newElement(x.Modulus, new(big.Int).ModSqrt(x.Value, x.Modulus.Int))
 }
 
-// BigInt returns value as a big.Int
+// BigInt returns value as a big.Int.
 func (x Element) BigInt() *big.Int {
 	return x.Value
 }
 
-// Bytes returns the value as bytes
+// Bytes returns the value as bytes.
 func (x Element) Bytes() []byte {
 	return x.BigInt().Bytes()
 }
 
-// IsEqual returns x == y
+// IsEqual returns x == y.
 func (x Element) IsEqual(y *Element) bool {
 	if !x.isEqualFields(y) {
 		return false
@@ -248,7 +250,7 @@ func (x Element) IsEqual(y *Element) bool {
 	return x.Value.Cmp(y.Value) == 0
 }
 
-// Clone returns a new copy of the element
+// Clone returns a new copy of the element.
 func (x Element) Clone() *Element {
 	return x.Modulus.ElementFromBytes(x.Bytes())
 }

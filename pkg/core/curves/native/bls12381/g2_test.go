@@ -49,8 +49,9 @@ func TestG2Equal(t *testing.T) {
 	b := new(G2).Identity()
 
 	require.Equal(t, 1, a.Equal(a))
-	require.Equal(t, 0, a.Equal(b))
 	require.Equal(t, 1, b.Equal(b))
+	require.Equal(t, 0, a.Equal(b))
+	require.Equal(t, 0, b.Equal(a))
 }
 
 func TestG2ToAffine(t *testing.T) {
@@ -223,19 +224,19 @@ func TestG2Neg(t *testing.T) {
 
 func TestG2Mul(t *testing.T) {
 	g := new(G2).Generator()
-	a := Bls12381FqNew().SetRaw(&[native.FieldLimbs]uint64{
+	a := FqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0x2b56_8297_a56d_a71c,
 		0xd8c3_9ecb_0ef3_75d1,
 		0x435c_38da_67bf_bf96,
 		0x8088_a050_26b6_59b2,
 	})
-	b := Bls12381FqNew().SetRaw(&[native.FieldLimbs]uint64{
+	b := FqNew().SetRaw(&[native.FieldLimbs]uint64{
 		0x785f_dd9b_26ef_8b85,
 		0xc997_f258_3769_5c18,
 		0x4c8d_bc39_e7b7_56c1,
 		0x70d9_b6cc_6d87_df20,
 	})
-	c := Bls12381FqNew().Mul(a, b)
+	c := FqNew().Mul(a, b)
 
 	t1 := new(G2).Generator()
 	t1.Mul(t1, a)
@@ -292,7 +293,7 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 func TestG2MulByX(t *testing.T) {
 	// multiplying by `x` a point in G2 is the same as multiplying by
 	// the equivalent scalar.
-	x := Bls12381FqNew().SetUint64(paramX)
+	x := FqNew().SetUint64(paramX)
 	x.Neg(x)
 	t1 := new(G2).Generator()
 	t1.MulByX(t1)
@@ -301,7 +302,7 @@ func TestG2MulByX(t *testing.T) {
 	require.Equal(t, 1, t1.Equal(t2))
 
 	point := new(G2).Generator()
-	a := Bls12381FqNew().SetUint64(42)
+	a := FqNew().SetUint64(42)
 	point.Mul(point, a)
 
 	t1.MulByX(point)
@@ -531,11 +532,11 @@ func TestG2SumOfProducts(t *testing.T) {
 	var b [64]byte
 	h0, _ := new(G2).Random(crand.Reader)
 	_, _ = crand.Read(b[:])
-	s := Bls12381FqNew().SetBytesWide(&b)
+	s := FqNew().SetBytesWide(&b)
 	_, _ = crand.Read(b[:])
-	sTilde := Bls12381FqNew().SetBytesWide(&b)
+	sTilde := FqNew().SetBytesWide(&b)
 	_, _ = crand.Read(b[:])
-	c := Bls12381FqNew().SetBytesWide(&b)
+	c := FqNew().SetBytesWide(&b)
 
 	lhs := new(G2).Mul(h0, s)
 	rhs, _ := new(G2).SumOfProducts([]*G2{h0}, []*native.Field{s})
@@ -543,7 +544,7 @@ func TestG2SumOfProducts(t *testing.T) {
 
 	u := new(G2).Mul(h0, s)
 	uTilde := new(G2).Mul(h0, sTilde)
-	sHat := Bls12381FqNew().Mul(c, s)
+	sHat := FqNew().Mul(c, s)
 	sHat.Sub(sTilde, sHat)
 
 	rhs.Mul(u, c)

@@ -7,9 +7,9 @@
 package fp
 
 import (
-	crand "crypto/rand"
+	"crypto/rand"
+	"encoding/binary"
 	"math/big"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,6 +17,22 @@ import (
 	"github.com/coinbase/kryptology/internal"
 	"github.com/coinbase/kryptology/pkg/core/curves/native"
 )
+
+func randUnit64(t *testing.T) uint64 {
+	t.Helper()
+	b := [8]byte{}
+	_, err := rand.Read(b[:])
+	require.NoError(t, err)
+	return binary.BigEndian.Uint64(b[:])
+}
+
+func randUnit32(t *testing.T) uint32 {
+	t.Helper()
+	b := [4]byte{}
+	_, err := rand.Read(b[:])
+	require.NoError(t, err)
+	return binary.BigEndian.Uint32(b[:])
+}
 
 func TestFpSetOne(t *testing.T) {
 	fp := K256FpNew().SetOne()
@@ -42,8 +58,8 @@ func TestFpAdd(t *testing.T) {
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		// Divide by 4 to prevent overflow false errors
-		l := rand.Uint64() >> 2
-		r := rand.Uint64() >> 2
+		l := randUnit64(t) >> 2
+		r := randUnit64(t) >> 2
 		e := l + r
 		lhs.SetUint64(l)
 		rhs.SetUint64(r)
@@ -66,8 +82,8 @@ func TestFpSub(t *testing.T) {
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		// Divide by 4 to prevent overflow false errors
-		l := rand.Uint64() >> 2
-		r := rand.Uint64() >> 2
+		l := randUnit64(t) >> 2
+		r := randUnit64(t) >> 2
 		if l < r {
 			l, r = r, l
 		}
@@ -93,8 +109,8 @@ func TestFpMul(t *testing.T) {
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		// Divide by 4 to prevent overflow false errors
-		l := rand.Uint32()
-		r := rand.Uint32()
+		l := randUnit32(t)
+		r := randUnit32(t)
 		e := uint64(l) * uint64(r)
 		lhs.SetUint64(uint64(l))
 		rhs.SetUint64(uint64(r))
@@ -112,7 +128,7 @@ func TestFpDouble(t *testing.T) {
 	require.Equal(t, e, K256FpNew().Double(a))
 
 	for i := 0; i < 25; i++ {
-		tv := rand.Uint32()
+		tv := randUnit32(t)
 		ttv := uint64(tv) * 2
 		a = K256FpNew().SetUint64(uint64(tv))
 		e = K256FpNew().SetUint64(ttv)
@@ -126,7 +142,7 @@ func TestFpSquare(t *testing.T) {
 	require.Equal(t, e, a.Square(a))
 
 	for i := 0; i < 25; i++ {
-		j := rand.Uint32()
+		j := randUnit32(t)
 		exp := uint64(j) * uint64(j)
 		e.SetUint64(exp)
 		a.SetUint64(uint64(j))
@@ -204,7 +220,7 @@ func TestFpBytes(t *testing.T) {
 	require.Equal(t, t1, t2)
 
 	for i := 0; i < 25; i++ {
-		t1.SetUint64(rand.Uint64())
+		t1.SetUint64(randUnit64(t))
 		seq = t1.Bytes()
 		_, err = t2.SetBytes(&seq)
 		require.NoError(t, err)
@@ -273,8 +289,6 @@ func TestFpCmp(t *testing.T) {
 	for _, test := range tests {
 		require.Equal(t, test.e, test.a.Cmp(test.b))
 		require.Equal(t, -test.e, test.b.Cmp(test.a))
-		require.Equal(t, 0, test.a.Cmp(test.a))
-		require.Equal(t, 0, test.b.Cmp(test.b))
 	}
 }
 
@@ -316,7 +330,7 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 	params := getK256FpParams()
 	var tv2 [64]byte
 	for i := 0; i < 25; i++ {
-		_, _ = crand.Read(tv2[:])
+		_, _ = rand.Read(tv2[:])
 		e := new(big.Int).SetBytes(tv2[:])
 		e.Mod(e, params.BiModulus)
 

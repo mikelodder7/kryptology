@@ -13,7 +13,7 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// Pedersen Verifiable Secret Sharing Scheme
+// Pedersen Verifiable Secret Sharing Scheme.
 type Pedersen struct {
 	threshold, limit uint32
 	curve            *curves.Curve
@@ -56,7 +56,7 @@ func (pv PedersenVerifier) Verify(share, blindShare *ShamirShare) error {
 	}
 }
 
-// PedersenResult contains all the data from calling Split
+// PedersenResult contains all the data from calling Split.
 type PedersenResult struct {
 	Blinding                     curves.Scalar
 	BlindingShares, SecretShares []*ShamirShare
@@ -64,7 +64,7 @@ type PedersenResult struct {
 	PedersenVerifier             *PedersenVerifier
 }
 
-// NewPedersen creates a new pedersen VSS
+// NewPedersen creates a new pedersen VSS.
 func NewPedersen(threshold, limit uint32, generator curves.Point) (*Pedersen, error) {
 	if limit < threshold {
 		return nil, fmt.Errorf("limit cannot be less than threshold")
@@ -88,7 +88,7 @@ func NewPedersen(threshold, limit uint32, generator curves.Point) (*Pedersen, er
 	return &Pedersen{threshold, limit, curve, generator}, nil
 }
 
-// Split creates the verifiers, blinding and shares
+// Split creates the verifiers, blinding and shares.
 func (pd Pedersen) Split(secret curves.Scalar, reader io.Reader) (*PedersenResult, error) {
 	// generate a random blinding factor
 	blinding := pd.curve.Scalar.Random(reader)

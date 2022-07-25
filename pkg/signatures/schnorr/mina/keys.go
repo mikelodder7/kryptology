@@ -18,22 +18,24 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/coinbase/kryptology/pkg/core/curves"
-	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fp"
+	"github.com/coinbase/kryptology/pkg/core/curves/native"
+	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta"
 	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fq"
 )
 
-const version = 0xcb
-const nonZeroCurvePointVersion = 0x01
-const isCompressed = 0x01
+const (
+	version                  = 0xcb
+	nonZeroCurvePointVersion = 0x01
+	isCompressed             = 0x01
+)
 
-// PublicKey is the verification key
+// PublicKey is the verification key.
 type PublicKey struct {
-	value *curves.Ep
+	value *curves.PointPallas
 }
 
-// GenerateAddress converts the public key to an address
+// GenerateAddress converts the public key to an address.
 func (pk PublicKey) GenerateAddress() string {
-
 	var payload [40]byte
 	payload[0] = version
 	payload[1] = nonZeroCurvePointVersion
@@ -48,7 +50,7 @@ func (pk PublicKey) GenerateAddress() string {
 	return base58.Encode(payload[:])
 }
 
-// ParseAddress converts a given string into a public key returning an error on failure
+// ParseAddress converts a given string into a public key returning an error on failure.
 func (pk *PublicKey) ParseAddress(b58 string) error {
 	buffer := base58.Decode(b58)
 	if len(buffer) != 40 {
@@ -70,11 +72,13 @@ func (pk *PublicKey) ParseAddress(b58 string) error {
 	}
 	x := buffer[3:35]
 	x[31] |= buffer[35] << 7
-	value, err := new(curves.Ep).FromAffineCompressed(x)
+	value := new(curves.PointPallas)
+	value.EllipticPoint = pasta.PointNew()
+	pt, err := value.FromAffineCompressed(x)
 	if err != nil {
 		return err
 	}
-	pk.value = value
+	pk.value, _ = pt.(*curves.PointPallas)
 	return nil
 }
 
@@ -83,32 +87,39 @@ func (pk PublicKey) MarshalBinary() ([]byte, error) {
 }
 
 func (pk *PublicKey) UnmarshalBinary(input []byte) error {
-	pt, err := new(curves.Ep).FromAffineCompressed(input)
+	pt := new(curves.PointPallas)
+	pt.EllipticPoint = pasta.PointNew()
+	t, err := pt.FromAffineCompressed(input)
 	if err != nil {
 		return err
 	}
+	pt, _ = t.(*curves.PointPallas)
 	pk.value = pt
 	return nil
 }
 
 func (pk *PublicKey) SetPointPallas(pallas *curves.PointPallas) {
-	pk.value = pallas.GetEp()
+	pk.value = new(curves.PointPallas)
+	pk.value.EllipticPoint = pasta.PointNew().Set(pallas.EllipticPoint)
 }
 
-// SecretKey is the signing key
+// SecretKey is the signing key.
 type SecretKey struct {
-	value *fq.Fq
+	value *curves.ScalarPallas
 }
 
-// GetPublicKey returns the corresponding verification
+// GetPublicKey returns the corresponding verification.
 func (sk SecretKey) GetPublicKey() *PublicKey {
-	pk := new(curves.Ep).Mul(new(curves.Ep).Generator(), sk.value)
-	return &PublicKey{pk}
+	pk := pasta.PointNew().Generator()
+	pk.Mul(pk, sk.value.Value)
+	value := new(curves.PointPallas)
+	value.EllipticPoint = pk
+	return &PublicKey{value}
 }
 
 func (sk SecretKey) MarshalBinary() ([]byte, error) {
 	t := sk.value.Bytes()
-	return t[:], nil
+	return t, nil
 }
 
 func (sk *SecretKey) UnmarshalBinary(input []byte) error {
@@ -117,37 +128,44 @@ func (sk *SecretKey) UnmarshalBinary(input []byte) error {
 	}
 	var buf [32]byte
 	copy(buf[:], input)
-	value, err := new(fq.Fq).SetBytes(&buf)
+	v, err := fq.PastaFqNew().SetBytes(&buf)
 	if err != nil {
 		return err
 	}
-	sk.value = value
+
+	sk.value = new(curves.ScalarPallas)
+	sk.value.Value = v
 	return nil
 }
 
-func (sk *SecretKey) SetFq(fq *fq.Fq) {
-	sk.value = fq
+func (sk *SecretKey) SetField(fqObject *native.Field) {
+	sk.value = new(curves.ScalarPallas)
+	sk.value.Value = fqObject
 }
 
-// NewKeys creates a new keypair using a CSPRNG
+// NewKeys creates a new keypair using a CSPRNG.
 func NewKeys() (*PublicKey, *SecretKey, error) {
 	return NewKeysFromReader(crand.Reader)
 }
 
-// NewKeysFromReader creates a new keypair using the specified reader
+// NewKeysFromReader creates a new keypair using the specified reader.
 func NewKeysFromReader(reader io.Reader) (*PublicKey, *SecretKey, error) {
 	t := new(curves.ScalarPallas).Random(reader)
 	sc, ok := t.(*curves.ScalarPallas)
 	if !ok || t.IsZero() {
 		return nil, nil, fmt.Errorf("invalid key")
 	}
-	sk := sc.GetFq()
-	pk := new(curves.Ep).Mul(new(curves.Ep).Generator(), sk)
+	sk := sc.Value
+	pk := pasta.PointNew().Generator()
+	pk.Mul(pk, sk)
 	if pk.IsIdentity() {
 		return nil, nil, fmt.Errorf("invalid key")
 	}
 
-	return &PublicKey{pk}, &SecretKey{sk}, nil
+	pk.ToAffine(pk)
+	valuePk := new(curves.PointPallas)
+	valuePk.EllipticPoint = pk
+	return &PublicKey{valuePk}, &SecretKey{sc}, nil
 }
 
 // SignTransaction generates a signature over the specified txn and network id
@@ -172,23 +190,24 @@ func (sk *SecretKey) finishSchnorrSign(input *roinput, networkId NetworkType) (*
 	}
 	pk := sk.GetPublicKey()
 	k := sk.msgDerive(input, pk, networkId)
-	if k.IsZero() {
+	if k.IsZero() == 1 {
 		return nil, fmt.Errorf("invalid nonce generated")
 	}
 	// r = k*G
-	r := new(curves.Ep).Generator()
+	r := pasta.PointNew().Generator()
 	r.Mul(r, k)
+	r.ToAffine(r)
 
-	if r.Y().IsOdd() {
+	if r.Y.Bytes()[0]&1 == 1 {
 		k.Neg(k)
 	}
-	rx := r.X()
+	rx := r.X
 	e := msgHash(pk, rx, input, ThreeW, networkId)
 
 	// S = k + e*sk
-	e.Mul(e, sk.value)
-	s := new(fq.Fq).Add(k, e)
-	if rx.IsZero() || s.IsZero() {
+	e.Mul(e, sk.value.Value)
+	s := fq.PastaFqNew().Add(k, e)
+	if rx.IsZero()|s.IsZero() == 1 {
 		return nil, fmt.Errorf("invalid signature")
 	}
 	return &Signature{
@@ -197,7 +216,7 @@ func (sk *SecretKey) finishSchnorrSign(input *roinput, networkId NetworkType) (*
 	}, nil
 }
 
-// VerifyTransaction checks if the signature is over the given transaction using this public key
+// VerifyTransaction checks if the signature is over the given transaction using this public key.
 func (pk *PublicKey) VerifyTransaction(sig *Signature, transaction *Transaction) error {
 	input := new(roinput).Init(3, 75)
 	transaction.addRoInput(input)
@@ -215,27 +234,30 @@ func (pk *PublicKey) finishSchnorrVerify(sig *Signature, input *roinput, network
 	if pk.value.IsIdentity() {
 		return fmt.Errorf("invalid public key")
 	}
-	if sig.R.IsZero() || sig.S.IsZero() {
+	if sig.R.IsZero()|sig.S.IsZero() == 1 {
 		return fmt.Errorf("invalid signature")
 	}
 	e := msgHash(pk, sig.R, input, ThreeW, networkId)
-	sg := new(curves.Ep).Generator()
+	sg := pasta.PointNew().Generator()
 	sg.Mul(sg, sig.S)
 
-	epk := new(curves.Ep).Mul(pk.value, e)
+	epk := pasta.PointNew().Set(pk.value.EllipticPoint)
+	epk.Mul(epk, e)
 	epk.Neg(epk)
 
-	r := new(curves.Ep).Add(sg, epk)
-	if !r.Y().IsOdd() && r.X().Equal(sig.R) {
+	r := pasta.PointNew().Add(sg, epk)
+	r.ToAffine(r)
+	if r.Y.Bytes()[0]&1 == 0 && r.X.Equal(sig.R) == 1 {
 		return nil
 	} else {
 		return fmt.Errorf("signature verification failed")
 	}
 }
 
-func msgHash(pk *PublicKey, rx *fp.Fp, input *roinput, hashType Permutation, networkId NetworkType) *fq.Fq {
-	input.AddFp(pk.value.X())
-	input.AddFp(pk.value.Y())
+func msgHash(pk *PublicKey, rx *native.Field, input *roinput, hashType Permutation, networkId NetworkType) *native.Field {
+	ep := pasta.PointNew().ToAffine(pk.value.EllipticPoint)
+	input.AddFp(ep.X)
+	input.AddFp(ep.Y)
 	input.AddFp(rx)
 
 	ctx := new(Context).Init(hashType, networkId)
@@ -244,11 +266,11 @@ func msgHash(pk *PublicKey, rx *fp.Fp, input *roinput, hashType Permutation, net
 	return ctx.Digest()
 }
 
-func (sk SecretKey) msgDerive(msg *roinput, pk *PublicKey, networkId NetworkType) *fq.Fq {
+func (sk SecretKey) msgDerive(msg *roinput, pk *PublicKey, networkId NetworkType) *native.Field {
 	input := msg.Clone()
 	input.AddFp(pk.value.X())
 	input.AddFp(pk.value.Y())
-	input.AddFq(sk.value)
+	input.AddFq(sk.value.Value)
 	input.AddBytes([]byte{byte(networkId)})
 	inputBytes := input.Bytes()
 
@@ -264,5 +286,5 @@ func (sk SecretKey) msgDerive(msg *roinput, pk *PublicKey, networkId NetworkType
 		binary.LittleEndian.Uint64(hash[16:24]),
 		binary.LittleEndian.Uint64(hash[24:32]),
 	}
-	return new(fq.Fq).SetRaw(&tmp)
+	return fq.PastaFqNew().SetLimbs(&tmp)
 }

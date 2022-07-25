@@ -6,10 +6,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// OversizeDstSalt is the salt used to hash a dst over MaxDstLen
+// OversizeDstSalt is the salt used to hash a dst over MaxDstLen.
 var OversizeDstSalt = []byte("H2C-OVERSIZE-DST-")
 
-// MaxDstLen the max size for dst in hash to curve
+// MaxDstLen the max size for dst in hash to curve.
 const MaxDstLen = 255
 
 func getDomainXmd(h hash.Hash, domain []byte) []byte {
@@ -82,11 +82,11 @@ func ExpandMsgXmd(h *EllipticPointHasher, msg, domain []byte, outLen int) []byte
 		_, _ = h.xmd.Write([]byte{domainLen})
 
 		// b_1 || ... || b_(ell - 1)
-		copy(out[(i-1)*h.xmd.Size():i*h.xmd.Size()], bi[:])
+		copy(out[(i-1)*h.xmd.Size():i*h.xmd.Size()], bi)
 		bi = h.xmd.Sum(nil)
 	}
 	// b_ell
-	copy(out[(ell-1)*h.xmd.Size():], bi[:])
+	copy(out[(ell-1)*h.xmd.Size():], bi)
 	return out[:outLen]
 }
 

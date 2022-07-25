@@ -133,7 +133,7 @@ func NewBob(curve *curves.Curve) *Bob {
 // in this round, Bob flips 32 random bytes and sends them to Alice.
 // note that this is not _explicitly_ given as part of the protocol in https://eprint.iacr.org/2018/499.pdf, Protocol 1).
 // rather, it is part of our generation of a unique session identifier, for use in subsequent schnorr proofs / seed OT / etc.
-// we do it by having each party sample 32 bytes, then by appending _both_ as salts. secure if either party is honest
+// we do it by having each party sample 32 bytes, then by appending _both_ as salts. secure if either party is honest.
 func (bob *Bob) Round1GenerateRandomSeed() ([simplest.DigestSize]byte, error) {
 	bobSeed := [simplest.DigestSize]byte{}
 	if _, err := rand.Read(bobSeed[:]); err != nil {
@@ -174,7 +174,7 @@ func (alice *Alice) Round2CommitToProof(bobSeed [simplest.DigestSize]byte) (*Rou
 	}, nil
 }
 
-// Round3SchnorrProve receives Bob's Commitment and returns schnorr statment + proof.
+// Round3SchnorrProve receives Bob's Commitment and returns schnorr statement + proof.
 // Steps 1 and 3 of protocol 2 on page 7.
 func (bob *Bob) Round3SchnorrProve(round2Output *Round2Output) (*schnorr.Proof, error) {
 	bob.transcript.AppendMessage([]byte("session_id_alice"), round2Output.Seed[:])
@@ -252,7 +252,7 @@ func (alice *Alice) Round10DkgRound6Ot(challengeOpenings []simplest.ChallengeOpe
 }
 
 // Output returns the output of the DKG operation. Must be called after step 9. Calling it before that step
-// has undefined behaviour.
+// has undefined behavior.
 func (alice *Alice) Output() *AliceOutput {
 	return &AliceOutput{
 		PublicKey:      alice.publicKey,
@@ -262,7 +262,7 @@ func (alice *Alice) Output() *AliceOutput {
 }
 
 // Output returns the output of the DKG operation. Must be called after step 9. Calling it before that step
-// has undefined behaviour.
+// has undefined behavior.
 func (bob *Bob) Output() *BobOutput {
 	return &BobOutput{
 		PublicKey:      bob.publicKey,

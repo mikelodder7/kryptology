@@ -16,7 +16,7 @@ import (
 	"github.com/coinbase/kryptology/pkg/tecdsa/gg20/dealer"
 )
 
-// DkgResult is all the data generated from the DKG
+// DkgResult is all the data generated from the DKG.
 type DkgResult struct {
 	PublicShares    []*curves.EcPoint
 	VerificationKey *curves.EcPoint
@@ -31,7 +31,7 @@ type DkgParticipantData struct {
 }
 
 // DkgRound4 computes dkg round 4 as shown in
-// [spec] fig. 5: DistKeyGenRound4
+// [spec] fig. 5: DistKeyGenRound4.
 func (dp *DkgParticipant) DkgRound4(psfProof map[uint32]paillier.PsfProof) (*DkgResult, error) {
 	if len(psfProof) == 0 {
 		return nil, internal.ErrIncorrectCount

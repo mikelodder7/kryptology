@@ -21,7 +21,7 @@ import (
 // To test ProveCompositeDL, the input must satisfy the following relationship
 // P = 2Pi+1, Q = 2Qi+1, N = PQ
 // H2 = H1^x mod N
-// P, Q are 1024 bits
+// P, Q are 1024 bits.
 func TestCdlProof(t *testing.T) {
 	curve := btcec.S256()
 	params := []*CdlProofParams{
@@ -158,7 +158,7 @@ func TestCdlProofTampered(t *testing.T) {
 
 // Recall that if the input to ProveCompositeDL is correct, h2 must be equal to h1^alpha
 // In this test, we set h1, h2, alpha as random values purposely, which should make the verification incorrect.
-// Pi, Qi and N are generated correctly via a side program and P = 2*Pi+1, Q=2*Qi+1, N = PQ
+// Pi, Qi and N are generated correctly via a side program and P = 2*Pi+1, Q=2*Qi+1, N = PQ.
 func TestCdlProofRandValues(t *testing.T) {
 	curve := btcec.S256()
 	pi := tt.B10("69194751040870458870606183726555435909086788535387699389669514131170791430457074867750473589740101538563709151356299341625165252163443101897409551452286117584229969813571483217371266470819768503264181903858655002445121864855018050830086220605407845379111572386400613256577806622758645652928390261158201056559")
@@ -241,7 +241,7 @@ func TestCdlProofInvalidParams(t *testing.T) {
 	}
 }
 
-// Numbers in array u and s are randomly generated via a side program
+// Numbers in array u and s are randomly generated via a side program.
 func TestMarshalJsonCdlProof(t *testing.T) {
 	test := CdlProof{
 		u: []*big.Int{
@@ -317,7 +317,7 @@ func TestMarshalJsonCdlProof(t *testing.T) {
 // Set SafePrimes P, Q to 100-bit length instead of 1024-bit length to test small modulus.
 // P and Q are generated using the SafePrime Generator via side program
 // P = 1028783406134480509185302717063
-// Q = 1093599917998934718101903070203
+// Q = 1093599917998934718101903070203.
 func TestSmallModulus(t *testing.T) {
 	curve := btcec.S256()
 	pi := tt.B10("514391703067240254592651358531")

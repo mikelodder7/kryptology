@@ -17,17 +17,17 @@ import (
 	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 	"github.com/coinbase/kryptology/pkg/paillier"
-	"github.com/coinbase/kryptology/pkg/sharing/v1"
+	v1 "github.com/coinbase/kryptology/pkg/sharing/v1"
 	"github.com/coinbase/kryptology/pkg/tecdsa/gg20/dealer"
 )
 
-// Participant is a tECDSA player that receives information from a trusted dealer
+// Participant is a tECDSA player that receives information from a trusted dealer.
 type Participant struct {
 	dealer.Share
 	sk *paillier.SecretKey
 }
 
-// Signer is a tECDSA player that holds the additive shares needed for performing the signing operation
+// Signer is a tECDSA player that holds the additive shares needed for performing the signing operation.
 type Signer struct {
 	sk              *paillier.SecretKey            // paillier secret key assigned to this signer
 	share           *v1.ShamirShare                // secret signing share for this signer
@@ -42,7 +42,7 @@ type Signer struct {
 	state     *state // Accumulated intermediate values associated with signing
 }
 
-// NewSigner C=creates a new signer from a dealer-provided output and a specific set of co-signers
+// NewSigner C=creates a new signer from a dealer-provided output and a specific set of co-signers.
 func NewSigner(info *dealer.ParticipantData, cosigners []uint32) (*Signer, error) {
 	// Create the participant
 	p := Participant{*info.SecretKeyShare, info.DecryptKey}
@@ -130,7 +130,7 @@ func (signer *Signer) resetSignRound() {
 	signer.state = nil
 }
 
-// state encapsulates all the values used in the signing rounds state machine
+// state encapsulates all the values used in the signing rounds state machine.
 type state struct {
 	keyGenType dealer.KeyGenType
 	verify     curves.EcdsaVerify
@@ -174,7 +174,7 @@ type state struct {
 
 // convertToAdditive takes all the publicShares and changes them to their additive form
 // for this participant. Only t shares are needed for this step
-// [spec] §4.figure 4: convertToAdditive
+// [spec] §4.figure 4: convertToAdditive.
 func (p Participant) convertToAdditive(curve elliptic.Curve, publicSharesMap map[uint32]*dealer.PublicShare) (*Signer, error) {
 	if publicSharesMap == nil {
 		return nil, fmt.Errorf("public shares cannot be nil")
@@ -194,7 +194,7 @@ func (p Participant) convertToAdditive(curve elliptic.Curve, publicSharesMap map
 	}
 
 	additiveMap := make(map[uint32]*dealer.PublicShare, len(publicSharesMap))
-	var maxIndex uint32 = 0
+	var maxIndex uint32
 	var privateKeyShare *v1.ShamirShare
 
 	// Compute lagrange coefficients
@@ -243,7 +243,7 @@ func (p Participant) convertToAdditive(curve elliptic.Curve, publicSharesMap map
 }
 
 // PrepareToSign creates a Signer out of a Participant. The expected co-signers for the signing rounds are
-// expected to be exactly those included in the publicSharesMap
+// expected to be exactly those included in the publicSharesMap.
 func (p Participant) PrepareToSign(pubKey *curves.EcPoint,
 	verify curves.EcdsaVerify,
 	curve elliptic.Curve,
@@ -309,7 +309,7 @@ type dkgParticipantData struct {
 	Commitment  core.Commitment
 }
 
-// dkgstate encapsulates all the values used in the dkg rounds state machine
+// dkgstate encapsulates all the values used in the dkg rounds state machine.
 type dkgstate struct {
 	// Round 1 variables
 	D  *core.Witness
@@ -333,7 +333,7 @@ type dkgstate struct {
 	PublicShares []*curves.EcPoint
 }
 
-// Check DKG round number is valid
+// Check DKG round number is valid.
 func (dp *DkgParticipant) verifyDkgRound(dkground uint) error {
 	if dp.Round != dkground {
 		return internal.ErrInvalidRound

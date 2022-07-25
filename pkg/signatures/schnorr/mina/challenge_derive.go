@@ -12,9 +12,9 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-type MinaTSchnorrHandler struct{}
+type TSchnorrHandler struct{}
 
-func (m MinaTSchnorrHandler) DeriveChallenge(msg []byte, pubKey curves.Point, r curves.Point) (curves.Scalar, error) {
+func (TSchnorrHandler) DeriveChallenge(msg []byte, pubKey, r curves.Point) (curves.Scalar, error) {
 	txn := new(Transaction)
 	err := txn.UnmarshalBinary(msg)
 	if err != nil {
@@ -33,10 +33,10 @@ func (m MinaTSchnorrHandler) DeriveChallenge(msg []byte, pubKey curves.Point, r 
 	}
 
 	pk := new(PublicKey)
-	pk.value = pt.GetEp()
+	pk.value = pt
 
 	sc := msgHash(pk, R.X(), input, ThreeW, MainNet)
 	s := new(curves.ScalarPallas)
-	s.SetFq(sc)
+	s.Value = sc
 	return s, nil
 }

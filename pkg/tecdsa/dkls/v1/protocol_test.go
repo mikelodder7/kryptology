@@ -28,7 +28,7 @@ import (
 )
 
 // For DKG bob starts first. For refresh and sign, Alice starts first.
-func runIteratedProtocol(firstParty protocol.Iterator, secondParty protocol.Iterator) (error, error) {
+func runIteratedProtocol(firstParty, secondParty protocol.Iterator) (error, error) {
 	var (
 		message *protocol.Message
 		aErr    error
@@ -105,7 +105,7 @@ func TestDkgProto(t *testing.T) {
 	}
 }
 
-// DKG > Refresh > Sign
+// DKG > Refresh > Sign.
 func TestRefreshProto(t *testing.T) {
 	t.Parallel()
 	curveInstances := []*curves.Curve{
@@ -138,9 +138,8 @@ func TestRefreshProto(t *testing.T) {
 	}
 }
 
-// DKG V0 > DKG V1 > Refresh > Sign
+// DKG V0 > DKG V1 > Refresh > Sign.
 func TestRefreshFromV0Proto(t *testing.T) {
-	t.Parallel()
 	curve := curves.K256()
 
 	// DKG v0
@@ -172,7 +171,7 @@ func TestRefreshFromV0Proto(t *testing.T) {
 	signV1(t, curve, aliceRefreshResultMessage, bobRefreshResultMessage)
 }
 
-// DKG > Output > NewDklsSign > Sign > Output
+// DKG > Output > NewDklsSign > Sign > Output.
 func TestDkgSignProto(t *testing.T) {
 	// Setup
 	curve := curves.K256()
@@ -237,7 +236,7 @@ func TestDkgSignProto(t *testing.T) {
 		}
 		require.True(t,
 			curves.VerifyEcdsa(publicKey,
-				digest[:],
+				digest,
 				result,
 			),
 			"signature failed verification",
@@ -318,7 +317,7 @@ func TestEncodeDecode(t *testing.T) {
 	})
 }
 
-func runV0IteratedProtocol(alice v0.ProtocolIterator, bob v0.ProtocolIterator) (error, error) {
+func runV0IteratedProtocol(alice, bob v0.ProtocolIterator) (error, error) {
 	var (
 		buf  bytes.Buffer
 		aErr error
@@ -361,12 +360,13 @@ func TestV0ToV1(t *testing.T) {
 	require.NotEmpty(t, aliceBytes)
 	require.NotEmpty(t, bobBytes)
 
-	signV0(params, aliceBytes, bobBytes, t)
-	convertV0AndSignV1(params, aliceBytes, bobBytes, t)
+	signV0(t, params, aliceBytes, bobBytes)
+	convertV0AndSignV1(t, params, aliceBytes, bobBytes)
 }
 
 // The content of this function are copied from the `proto_test.go` file in the v0 package.
-func signV0(params *v0.Params, aliceBytes []byte, bobBytes []byte, t *testing.T) {
+func signV0(t *testing.T, params *v0.Params, aliceBytes, bobBytes []byte) {
+	t.Helper()
 	aliceDkg, err := v0.DecodeAlice(params, aliceBytes)
 	require.NoError(t, err)
 
@@ -410,7 +410,8 @@ func signV0(params *v0.Params, aliceBytes []byte, bobBytes []byte, t *testing.T)
 	})
 }
 
-func convertV0AndSignV1(params *v0.Params, aliceBytes []byte, bobBytes []byte, t *testing.T) {
+func convertV0AndSignV1(t *testing.T, params *v0.Params, aliceBytes, bobBytes []byte) {
+	t.Helper()
 	// Now convert the encoded value to V1 and then run the V1 signing protocol.
 	aliceDkgResultMessage, err := ConvertAliceDkgOutputToV1(params, aliceBytes)
 	require.NoError(t, err)
@@ -420,7 +421,7 @@ func convertV0AndSignV1(params *v0.Params, aliceBytes []byte, bobBytes []byte, t
 	signV1(t, curves.K256(), aliceDkgResultMessage, bobDkgResultMessage)
 }
 
-func signV1(t *testing.T, curve *curves.Curve, aliceDkgResultMessage *protocol.Message, bobDkgResultMessage *protocol.Message) {
+func signV1(t *testing.T, curve *curves.Curve, aliceDkgResultMessage, bobDkgResultMessage *protocol.Message) {
 	t.Helper()
 	// New DklsSign
 	msg := []byte("As soon as you trust yourself, you will know how to live.")
@@ -472,7 +473,7 @@ func signV1(t *testing.T, curve *curves.Curve, aliceDkgResultMessage *protocol.M
 		}
 		require.True(t,
 			curves.VerifyEcdsa(publicKey,
-				digest[:],
+				digest,
 				result,
 			),
 			"signature failed verification",

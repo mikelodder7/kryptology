@@ -93,12 +93,12 @@ func (bob *Bob) signInit(w io.Writer) error {
 	// result is an instance seed _plus_ partial instance dB key plus _two_ concurrent first messages in the multiplication protocol!
 	result := &signInitStorage{}
 	enc := gob.NewEncoder(w)
-	var err error
-	if _, err = rand.Read(result.Seed[:]); err != nil {
+	if _, err := rand.Read(result.Seed[:]); err != nil {
 		return err
 	}
 	idExt := sha256.Sum256(result.Seed[:])
 
+	var err error
 	if bob.kB, err = bob.params.Scalar.Random(); err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (bob *Bob) signInit(w io.Writer) error {
 	}
 	result.DB = bob.dB // ?
 	kBInv := bob.params.Scalar.Div(big.NewInt(1), bob.kB)
-	if err = enc.Encode(result); err != nil {
+	if err := enc.Encode(result); err != nil {
 		return err
 	}
 	return bob.tB.MultiplyInit(idExt, []*big.Int{kBInv, bob.params.Scalar.Mul(bob.SkB, kBInv)}, w)
@@ -158,7 +158,7 @@ func (alice *Alice) signInit(digest []byte, rw io.ReadWriter) error {
 
 	// Alice's response here is _two_ (i.e., collated) responses to the multiplication protocol.
 	// followed by Alice's R', followed by a schnorr proof for R (!). folllowed by \eta^{\phi} and \eta^{sig}.
-	if err = tA.Multiply(idExt, []*big.Int{alice.params.Scalar.Add(phi, kAInv), alice.params.Scalar.Mul(alice.SkA, kAInv)}, rw); err != nil {
+	if err := tA.Multiply(idExt, []*big.Int{alice.params.Scalar.Add(phi, kAInv), alice.params.Scalar.Mul(alice.SkA, kAInv)}, rw); err != nil {
 		return err
 	}
 

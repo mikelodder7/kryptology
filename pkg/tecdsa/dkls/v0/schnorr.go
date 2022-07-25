@@ -71,7 +71,7 @@ func (proof *Schnorr) Verify() error {
 		return err
 	}
 	if subtle.ConstantTimeCompare(proof.params.Scalar.Bytes(proof.C), hash.Sum(nil)) != 1 {
-		return fmt.Errorf("Schnorr verification failed")
+		return fmt.Errorf("schnorr verification failed")
 	}
 	return nil
 }

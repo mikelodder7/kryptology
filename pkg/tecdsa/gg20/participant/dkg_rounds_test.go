@@ -60,6 +60,7 @@ func setupDkgRound3ParticipantMap(curve elliptic.Curve, t, n int) map[uint32]*Dk
 }
 
 func setupDkgRound3Commitments(t *testing.T, participants map[uint32]*DkgParticipant, playerCnt int) map[uint32]*core.Witness {
+	t.Helper()
 	var err error
 	// Setup commitments for each player so they can be passed as inputs
 	// normally received from echo broadcast
@@ -328,7 +329,7 @@ func TestDkgRound1Works(t *testing.T) {
 	}
 }
 
-// Test repeat call for DKG Round 1. There should be some error after repeat call
+// Test repeat call for DKG Round 1. There should be some error after repeat call.
 func TestDkgRound1RepeatCall(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -595,7 +596,7 @@ func TestDkgRound2Works(t *testing.T) {
 	}
 }
 
-// Test when the broadcast of Round 1 is tampered
+// Test when the broadcast of Round 1 is tampered.
 func TestDkgRound2Tampered(t *testing.T) {
 	curve := btcec.S256()
 	total := 3
@@ -628,7 +629,7 @@ func TestDkgRound2Tampered(t *testing.T) {
 	require.Error(t, err)
 }
 
-// Test repeat call of DKG round 2
+// Test repeat call of DKG round 2.
 func TestDkgRound2RepeatCall(t *testing.T) {
 	curve := btcec.S256()
 	total := 3
@@ -650,7 +651,7 @@ func TestDkgRound2RepeatCall(t *testing.T) {
 	require.Nil(t, p2psend)
 }
 
-// Test the case when the number of received broadcast messages is not enough
+// Test the case when the number of received broadcast messages is not enough.
 func TestDkgRound2NotEnoughParties(t *testing.T) {
 	curve := btcec.S256()
 	total := 3

@@ -7,13 +7,13 @@
 package mina
 
 import (
+	"github.com/coinbase/kryptology/pkg/core/curves/native"
 	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fp"
-	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fq"
 )
 
-// Handles the packing of bits and fields according to Mina spec
+// Handles the packing of bits and fields according to Mina spec.
 type roinput struct {
-	fields []*fp.Fp
+	fields []*native.Field
 	bits   *BitVector
 }
 
@@ -22,17 +22,17 @@ var conv = map[bool]int{
 	false: 0,
 }
 
-func (r *roinput) Init(fields int, bytes int) *roinput {
-	r.fields = make([]*fp.Fp, 0, fields)
+func (r *roinput) Init(fields, bytes int) *roinput {
+	r.fields = make([]*native.Field, 0, fields)
 	r.bits = NewBitVector(make([]byte, bytes), 0)
 	return r
 }
 
 func (r *roinput) Clone() *roinput {
 	t := new(roinput)
-	t.fields = make([]*fp.Fp, len(r.fields))
+	t.fields = make([]*native.Field, len(r.fields))
 	for i, f := range r.fields {
-		t.fields[i] = new(fp.Fp).Set(f)
+		t.fields[i] = new(native.Field).Set(f)
 	}
 	buffer := r.bits.Bytes()
 	data := make([]byte, len(buffer))
@@ -41,12 +41,12 @@ func (r *roinput) Clone() *roinput {
 	return t
 }
 
-func (r *roinput) AddFp(fp *fp.Fp) {
-	r.fields = append(r.fields, fp)
+func (r *roinput) AddFp(fpObject *native.Field) {
+	r.fields = append(r.fields, fpObject)
 }
 
-func (r *roinput) AddFq(fq *fq.Fq) {
-	scalar := fq.ToRaw()
+func (r *roinput) AddFq(fq *native.Field) {
+	scalar := fq.Raw()
 	// Mina handles fields as 255 bit numbers
 	// with each field we lose a bit
 	for i := 0; i < 255; i++ {
@@ -64,7 +64,7 @@ func (r *roinput) AddBit(b bool) {
 func (r *roinput) AddBytes(input []byte) {
 	for _, b := range input {
 		for i := 0; i < 8; i++ {
-			r.bits.Append(byte((b >> i) & 1))
+			r.bits.Append((b >> i) & 1)
 		}
 	}
 }
@@ -87,7 +87,7 @@ func (r roinput) Bytes() []byte {
 	// Mina handles fields as 255 bit numbers
 	// with each field we lose a bit
 	for _, f := range r.fields {
-		buf := f.ToRaw()
+		buf := f.Raw()
 		for i := 0; i < 255; i++ {
 			limb := i / 64
 			idx := i % 64
@@ -101,10 +101,10 @@ func (r roinput) Bytes() []byte {
 	return out
 }
 
-func (r roinput) Fields() []*fp.Fp {
-	fields := make([]*fp.Fp, 0, len(r.fields)+r.bits.Length()/256)
+func (r roinput) Fields() []*native.Field {
+	fields := make([]*native.Field, 0, len(r.fields)+r.bits.Length()/256)
 	for _, f := range r.fields {
-		fields = append(fields, new(fp.Fp).Set(f))
+		fields = append(fields, fp.PastaFpNew().Set(f))
 	}
 	const maxChunkSize = 254
 	bitsConsumed := 0
@@ -128,7 +128,7 @@ func (r roinput) Fields() []*fp.Fp {
 			chunk[limb] |= uint64(b) << idx
 			bitIdx++
 		}
-		fields = append(fields, new(fp.Fp).SetRaw(&chunk))
+		fields = append(fields, fp.PastaFpNew().SetLimbs(&chunk))
 		bitsConsumed += chunkSizeInBits
 	}
 

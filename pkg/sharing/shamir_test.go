@@ -177,7 +177,7 @@ func TestMarshalJsonRoundTrip(t *testing.T) {
 
 		// Unmarshal and test
 		out := &ShamirShare{}
-		//out.Value = curve.NewScalar()
+		// out.Value = curve.NewScalar()
 		err = json.Unmarshal(input, &out)
 		require.NoError(t, err)
 		require.Equal(t, in.Id, out.Id)

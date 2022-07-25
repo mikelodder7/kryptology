@@ -63,7 +63,7 @@ func (dp *Participant) Round3(bcast map[uint32]Round2Bcast) (*Round3Bcast, *v1.S
 		temp, err := Pk.Add(bcast[id][0])
 		if err != nil {
 			return nil, nil, fmt.Errorf("error in computing Pk+R_j1")
-		} //nolint:errcheck
+		}
 		Pk = temp
 	}
 

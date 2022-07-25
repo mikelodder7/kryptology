@@ -166,7 +166,7 @@ func TestGolden(t *testing.T) {
 
 		sig2, err := Sign(priv[:], msg)
 		require.NoError(t, err)
-		if !bytes.Equal(sig, sig2[:]) {
+		if !bytes.Equal(sig, sig2) {
 			t.Errorf("different signature result on line %d: %x vs %x", lineNo, sig, sig2)
 		}
 

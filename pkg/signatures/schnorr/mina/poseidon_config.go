@@ -7,10 +7,11 @@
 package mina
 
 import (
+	"github.com/coinbase/kryptology/pkg/core/curves/native"
 	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fp"
 )
 
-// SBox is the type of exponentiation to perform
+// SBox is the type of exponentiation to perform.
 type SBox int
 
 const (
@@ -22,19 +23,19 @@ const (
 
 // Exp mutates f by computing x^3, x^5, x^7 or x^-1 as described in
 // https://eprint.iacr.org/2019/458.pdf page 8
-func (sbox SBox) Exp(f *fp.Fp) {
+func (sbox SBox) Exp(f *native.Field) {
 	switch sbox {
 	case Cube:
-		t := new(fp.Fp).Square(f)
+		t := fp.PastaFpNew().Square(f)
 		f.Mul(t, f)
 	case Quint:
-		t := new(fp.Fp).Square(f)
+		t := fp.PastaFpNew().Square(f)
 		t.Square(t)
 		f.Mul(t, f)
 	case Sept:
-		f2 := new(fp.Fp).Square(f)
-		f4 := new(fp.Fp).Square(f2)
-		t := new(fp.Fp).Mul(f2, f4)
+		f2 := fp.PastaFpNew().Square(f)
+		f4 := fp.PastaFpNew().Square(f2)
+		t := fp.PastaFpNew().Mul(f2, f4)
 		f.Mul(t, f)
 	case Inverse:
 		f.Invert(f)
@@ -42,7 +43,7 @@ func (sbox SBox) Exp(f *fp.Fp) {
 	}
 }
 
-// Permutation is the permute function to use
+// Permutation is the permute function to use.
 type Permutation int
 
 const (
@@ -51,7 +52,7 @@ const (
 	Three
 )
 
-// Permute executes the poseidon hash function
+// Permute executes the poseidon hash function.
 func (p Permutation) Permute(ctx *Context) {
 	switch p {
 	case ThreeW:
@@ -61,9 +62,7 @@ func (p Permutation) Permute(ctx *Context) {
 			mds(ctx)
 		}
 		ark(ctx, ctx.fullRounds)
-	case Three:
-		fallthrough
-	case FiveW:
+	case Three, FiveW:
 		// Full rounds only
 		for r := 0; r < ctx.fullRounds; r++ {
 			sbox(ctx)
@@ -87,13 +86,13 @@ func sbox(ctx *Context) {
 }
 
 func mds(ctx *Context) {
-	state2 := make([]*fp.Fp, len(ctx.state))
+	state2 := make([]*native.Field, len(ctx.state))
 	for i := range ctx.state {
-		state2[i] = new(fp.Fp).SetZero()
+		state2[i] = fp.PastaFpNew()
 	}
 	for row := 0; row < ctx.spongeWidth; row++ {
 		for col := 0; col < ctx.spongeWidth; col++ {
-			t := new(fp.Fp).Mul(ctx.state[col], ctx.mdsMatrix[row][col])
+			t := fp.PastaFpNew().Mul(ctx.state[col], ctx.mdsMatrix[row][col])
 			state2[row].Add(state2[row], t)
 		}
 	}
@@ -102,7 +101,7 @@ func mds(ctx *Context) {
 	}
 }
 
-// NetworkType is which Mina network id to use
+// NetworkType is which Mina network id to use.
 type NetworkType int
 
 const (

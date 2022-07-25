@@ -42,23 +42,23 @@ var curveMapper = map[string]func() elliptic.Curve{
 	"P-521":     elliptic.P521,
 }
 
-// EcPoint represents an elliptic curve Point
+// EcPoint represents an elliptic curve Point.
 type EcPoint struct {
 	Curve elliptic.Curve
 	X, Y  *big.Int
 }
 
-// EcPointJson encapsulates the data that is serialized to JSON
+// EcPointJSON encapsulates the data that is serialized to JSON
 // used internally and not for external use. Public so other pieces
-// can use for serialization
-type EcPointJson struct {
+// can use for serialization.
+type EcPointJSON struct {
 	CurveName string
 	X, Y      *big.Int
 }
 
-// MarshalJSON serializes
+// MarshalJSON serializes.
 func (a EcPoint) MarshalJSON() ([]byte, error) {
-	return json.Marshal(EcPointJson{
+	return json.Marshal(EcPointJSON{
 		CurveName: a.Curve.Params().Name,
 		X:         a.X,
 		Y:         a.Y,
@@ -66,7 +66,7 @@ func (a EcPoint) MarshalJSON() ([]byte, error) {
 }
 
 func (a *EcPoint) UnmarshalJSON(bytes []byte) error {
-	data := new(EcPointJson)
+	data := new(EcPointJSON)
 	err := json.Unmarshal(bytes, data)
 	if err != nil {
 		return err
@@ -109,14 +109,14 @@ func (a EcPoint) IsOnCurve() bool {
 	return a.Curve.IsOnCurve(a.X, a.Y)
 }
 
-// IsIdentity returns true if this Point is the Point at infinity
+// IsIdentity returns true if this Point is the Point at infinity.
 func (a EcPoint) IsIdentity() bool {
 	x := core.ConstantTimeEqByte(a.X, core.Zero)
 	y := core.ConstantTimeEqByte(a.Y, core.Zero)
 	return (x & y) == 1
 }
 
-// Equals return true if a + b have the same x,y coordinates
+// Equals return true if a + b have the same x,y coordinates.
 func (a EcPoint) Equals(b *EcPoint) bool {
 	if !sameCurve(&a, b) {
 		return false
@@ -127,7 +127,7 @@ func (a EcPoint) Equals(b *EcPoint) bool {
 	return (x & y) == 1
 }
 
-// IsBasePoint returns true if this Point is curve's base Point
+// IsBasePoint returns true if this Point is curve's base Point.
 func (a EcPoint) IsBasePoint() bool {
 	p := a.Curve.Params()
 	x := core.ConstantTimeEqByte(a.X, p.Gx)
@@ -140,7 +140,7 @@ func reduceModN(curve elliptic.Curve, k *big.Int) *big.Int {
 	return new(big.Int).Mod(k, curve.Params().N)
 }
 
-// Add performs elliptic curve addition on two points
+// Add performs elliptic curve addition on two points.
 func (a *EcPoint) Add(b *EcPoint) (*EcPoint, error) {
 	// Validate parameters
 	if a == nil || b == nil {
@@ -172,7 +172,7 @@ func (a *EcPoint) Neg() (*EcPoint, error) {
 	return p, nil
 }
 
-// ScalarMult multiplies this Point by a Scalar
+// ScalarMult multiplies this Point by a Scalar.
 func (a *EcPoint) ScalarMult(k *big.Int) (*EcPoint, error) {
 	if a == nil || k == nil {
 		return nil, fmt.Errorf("cannot multiply nil Point or element")
@@ -187,7 +187,7 @@ func (a *EcPoint) ScalarMult(k *big.Int) (*EcPoint, error) {
 	return p, nil
 }
 
-// NewScalarBaseMult creates a Point from the base Point multiplied by a field element
+// NewScalarBaseMult creates a Point from the base Point multiplied by a field element.
 func NewScalarBaseMult(curve elliptic.Curve, k *big.Int) (*EcPoint, error) {
 	if curve == nil || k == nil {
 		return nil, fmt.Errorf("nil parameters are not supported")
@@ -202,7 +202,7 @@ func NewScalarBaseMult(curve elliptic.Curve, k *big.Int) (*EcPoint, error) {
 	return p, nil
 }
 
-// Bytes returns the bytes represented by this Point with x || y
+// Bytes returns the bytes represented by this Point with x || y.
 func (a EcPoint) Bytes() []byte {
 	fieldSize := internal.CalcFieldSize(a.Curve)
 	out := make([]byte, fieldSize*2)
@@ -230,7 +230,7 @@ func PointFromBytesUncompressed(curve elliptic.Curve, b []byte) (*EcPoint, error
 	return p, nil
 }
 
-// sameCurve determines if points a,b appear to be from the same curve
+// sameCurve determines if points a,b appear to be from the same curve.
 func sameCurve(a, b *EcPoint) bool {
 	// Handle identical pointers and double-nil
 	if a == b {

@@ -263,9 +263,8 @@ func TestNewDealerShares(t *testing.T) {
 			}
 			pkx, pky := curve.ScalarBaseMult(sk)
 			require.NotNil(t, pkx, pky)
-			require.Equal(t, pkx, pk.X) // nolint
-			require.Equal(t, pky, pk.Y) // nolint
-
+			require.Equal(t, pkx, pk.X)
+			require.Equal(t, pky, pk.Y)
 		})
 	}
 }

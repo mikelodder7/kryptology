@@ -20,13 +20,13 @@ import (
 )
 
 var (
-	// Zero is additive identity in the set of integers
+	// Zero is additive identity in the set of integers.
 	Zero = big.NewInt(0)
 
-	// One is the multiplicative identity in the set of integers
+	// One is the multiplicative identity in the set of integers.
 	One = big.NewInt(1)
 
-	// Two is the odd prime
+	// Two is the odd prime.
 	Two = big.NewInt(2)
 )
 
@@ -36,7 +36,7 @@ var (
 // useful in bitwise operations. Returns 0x1 if the two values have the
 // identical sign and byte representation; 0x0 otherwise.
 func ConstantTimeEqByte(a, b *big.Int) byte {
-	if a == nil && a == b {
+	if a == nil && b == nil {
 		return 1
 	}
 	if a == nil || b == nil {
@@ -70,7 +70,7 @@ func ConstantTimeEq(a, b *big.Int) bool {
 }
 
 // In determines ring membership before modular reduction: x ∈ Z_m
-// returns nil if 0 ≤ x < m
+// returns nil if 0 ≤ x < m.
 func In(x, m *big.Int) error {
 	if AnyNil(x, m) {
 		return internal.ErrNilArguments
@@ -84,7 +84,7 @@ func In(x, m *big.Int) error {
 	return internal.ErrZmMembership
 }
 
-// Add (modular addition): z = x+y (modulo m)
+// Add (modular addition): z = x+y (modulo m).
 func Add(x, y, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, y) {
 		return nil, internal.ErrNilArguments
@@ -98,7 +98,7 @@ func Add(x, y, m *big.Int) (*big.Int, error) {
 	return z, nil
 }
 
-// Mul (modular multiplication): z = x*y (modulo m)
+// Mul (modular multiplication): z = x*y (modulo m).
 func Mul(x, y, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, y) {
 		return nil, internal.ErrNilArguments
@@ -113,7 +113,7 @@ func Mul(x, y, m *big.Int) (*big.Int, error) {
 	return z, nil
 }
 
-// Exp (modular exponentiation): z = x^y (modulo m)
+// Exp (modular exponentiation): z = x^y (modulo m).
 func Exp(x, y, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, y) {
 		return nil, internal.ErrNilArguments
@@ -122,7 +122,7 @@ func Exp(x, y, m *big.Int) (*big.Int, error) {
 	return new(big.Int).Exp(x, y, m), nil
 }
 
-// Neg (modular negation): z = -x (modulo m)
+// Neg (modular negation): z = -x (modulo m).
 func Neg(x, m *big.Int) (*big.Int, error) {
 	if AnyNil(x, m) {
 		return nil, internal.ErrNilArguments
@@ -167,7 +167,7 @@ func Rand(m *big.Int) (*big.Int, error) {
 	}
 }
 
-// AnyNil determines if any of values are nil
+// AnyNil determines if any of values are nil.
 func AnyNil(values ...*big.Int) bool {
 	for _, x := range values {
 		if x == nil {

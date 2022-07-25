@@ -16,7 +16,7 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-func testDKG(alice *Alice, bob *Bob, alicePipe *pipeWrapper, bobPipe *pipeWrapper) error {
+func testDKG(alice *Alice, bob *Bob, alicePipe, bobPipe *PipeWrapper) error {
 	errors := make(chan error, 2)
 
 	go func() {
@@ -62,7 +62,7 @@ func BenchmarkDKG(b *testing.B) {
 	b.ReportMetric(float64(bytes)/float64(b.N), "bytes/op")
 }
 
-// Verify correctness of the OT subprotocol after DKG has completed
+// Verify correctness of the OT subprotocol after DKG has completed.
 func verifyOt(alice *Alice, bob *Bob) error {
 	for i := 0; i < kappa; i++ {
 		if alice.Receiver.Rho[i] != bob.Sender.Rho[i][alice.Receiver.choice[i]] {

@@ -133,7 +133,8 @@ func TestConvertToAdditiveRecombine(t *testing.T) {
 					map[uint32]*dealer.PublicShare{
 						i: publicSharesMap[i],
 						j: publicSharesMap[j],
-						k: publicSharesMap[k]})
+						k: publicSharesMap[k],
+					})
 				if err != nil {
 					t.Errorf("convertToAdditive failed: %v", err)
 				}
@@ -152,7 +153,7 @@ func TestConvertToAdditiveRecombine(t *testing.T) {
 	}
 }
 
-// Test that verifyStateMap checks rounds as expected
+// Test that verifyStateMap checks rounds as expected.
 func TestVerifyStateMapRoundCheck(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -187,7 +188,7 @@ func TestVerifyStateMapRoundCheck(t *testing.T) {
 	}
 }
 
-// Test that verifyStateMap checks rounds as expected
+// Test that verifyStateMap checks rounds as expected.
 func TestSetCosigners(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -246,7 +247,7 @@ func TestSetCosigners(t *testing.T) {
 	}
 }
 
-// Test that verifyStateMap checks rounds as expected
+// Test that verifyStateMap checks rounds as expected.
 func TestVerifyStateMapCosigners(t *testing.T) {
 	tests := []struct {
 		name        string

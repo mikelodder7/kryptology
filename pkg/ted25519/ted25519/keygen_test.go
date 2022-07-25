@@ -67,7 +67,6 @@ func TestGenerateEd25519KeyInvalidConfig(t *testing.T) {
 }
 
 func TestVerifyVSSEd25519(t *testing.T) {
-
 	config := ShareConfiguration{T: 2, N: 3}
 	pubKey1, shares1, commitments1, err := GenerateSharedKey(&config)
 	require.NoError(t, err)

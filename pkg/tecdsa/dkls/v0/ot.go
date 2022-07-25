@@ -25,7 +25,7 @@ type (
 	seedOtTransfer     = [kappa]*curves.EcPoint
 )
 
-// seedOTSender stores state for the "sender" role in seed OT. see Protocol 7 in Appendix A of DKLs
+// seedOTSender stores state for the "sender" role in seed OT. see Protocol 7 in Appendix A of DKLs.
 type seedOTSender struct {
 	// Exported fields are marshaled
 	Rho seedOtFinal // this will store the (vectorized) outputs of kappa executions of (random) seed OT.
@@ -61,10 +61,10 @@ func (sender *seedOTSender) pubKey(w io.Writer) error {
 		return err
 	}
 	proof := &Schnorr{params: sender.params, Pub: sender.pub}
-	if err = proof.Prove(sender.b); err != nil {
+	if err := proof.Prove(sender.b); err != nil {
 		return err
 	}
-	if err = enc.Encode(proof); err != nil {
+	if err := enc.Encode(proof); err != nil {
 		return err
 	}
 	if sender.pub.Y, err = core.Neg(sender.pub.Y, sender.params.Curve.Params().P); err != nil { // using Weierstrass
@@ -77,19 +77,16 @@ func (sender *seedOTSender) pubKey(w io.Writer) error {
 
 func (receiver *seedOTReceiver) pubKey(r io.Reader) error {
 	dec := gob.NewDecoder(r)
-	var err error
 	input := &Schnorr{params: receiver.params}
-	if err = dec.Decode(input); err != nil {
+	if err := dec.Decode(input); err != nil {
 		return err
 	}
 	receiver.pub = input.Pub
-	if err = input.Verify(); err != nil {
-		return err
-	}
-	return nil
+	err := input.Verify()
+	return err
 }
 
-// Initializes the choice array from the Packed array
+// Initializes the choice array from the Packed array.
 func (receiver *seedOTReceiver) initChoice() {
 	// unpack the random values in Packed into bits in Choice
 	receiver.choice = make([]int, kappa)
@@ -339,7 +336,7 @@ type cOTStorage struct {
 
 func (receiver *cOTReceiver) init(idExt [32]byte, choice []byte, w io.Writer) error {
 	// input choice vector is "packed".
-	copy(receiver.w[0:receiver.l>>3], choice[:])                     // write the input choice vector into our local data.
+	copy(receiver.w[0:receiver.l>>3], choice)                        // write the input choice vector into our local data.
 	if _, err := rand.Read(receiver.w[receiver.l>>3:]); err != nil { // fill the rest with random bytes; this is "gamma^{ext}"
 		return err
 	}
@@ -365,7 +362,7 @@ func (receiver *cOTReceiver) init(idExt [32]byte, choice []byte, w io.Writer) er
 			// this is the core pseudorandom expansion of the secret OT input seeds s_i^0 and s_i^1
 			// see Extension, 2), in Protocol 9, page 17 of DKLs https://eprint.iacr.org/2018/499.pdf
 			// use the idExt as the "domain separator", and the _secret_ seed rho as the input!
-			copy(v[j][i][:], row) // could easily use a shake3 and "Read" it directly in.
+			copy(v[j][i], row) // could easily use a shake3 and "Read" it directly in.
 		}
 		for j := 0; j < receiver.lPrime>>3; j++ {
 			result.U[i][j] = v[0][i][j] ^ v[1][i][j] ^ receiver.w[j]
@@ -376,7 +373,7 @@ func (receiver *cOTReceiver) init(idExt [32]byte, choice []byte, w io.Writer) er
 				// but because both matrices are densely packed (represented as bytes), we have to do some bitwise tricks.
 			}
 		}
-		if _, err := hash.Write(result.U[i][:]); err != nil {
+		if _, err := hash.Write(result.U[i]); err != nil {
 			return err
 		}
 	}
@@ -394,7 +391,7 @@ func (receiver *cOTReceiver) init(idExt [32]byte, choice []byte, w io.Writer) er
 	return enc.Encode(result)
 }
 
-func (sender *cOTSender) transfer(idExt [32]byte, inputMain []*big.Int, inputOT [2 * s][]*big.Int, rw io.ReadWriter) error {
+func (sender *cOTSender) transfer(idExt [32]byte, inputMain []*big.Int, inputOT *[2 * s][]*big.Int, rw io.ReadWriter) error {
 	// input message: Bob's values WPrime, VPrime, and U. output: tau.
 	enc := gob.NewEncoder(rw)
 	dec := gob.NewDecoder(rw)
@@ -419,7 +416,7 @@ func (sender *cOTSender) transfer(idExt [32]byte, inputMain []*big.Int, inputOT 
 		}
 		// use the idExt as the domain separator, and the _secret_ seed rho as the input!
 		v := make([]byte, sender.lPrime>>3) // we only need to retain one row of v at a time.
-		copy(v[:], row)
+		copy(v, row)
 		mask := byte(^(sender.receiver.choice[i] - 1))
 		for j := 0; j < sender.lPrime>>3; j++ {
 			z[i][j] = v[j] ^ mask&input.U[i][j]
@@ -429,7 +426,7 @@ func (sender *cOTSender) transfer(idExt [32]byte, inputMain []*big.Int, inputOT 
 				// assigning to zeta the matrix transposition of z. see notes above.
 			}
 		}
-		if _, err = hash.Write(input.U[i][:]); err != nil {
+		if _, err = hash.Write(input.U[i]); err != nil {
 			return err
 		}
 	}
@@ -529,6 +526,6 @@ func (receiver *cOTReceiver) cOT(idExt [32]byte, choice []byte, rw io.ReadWriter
 	return receiver.transfer(rw)
 }
 
-func (sender *cOTSender) cOT(idExt [32]byte, input []*big.Int, inputOT [2 * s][]*big.Int, rw io.ReadWriter) error {
+func (sender *cOTSender) cOT(idExt [32]byte, input []*big.Int, inputOT *[2 * s][]*big.Int, rw io.ReadWriter) error {
 	return sender.transfer(idExt, input, inputOT, rw)
 }

@@ -26,7 +26,7 @@ type phase1Response struct {
 	R2 dkg.Round2Message `json:"r2"`
 }
 
-// Runs server's R1 and R2
+// Runs server's R1 and R2.
 func (s *server) phase1(in *dkg.Round1Message) (*dkg.Round1Message, *dkg.Round2Message) {
 	// Setup logger
 	s.l = log.New(os.Stdout, "[server] ", log.Lshortfile|log.Lmsgprefix)
@@ -51,7 +51,7 @@ func (s *server) phase1(in *dkg.Round1Message) (*dkg.Round1Message, *dkg.Round2M
 	return r1Out, r2out
 }
 
-// Runs server's finalize
+// Runs server's finalize.
 func (s *server) phase2(in *dkg.Round2Message) {
 	// DKG finalize
 	s.l.Println("Finalize DKG")
@@ -60,7 +60,7 @@ func (s *server) phase2(in *dkg.Round2Message) {
 	s.l.Printf("result=%#v", result)
 }
 
-// Runs server's R1 and R2 with in/out in JSON
+// Runs server's R1 and R2 with in/out in JSON.
 func (s *server) phase1Json(req []byte) []byte {
 	// Deserialize the Round1 input
 	in := &dkg.Round1Message{}
@@ -74,7 +74,7 @@ func (s *server) phase1Json(req []byte) []byte {
 	return out
 }
 
-// Runs server's Finalize with in/out in JSON
+// Runs server's Finalize with in/out in JSON.
 func (s *server) phase2Json(req []byte) {
 	// Deserialize the Round2 input
 	in := &dkg.Round2Message{}

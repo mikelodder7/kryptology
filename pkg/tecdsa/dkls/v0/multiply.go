@@ -72,18 +72,18 @@ func (receiver *MultiplyReceiver) encode(beta []*big.Int) ([]byte, error) {
 	for i := 0; i < receiver.multiplicity; i++ {
 		for j := 0; j < kappa; j++ {
 			bit := int(result[((1+2*i)*kappa+j)>>3]) >> (j & 0x07) & 0x01
-			mask := params.Scalar.Bytes(params.Scalar.Sub(new(big.Int).SetBytes(bytes[i][:]), params.gadget[kappa+j]))
-			subtle.ConstantTimeCopy(bit, bytes[i][:], mask)
+			mask := params.Scalar.Bytes(params.Scalar.Sub(new(big.Int).SetBytes(bytes[i]), params.gadget[kappa+j]))
+			subtle.ConstantTimeCopy(bit, bytes[i], mask)
 		}
 		// some converting from bytes and back. a bit cumbersome, but in practice this will be negligible
 		// it'd be simpler to just keep running big ints, which we are subtracting from.
 		// but we can only `ConstantTimeCopy` byte slices (as opposed to big ints). so keep them as bytes.
 		for j := 0; j < 2*s; j++ {
 			bit := int(result[(2*receiver.multiplicity*kappa+j)>>3]) >> (j & 0x07) & 0x01
-			mask := params.Scalar.Bytes(params.Scalar.Sub(new(big.Int).SetBytes(bytes[i][:]), params.gadget[2*kappa+j]))
-			subtle.ConstantTimeCopy(bit, bytes[i][:], mask)
+			mask := params.Scalar.Bytes(params.Scalar.Sub(new(big.Int).SetBytes(bytes[i]), params.gadget[2*kappa+j]))
+			subtle.ConstantTimeCopy(bit, bytes[i], mask)
 		}
-		copy(result[2*i*kappa>>3:(2*i+1)*kappa>>3], internal.ReverseScalarBytes(bytes[i][:]))
+		copy(result[2*i*kappa>>3:(2*i+1)*kappa>>3], internal.ReverseScalarBytes(bytes[i]))
 	}
 	return result, nil
 }
@@ -107,7 +107,6 @@ func (sender *MultiplySender) Multiply(idExt [32]byte, alpha []*big.Int, rw io.R
 	for i := range inputOT {
 		inputOT[i] = make([]*big.Int, sender.multiplicity)
 	}
-	var err error
 	params := sender.sender.receiver.params
 	for i := 0; i < sender.multiplicity; i++ {
 		for j := 0; j < 2*kappa; j++ {
@@ -117,7 +116,7 @@ func (sender *MultiplySender) Multiply(idExt [32]byte, alpha []*big.Int, rw io.R
 			inputOT[j][i] = params.Scalar.Mul(params.gadget[j+2*kappa], alpha[i])
 		}
 	}
-	if err = sender.sender.transfer(idExt, inputMain, inputOT, rw); err != nil {
+	if err := sender.sender.transfer(idExt, inputMain, &inputOT, rw); err != nil {
 		return err
 	}
 

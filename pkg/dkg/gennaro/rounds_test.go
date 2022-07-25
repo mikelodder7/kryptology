@@ -55,6 +55,7 @@ func TestParticipantRound1BadSecret(t *testing.T) {
 }
 
 func PrepareRound2Input(t *testing.T) (*Participant, *Participant, Round1Bcast, Round1Bcast, Round1P2PSend) {
+	t.Helper()
 	// Prepare round 1 output of 2 participants
 	p1, err := NewParticipant(1, 2, testGenerator, curves.NewK256Scalar(), 2)
 	require.NoError(t, err)
@@ -67,7 +68,7 @@ func PrepareRound2Input(t *testing.T) (*Participant, *Participant, Round1Bcast, 
 	return p1, p2, bcast1, bcast2, p2psend2
 }
 
-// Test Gennaro DKG round2 works
+// Test Gennaro DKG round2 works.
 func TestParticipantRound2Works(t *testing.T) {
 	// Prepare Dkg Round 1 output
 	p1, _, bcast1, bcast2, p2psend2 := PrepareRound2Input(t)
@@ -89,7 +90,7 @@ func TestParticipantRound2Works(t *testing.T) {
 	require.NotNil(t, p1.otherParticipantShares)
 }
 
-// Test Gennaro DKG round 2 repeat call
+// Test Gennaro DKG round 2 repeat call.
 func TestParticipantRound2RepeatCall(t *testing.T) {
 	// Prepare Dkg Round 1 output
 	p1, _, bcast1, bcast2, p2psend2 := PrepareRound2Input(t)
@@ -108,7 +109,7 @@ func TestParticipantRound2RepeatCall(t *testing.T) {
 	require.Error(t, err)
 }
 
-// Test Gennaro Dkg Round 2 Bad Input
+// Test Gennaro Dkg Round 2 Bad Input.
 func TestParticipantRound2BadInput(t *testing.T) {
 	// Prepare Dkg Round 1 output
 	p1, _, _, _, _ := PrepareRound2Input(t)
@@ -140,6 +141,7 @@ func TestParticipantRound2BadInput(t *testing.T) {
 }
 
 func PrepareRound3Input(t *testing.T) (*Participant, *Participant, map[uint32]Round2Bcast) {
+	t.Helper()
 	p1, _ := NewParticipant(1, 2, testGenerator, curves.NewK256Scalar(), 2)
 	p2, _ := NewParticipant(2, 2, testGenerator, curves.NewK256Scalar(), 1)
 	bcast1, p2psend1, _ := p1.Round1(nil)
@@ -159,7 +161,7 @@ func PrepareRound3Input(t *testing.T) (*Participant, *Participant, map[uint32]Ro
 	return p1, p2, round3Input
 }
 
-// Test Gennaro Dkg Round 3 Works
+// Test Gennaro Dkg Round 3 Works.
 func TestParticipantRound3Works(t *testing.T) {
 	// Prepare Gennaro Dkg Round 3 Input
 	p1, p2, round3Input := PrepareRound3Input(t)
@@ -192,7 +194,7 @@ func TestParticipantRound3Works(t *testing.T) {
 	require.True(t, tmp.Equals(p2.verificationKey))
 }
 
-// Test Gennaro Dkg Round3 Repeat Call
+// Test Gennaro Dkg Round3 Repeat Call.
 func TestParticipantRound3RepeatCall(t *testing.T) {
 	// Prepare Round 3 Input
 	p1, _, round3Input := PrepareRound3Input(t)
@@ -204,7 +206,7 @@ func TestParticipantRound3RepeatCall(t *testing.T) {
 	require.Error(t, err)
 }
 
-// Test Gennaro DKG Round 3 Bad Input
+// Test Gennaro DKG Round 3 Bad Input.
 func TestParticipantRound3BadInput(t *testing.T) {
 	// Test empty round 3 input
 	p1, _, _ := PrepareRound3Input(t)
@@ -225,7 +227,7 @@ func TestParticipantRound3BadInput(t *testing.T) {
 	require.Error(t, err)
 }
 
-// Test Gennaro Dkg Round 4 Works
+// Test Gennaro Dkg Round 4 Works.
 func TestParticipantRound4Works(t *testing.T) {
 	// Prepare Gennaro Dkg Round 3 Input
 	p1, p2, round3Input := PrepareRound3Input(t)
@@ -247,7 +249,7 @@ func TestParticipantRound4Works(t *testing.T) {
 	require.Equal(t, publicShares1, publicShares2)
 }
 
-// Test Gennaro Dkg Round 4 Works
+// Test Gennaro Dkg Round 4 Works.
 func TestParticipantRound4RepeatCall(t *testing.T) {
 	// Prepare Gennaro Dkg Round 3 Input
 	p1, p2, round3Input := PrepareRound3Input(t)
@@ -269,7 +271,7 @@ func TestParticipantRound4RepeatCall(t *testing.T) {
 	require.Equal(t, publicShares1, publicShares2)
 }
 
-// Test all Gennaro DKG rounds
+// Test all Gennaro DKG rounds.
 func TestAllGennaroDkgRounds(t *testing.T) {
 	// Initiate two participants
 	p1, _ := NewParticipant(1, 2, testGenerator, curves.NewK256Scalar(), 2)
@@ -320,7 +322,7 @@ func TestAllGennaroDkgRounds(t *testing.T) {
 	require.True(t, tmp.Equals(p2.verificationKey))
 }
 
-// Ensure correct functioning when input is missing
+// Ensure correct functioning when input is missing.
 func TestParticipant2BadInput(t *testing.T) {
 	//
 	// Setup
@@ -368,7 +370,7 @@ func TestValidIDs(t *testing.T) {
 	}
 }
 
-// Test newParticipant with arbitrary IDs
+// Test newParticipant with arbitrary IDs.
 func TestParticipantArbitraryIds(t *testing.T) {
 	_, err := NewParticipant(3, 2, testGenerator, curves.NewK256Scalar(), 4)
 	require.Error(t, err)

@@ -42,7 +42,7 @@ type PublicKey []byte
 // PrivateKey is the type of Ed25519 private keys. It implements crypto.Signer.
 type PrivateKey []byte
 
-// Bytes returns the publicKey in byte array
+// Bytes returns the publicKey in byte array.
 func (p PublicKey) Bytes() []byte {
 	return p
 }
@@ -137,7 +137,7 @@ func newKeyFromSeed(privateKey, seed []byte) error {
 
 	publicKeyBytes := A.ToAffineCompressed()
 	copy(privateKey, seed)
-	copy(privateKey[32:], publicKeyBytes[:])
+	copy(privateKey[32:], publicKeyBytes)
 	return nil
 }
 
@@ -195,7 +195,7 @@ func sign(signature, privateKey, message []byte) error {
 	encodedR := R.ToAffineCompressed()
 
 	h.Reset()
-	_, err = h.Write(encodedR[:])
+	_, err = h.Write(encodedR)
 	if err != nil {
 		return err
 	}
@@ -222,14 +222,14 @@ func sign(signature, privateKey, message []byte) error {
 
 	// S = k*s + r
 	S := k.MulAdd(s, r)
-	copy(signature[:], encodedR[:])
-	copy(signature[32:], S.Bytes()[:])
+	copy(signature, encodedR)
+	copy(signature[32:], S.Bytes())
 	return nil
 }
 
 // Verify reports whether sig is a valid signature of message by publicKey. It
 // will panic if len(publicKey) is not PublicKeySize.
-// Previously publicKey is of type PublicKey
+// Previously publicKey is of type PublicKey.
 func Verify(publicKey PublicKey, message, sig []byte) (bool, error) {
 	if l := len(publicKey); l != PublicKeySize {
 		return false, fmt.Errorf("ed25519: bad public key length: " + strconv.Itoa(l))

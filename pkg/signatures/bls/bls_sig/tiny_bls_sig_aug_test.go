@@ -12,7 +12,8 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves/native/bls12381"
 )
 
-func generateAugSignatureG1(sk *SecretKey, msg []byte, t *testing.T) *SignatureVt {
+func generateAugSignatureG1(t *testing.T, sk *SecretKey, msg []byte) *SignatureVt {
+	t.Helper()
 	bls := NewSigAugVt()
 	sig, err := bls.Sign(sk, msg)
 	if err != nil {
@@ -22,6 +23,7 @@ func generateAugSignatureG1(sk *SecretKey, msg []byte, t *testing.T) *SignatureV
 }
 
 func generateAugAggregateDataG1(t *testing.T) ([]*PublicKeyVt, []*SignatureVt, [][]byte) {
+	t.Helper()
 	msgs := make([][]byte, numAggregateG1)
 	pks := make([]*PublicKeyVt, numAggregateG1)
 	sigs := make([]*SignatureVt, numAggregateG1)
@@ -29,14 +31,14 @@ func generateAugAggregateDataG1(t *testing.T) ([]*PublicKeyVt, []*SignatureVt, [
 	bls := NewSigAugVt()
 
 	for i := 0; i < numAggregateG1; i++ {
-		readRand(ikm, t)
+		readRand(t, ikm)
 		pk, sk, err := bls.KeygenWithSeed(ikm)
 		if err != nil {
 			t.Errorf("Aug KeyGen failed")
 		}
 		msg := make([]byte, 20)
-		readRand(msg, t)
-		sig := generateAugSignatureG1(sk, msg, t)
+		readRand(t, msg)
+		sig := generateAugSignatureG1(t, sk, msg)
 		msgs[i] = msg
 		sigs[i] = sig
 		pks[i] = pk
@@ -46,7 +48,7 @@ func generateAugAggregateDataG1(t *testing.T) ([]*PublicKeyVt, []*SignatureVt, [
 
 func TestAugKeyGenG1Works(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigAugVt()
 	_, _, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
@@ -56,7 +58,7 @@ func TestAugKeyGenG1Works(t *testing.T) {
 
 func TestAugKeyGenG1Fail(t *testing.T) {
 	ikm := make([]byte, 10)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigAugVt()
 	_, _, err := bls.KeygenWithSeed(ikm)
 	if err == nil {
@@ -66,16 +68,15 @@ func TestAugKeyGenG1Fail(t *testing.T) {
 
 func TestAugCustomDstG1(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigAugVtWithDst("BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_AUG_TEST")
 	pk, sk, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
 		t.Errorf("Aug Custom Dst KeyGen failed")
 	}
 
-	readRand(ikm, t)
+	readRand(t, ikm)
 	sig, err := bls.Sign(sk, ikm)
-
 	if err != nil {
 		t.Errorf("Aug Custom Dst Sign failed")
 	}
@@ -92,15 +93,15 @@ func TestAugCustomDstG1(t *testing.T) {
 
 func TestAugSigningG1(t *testing.T) {
 	ikm := make([]byte, 32)
-	readRand(ikm, t)
+	readRand(t, ikm)
 	bls := NewSigAugVt()
 	pk, sk, err := bls.KeygenWithSeed(ikm)
 	if err != nil {
 		t.Errorf("Aug KeyGen failed")
 	}
 
-	readRand(ikm, t)
-	sig := generateAugSignatureG1(sk, ikm, t)
+	readRand(t, ikm)
+	sig := generateAugSignatureG1(t, sk, ikm)
 
 	if res, _ := bls.Verify(pk, ikm, sig); !res {
 		t.Errorf("Aug Verify failed")
@@ -217,13 +218,13 @@ func TestAugAggregateVerifyG1DupMsg(t *testing.T) {
 
 	ikm := make([]byte, 32)
 	for i := 0; i < numAggregateG1; i++ {
-		readRand(ikm, t)
+		readRand(t, ikm)
 		pk, sk, err := bls.KeygenWithSeed(ikm)
 		if err != nil {
 			t.Errorf("Aug KeyGen failed")
 		}
 
-		sig := generateAugSignatureG1(sk, messages[i], t)
+		sig := generateAugSignatureG1(t, sk, messages[i])
 		pks[i] = pk
 		sigs[i] = sig
 	}
@@ -302,7 +303,7 @@ func TestAugPartialSignVt(t *testing.T) {
 	}
 }
 
-// Ensure that mixed partial signatures from distinct origins create invalid composite signatures
+// Ensure that mixed partial signatures from distinct origins create invalid composite signatures.
 func TestAugVtPartialMixupShares(t *testing.T) {
 	total := uint(5)
 	ikm := make([]byte, 32)

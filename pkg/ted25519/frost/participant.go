@@ -27,7 +27,7 @@ type Signer struct {
 	lCoeffs          map[uint32]curves.Scalar // lCoeffs are Lagrange coefficients of each cosigner.
 	cosigners        []uint32
 	state            *state // Accumulated intermediate values associated with signing
-	challengeDeriver ChallengeDerive
+	challengeDeriver ChallengeDeriver
 }
 
 type state struct {
@@ -46,7 +46,7 @@ type state struct {
 // NewSigner create a signer from a dkg participant
 // Note that we can pre-assign Lagrange coefficients lcoeffs of each cosigner. This optimizes performance.
 // See paragraph 3 of section 3 in the draft - https://tools.ietf.org/pdf/draft-komlo-frost-00.pdf
-func NewSigner(info *frost.DkgParticipant, id, thresh uint32, lcoeffs map[uint32]curves.Scalar, cosigners []uint32, challengeDeriver ChallengeDerive) (*Signer, error) {
+func NewSigner(info *frost.DkgParticipant, id, thresh uint32, lcoeffs map[uint32]curves.Scalar, cosigners []uint32, challengeDeriver ChallengeDeriver) (*Signer, error) {
 	if info == nil || len(cosigners) == 0 || len(lcoeffs) == 0 {
 		return nil, internal.ErrNilArguments
 	}
@@ -61,8 +61,8 @@ func NewSigner(info *frost.DkgParticipant, id, thresh uint32, lcoeffs map[uint32
 
 	// Check if cosigners and lcoeffs contain the same IDs
 	for i := 0; i < len(cosigners); i++ {
-		id := cosigners[i]
-		if _, ok := lcoeffs[id]; !ok {
+		cosignerId := cosigners[i]
+		if _, ok := lcoeffs[cosignerId]; !ok {
 			return nil, fmt.Errorf("lcoeffs and cosigners have inconsistent ID")
 		}
 	}

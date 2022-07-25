@@ -14,22 +14,22 @@ import (
 	"github.com/coinbase/kryptology/pkg/sharing"
 )
 
-// Round2Bcast are values that are broadcast to all other participants
-// after round2 completes
-type Round2Bcast struct {
+// Round4Bcast are values that are broadcast to all other participants
+// after round2 completes.
+type Round4Bcast struct {
 	VerificationKey curves.Point
 	VkShare         curves.Point
 }
 
-// Round2 implements dkg round 2 of FROST
-func (dp *DkgParticipant) Round2(bcast map[uint32]*Round1Bcast, p2psend map[uint32]*sharing.ShamirShare) (*Round2Bcast, error) {
+// Round4FrostDkgSecondRound implements dkg round 2 of FROST DKG.
+func (dp *DkgParticipant) Round4FrostDkgSecondRound(bcast map[uint32]*Round3Bcast, p2psend map[uint32]*sharing.ShamirShare) (*Round4Bcast, error) {
 	// Make sure dkg participant is not empty
 	if dp == nil || dp.Curve == nil {
 		return nil, internal.ErrNilArguments
 	}
 
 	// Check dkg participant has the correct dkg round number
-	if dp.round != 2 {
+	if dp.round != 4 {
 		return nil, internal.ErrInvalidRound
 	}
 
@@ -51,14 +51,14 @@ func (dp *DkgParticipant) Round2(bcast map[uint32]*Round1Bcast, p2psend map[uint
 	for id := range bcast {
 		// ci should be within the range 1 to q-1, q is the group order.
 		if bcast[id].Ci.IsZero() {
-			return nil, fmt.Errorf("ci should not be zero from participant %d\n", id)
+			return nil, fmt.Errorf("ci should not be zero from participant %d", id)
 		}
 	}
 	// Validate each received commitment is on curve
 	for id := range bcast {
 		for _, com := range bcast[id].Verifiers.Commitments {
 			if !com.IsOnCurve() || com.IsIdentity() {
-				return nil, fmt.Errorf("some commitment is not on curve from participant %d\n", id)
+				return nil, fmt.Errorf("some commitment is not on curve from participant %d", id)
 			}
 		}
 	}
@@ -67,7 +67,6 @@ func (dp *DkgParticipant) Round2(bcast map[uint32]*Round1Bcast, p2psend map[uint
 
 	// Step 2 - for j in 1,...,n
 	for id := range bcast {
-
 		// Step 3 - if j == i, continue
 		if id == dp.Id {
 			continue
@@ -94,7 +93,7 @@ func (dp *DkgParticipant) Round2(bcast map[uint32]*Round1Bcast, p2psend map[uint
 		// Append participant id
 		msg = append(msg, byte(id))
 		// Append CTX
-		msg = append(msg, dp.ctx)
+		msg = append(msg, dp.ctx...)
 		// Append Aj0
 		msg = append(msg, Aj0.ToAffineCompressed()...)
 		// Append prod
@@ -103,13 +102,13 @@ func (dp *DkgParticipant) Round2(bcast map[uint32]*Round1Bcast, p2psend map[uint
 		cj := dp.Curve.Scalar.Hash(msg)
 		// Check equation
 		if cj.Cmp(bcast[id].Ci) != 0 {
-			return nil, fmt.Errorf("Hash check fails for participant with id %d\n", id)
+			return nil, fmt.Errorf("hash check fails for participant with id %d", id)
 		}
 
 		// Step 5 - FeldmanVerify
 		fji := p2psend[id]
 		if err = bcast[id].Verifiers.Verify(fji); err != nil {
-			return nil, fmt.Errorf("feldman verify fails for participant with id %d\n", id)
+			return nil, fmt.Errorf("feldman verify fails for participant with id %d", id)
 		}
 	}
 
@@ -148,10 +147,10 @@ func (dp *DkgParticipant) Round2(bcast map[uint32]*Round1Bcast, p2psend map[uint
 	dp.VerificationKey = vk
 
 	// Update round number
-	dp.round = 3
+	dp.round = 5
 
 	// Broadcast
-	return &Round2Bcast{
+	return &Round4Bcast{
 		vk,
 		dp.VkShare,
 	}, nil

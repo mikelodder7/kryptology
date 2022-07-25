@@ -41,10 +41,10 @@ type (
 		N2 *big.Int // N² computed and cached to prevent re-computation.
 	}
 
-	// PublicKeyJson encapsulates the data that is serialized to JSON.
+	// PublicKeyJSON encapsulates the data that is serialized to JSON.
 	// It is used internally and not for external use. Public so other pieces
 	// can use for serialization.
-	PublicKeyJson struct {
+	PublicKeyJSON struct {
 		N *big.Int
 	}
 
@@ -56,10 +56,10 @@ type (
 		U       *big.Int // L((N + 1)^λ(N) mod N²)−1 mod N
 	}
 
-	// SecretKeyJson encapsulates the data that is serialized to JSON.
+	// SecretKeyJSON encapsulates the data that is serialized to JSON.
 	// It is used internally and not for external use. Public so other pieces
 	// can use for serialization.
-	SecretKeyJson struct {
+	SecretKeyJSON struct {
 		N, Lambda, Totient, U *big.Int
 	}
 
@@ -67,9 +67,7 @@ type (
 	Ciphertext *big.Int
 )
 
-var (
-	two = big.NewInt(2) // The odd prime
-)
+var two = big.NewInt(2) // The odd prime
 
 // NewKeys generates Paillier keys with `bits` sized safe primes.
 func NewKeys() (*PublicKey, *SecretKey, error) {
@@ -80,7 +78,7 @@ func NewKeys() (*PublicKey, *SecretKey, error) {
 // `genSafePrime` to generate the safe primes.
 func keyGenerator(genSafePrime func(uint) (*big.Int, error), bits uint) (*PublicKey, *SecretKey, error) {
 	values := make(chan *big.Int, 2)
-	errors := make(chan error, 2)
+	errorsChannel := make(chan error, 2)
 
 	var p, q *big.Int
 
@@ -89,11 +87,11 @@ func keyGenerator(genSafePrime func(uint) (*big.Int, error), bits uint) (*Public
 			go func() {
 				value, err := genSafePrime(bits)
 				values <- value
-				errors <- err
+				errorsChannel <- err
 			}()
 		}
 
-		for _, err := range []error{<-errors, <-errors} {
+		for _, err := range []error{<-errorsChannel, <-errorsChannel} {
 			if err != nil {
 				return nil, nil, err
 			}
@@ -148,13 +146,13 @@ func NewSecretKey(p, q *big.Int) (*SecretKey, error) {
 
 // MarshalJSON converts the public key into json format.
 func (pk PublicKey) MarshalJSON() ([]byte, error) {
-	data := PublicKeyJson{pk.N}
+	data := PublicKeyJSON{pk.N}
 	return json.Marshal(data)
 }
 
 // UnmarshalJSON converts the json data into this public key.
 func (pk *PublicKey) UnmarshalJSON(bytes []byte) error {
-	data := new(PublicKeyJson)
+	data := new(PublicKeyJSON)
 	if err := json.Unmarshal(bytes, data); err != nil {
 		return err
 	}
@@ -223,15 +221,12 @@ func (pk *PublicKey) Add(c, d Ciphertext) (Ciphertext, error) {
 	if c == nil || d == nil {
 		return nil, internal.ErrNilArguments
 	}
-	// Ensure c,d ∈ Z_N²
-	cErr := core.In(c, pk.N2)
-	dErr := core.In(d, pk.N2)
-	// Constant time error check
+	// Ensure c,d ∈ Z_N² & Constant time error check
 	var err error
-	if cErr != nil {
+	if cErr := core.In(c, pk.N2); cErr != nil {
 		err = cErr
 	}
-	if dErr != nil {
+	if dErr := core.In(d, pk.N2); dErr != nil {
 		err = dErr
 	}
 	if err != nil {
@@ -252,18 +247,13 @@ func (pk *PublicKey) Mul(a *big.Int, c Ciphertext) (Ciphertext, error) {
 		return nil, internal.ErrNilArguments
 	}
 
-	// Ensure a ∈ Z_N
-	aErr := core.In(a, pk.N)
-	// Ensure c ∈ Z_N²
-	cErr := core.In(c, pk.N2)
-
 	var err error
-
-	// Constant time error check
-	if aErr != nil {
+	// Ensure a ∈ Z_N && Constant time error check
+	if aErr := core.In(a, pk.N); aErr != nil {
 		err = aErr
 	}
-	if cErr != nil {
+	// Ensure c ∈ Z_N² && Constant time error check
+	if cErr := core.In(c, pk.N2); cErr != nil {
 		err = cErr
 	}
 	if err != nil {
@@ -352,7 +342,7 @@ func (sk *SecretKey) Decrypt(c Ciphertext) (*big.Int, error) {
 
 // MarshalJSON converts the secret key into json format.
 func (sk SecretKey) MarshalJSON() ([]byte, error) {
-	data := SecretKeyJson{
+	data := SecretKeyJSON{
 		sk.N,
 		sk.Lambda,
 		sk.Totient,
@@ -363,7 +353,7 @@ func (sk SecretKey) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON converts the json data into this secret key.
 func (sk *SecretKey) UnmarshalJSON(bytes []byte) error {
-	data := new(SecretKeyJson)
+	data := new(SecretKeyJSON)
 	if err := json.Unmarshal(bytes, data); err != nil {
 		return err
 	}

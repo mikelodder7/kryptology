@@ -30,7 +30,7 @@ type TestSig struct {
 
 // NOTE: NEM provides no test vectors for Keccak512, but has test vectors for Keccak256
 // We use Keccak256 and 512 in the exact same manner, so ensuring this test passes
-// gives decent confidence in our Keccak512 use as well
+// gives decent confidence in our Keccak512 use as well.
 func TestKeccak256SanityCheck(t *testing.T) {
 	data := "A6151D4904E18EC288243028CEDA30556E6C42096AF7150D6A7232CA5DBA52BD2192E23DAA5FA2BEA3D4BD95EFA2389CD193FCD3376E70A5C097B32C1C62C80AF9D710211545F7CDDDF63747420281D64529477C61E721273CFD78F8890ABB4070E97BAA52AC8FF61C26D195FC54C077DEF7A3F6F79B36E046C1A83CE9674BA1983EC2FB58947DE616DD797D6499B0385D5E8A213DB9AD5078A8E0C940FF0CB6BF92357EA5609F778C3D1FB1E7E36C35DB873361E2BE5C125EA7148EFF4A035B0CCE880A41190B2E22924AD9D1B82433D9C023924F2311315F07B88BFD42850047BF3BE785C4CE11C09D7E02065D30F6324365F93C5E7E423A07D754EB314B5FE9DB4614275BE4BE26AF017ABDC9C338D01368226FE9AF1FB1F815E7317BDBB30A0F36DC69"
 	toMatch := "4E9E79AB7434F6C7401FB3305D55052EE829B9E46D5D05D43B59FEFB32E9A619"
@@ -46,7 +46,7 @@ func TestKeccak256SanityCheck(t *testing.T) {
 	require.Equal(t, hashed, toMatchBytes)
 }
 
-// Test that the pubkey can get derived correctly from privkey
+// Test that the pubkey can get derived correctly from privkey.
 func TestPrivToPubkey(t *testing.T) {
 	testVectors := GetPrivToPubkeyTestCases()
 
@@ -68,7 +68,7 @@ func TestPrivToPubkey(t *testing.T) {
 // Test that we can:
 // Get pubkey from privkey
 // Obtain the correct signature
-// Verify the test vector provided signature
+// Verify the test vector provided signature.
 func TestSigs(t *testing.T) {
 	testVectors := GetSigTestCases()
 
@@ -107,7 +107,7 @@ func TestSigs(t *testing.T) {
 
 // NOTE: Test cases were obtained from NEM
 // See link: https://github.com/symbol/test-vectors
-// Pulled 5 test vectors for each test case, at time of writing confirmed that all 10000 vectors passed
+// Pulled 5 test vectors for each test case, at time of writing confirmed that all 10000 vectors passed.
 func GetPrivToPubkeyTestCases() []KeyPair {
 	var toReturn []KeyPair
 

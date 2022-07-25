@@ -197,6 +197,7 @@ func BenchmarkSigning(b *testing.B) {
 }
 
 func benchSign(b *testing.B, hash []byte, curve elliptic.Curve, verify curves.EcdsaVerify, threshold, count uint32) error {
+	b.Helper()
 	// Setup signers
 	b.StopTimer()
 
@@ -248,7 +249,7 @@ func benchSign(b *testing.B, hash []byte, curve elliptic.Curve, verify curves.Ec
 		}
 		p2p[i], err = s.SignRound2(in, nil) // TODO: fix me later
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -335,7 +336,7 @@ func benchSign(b *testing.B, hash []byte, curve elliptic.Curve, verify curves.Ec
 	return nil
 }
 
-// Benchmark 2-party signing
+// Benchmark 2-party signing.
 func BenchmarkSign2p(b *testing.B) {
 	// Dealer-related setup (not part of signing being measured)
 	k256 := btcec.S256()
@@ -394,6 +395,7 @@ type signingSetup struct {
 
 // Run a 2-party signing protocol and report messaging metrics.
 func sign2p(b *testing.B, bw *msgCounter, setup *signingSetup) {
+	b.Helper()
 	// Hash of message for signature
 	hashBi, err := core.Hash([]byte("I will be brief. Your noble son is mad."), setup.curve)
 	require.NoError(b, err)
@@ -567,13 +569,13 @@ func sign2p(b *testing.B, bw *msgCounter, setup *signingSetup) {
 	require.Equal(b, s1_sig, s2_sig, "computed ECDSA signature do not match")
 }
 
-// Tracks messaging-related metrics: msg count, serialized total bytes
+// Tracks messaging-related metrics: msg count, serialized total bytes.
 type msgCounter struct {
 	bytes    int
 	messages int
 }
 
-// Accumulates message and byte counts
+// Accumulates message and byte counts.
 func (m *msgCounter) Count(msgs ...interface{}) error {
 	for _, msg := range msgs {
 		if msg == nil {

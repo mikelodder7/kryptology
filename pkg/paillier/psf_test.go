@@ -81,7 +81,7 @@ func TestGenerateChallengesWorks(t *testing.T) {
 }
 
 // tests whether the hash function can still produce valid challenges
-// even when the modulus is smaller than the hash output
+// even when the modulus is smaller than the hash output.
 func TestGenerateChallengesPrimeN(t *testing.T) {
 	curves := []elliptic.Curve{btcec.S256(), elliptic.P256()}
 	n := []*big.Int{
@@ -150,62 +150,81 @@ func TestPsfProofParams_Prove(t *testing.T) {
 		expectedResultLen int
 	}{
 		// Positive tests
-		{"positive: p256, small numbers",
+		{
+			"positive: p256, small numbers",
 			&PsfProofParams{elliptic.P256(), smallSk, 1001, Qp256},
 			nil,
 			PsfProofLength,
 		},
-		{"positive: p256, large numbers",
+		{
+			"positive: p256, large numbers",
 			&PsfProofParams{elliptic.P256(), sk, pi, Qp256},
 			nil,
 			PsfProofLength,
 		},
-		{"positive: s256, large numbers",
+		{
+			"positive: s256, large numbers",
 			&PsfProofParams{btcec.S256(), sk, pi, Qs256},
 			nil,
 			PsfProofLength,
 		},
 
 		// Nil params
-		{"negative: ",
-			&PsfProofParams{btcec.S256(),
+		{
+			"negative: ",
+			&PsfProofParams{
+				btcec.S256(),
 				sk,
 				pi,
-				Qs256},
+				Qs256,
+			},
 			nil,
 			PsfProofLength,
 		},
-		{"negative: proof params are nil",
-			&PsfProofParams{nil,
+		{
+			"negative: proof params are nil",
+			&PsfProofParams{
+				nil,
 				sk,
 				pi,
-				Qs256},
+				Qs256,
+			},
 			internal.ErrNilArguments,
 			0,
 		},
-		{"negative: SecretKey is nil",
-			&PsfProofParams{btcec.S256(),
+		{
+			"negative: SecretKey is nil",
+			&PsfProofParams{
+				btcec.S256(),
 				nil,
 				pi,
-				Qs256},
+				Qs256,
+			},
 			internal.ErrNilArguments,
 			0,
 		},
-		{"negative: y is nil",
-			&PsfProofParams{btcec.S256(),
+		{
+			"negative: y is nil",
+			&PsfProofParams{
+				btcec.S256(),
 				sk,
 				0,
-				Qs256},
+				Qs256,
+			},
 			internal.ErrNilArguments,
 			0,
 		},
-		{"negative: Pi is nil",
-			&PsfProofParams{btcec.S256(),
+		{
+			"negative: Pi is nil",
+			&PsfProofParams{
+				btcec.S256(),
 				sk,
 				pi,
-				nil},
+				nil,
+			},
 			internal.ErrNilArguments,
-			0},
+			0,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -217,10 +236,9 @@ func TestPsfProofParams_Prove(t *testing.T) {
 			require.Len(t, result, test.expectedResultLen)
 		})
 	}
-
 }
 
-// Test that Range2Proof can be marshaled and unmarshaled correctly
+// Test that Range2Proof can be marshaled and unmarshaled correctly.
 func TestPsfProof_MarshalJSON(t *testing.T) {
 	// Generate some proof
 	sk, _ := NewSecretKey(
@@ -255,7 +273,7 @@ func TestPsfProof_MarshalJSON(t *testing.T) {
 
 // Tests for Verify
 // prove/verify round trip works
-// modifying any parameter causes verify to fail
+// modifying any parameter causes verify to fail.
 func TestPsfProofWorks(t *testing.T) {
 	// RSA primes for testing
 	sk, _ := NewSecretKey(

@@ -14,10 +14,10 @@ package camshoup
 import (
 	"math/big"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
 
 	"github.com/coinbase/kryptology/internal"
-	crypto "github.com/coinbase/kryptology/pkg/core"
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/paillier"
 )
 
@@ -27,28 +27,23 @@ import (
 // See section 3.1 and 3.2 in verenc.pdf.
 // nd4 = n / 4 integer division
 // n2 = n^2
-// nd4 = n^2 / 4 integer division
+// nd4 = n^2 / 4 integer division.
 type PaillierGroup struct {
 	g, h, n, nd4, n2d2, n2d4, n2, twoInvTwo *big.Int
-}
-
-type paillierMarshal struct {
-	N []byte `bare:"n"`
-	G []byte `bare:"g"`
 }
 
 // NewPaillierGroup creates a new Paillier group for verifiable encryption
 // and generates safe primes for p and q.
 func NewPaillierGroup() (*PaillierGroup, error) {
-	return groupGenerator(crypto.GenerateSafePrime, paillier.PaillierPrimeBits)
+	return groupGenerator(core.GenerateSafePrime, paillier.PaillierPrimeBits)
 }
 
 // NewPaillierGroupWithPrimes create a new Paillier group for verifiable encryption
-// Order n^2 where n = p * q
+// Order n^2 where n = p * q.
 func NewPaillierGroupWithPrimes(p, q *big.Int) (*PaillierGroup, error) {
 	n := new(big.Int).Mul(p, q)
 	n2 := new(big.Int).Mul(n, n)
-	gTick, err := crypto.Rand(n2)
+	gTick, err := core.Rand(n2)
 	if err != nil {
 		return nil, err
 	}
@@ -67,10 +62,10 @@ func NewPaillierGroupWithPrimes(p, q *big.Int) (*PaillierGroup, error) {
 	}, nil
 }
 
-// create two safe primes and generate a new Paillier group
+// create two safe primes and generate a new Paillier group.
 func groupGenerator(genSafePrime func(uint) (*big.Int, error), bits uint) (*PaillierGroup, error) {
 	values := make(chan *big.Int, 2)
-	errors := make(chan error, 2)
+	errs := make(chan error, 2)
 
 	var p, q *big.Int
 
@@ -79,11 +74,11 @@ func groupGenerator(genSafePrime func(uint) (*big.Int, error), bits uint) (*Pail
 			go func() {
 				value, err := genSafePrime(bits)
 				values <- value
-				errors <- err
+				errs <- err
 			}()
 		}
 
-		for _, err := range []error{<-errors, <-errors} {
+		for _, err := range []error{<-errs, <-errs} {
 			if err != nil {
 				return nil, err
 			}
@@ -96,7 +91,7 @@ func groupGenerator(genSafePrime func(uint) (*big.Int, error), bits uint) (*Pail
 
 // Abs computes a mod n^2 where 0 < a < n^2 or
 // (n^2 - a) mod n^2 if a > n^2/2
-// See section 3.2
+// See section 3.2.
 func (pg PaillierGroup) Abs(a *big.Int) *big.Int {
 	tv := new(big.Int).Mod(a, pg.n2)
 
@@ -108,7 +103,7 @@ func (pg PaillierGroup) Abs(a *big.Int) *big.Int {
 	}
 }
 
-// Exp computes base^exp mod n^2
+// Exp computes base^exp mod n^2.
 func (pg PaillierGroup) Exp(base, exp *big.Int) *big.Int {
 	return new(big.Int).Exp(base, exp, pg.n2)
 }
@@ -118,51 +113,62 @@ func (pg PaillierGroup) Mul(lhs, rhs *big.Int) *big.Int {
 	return r.Mod(r, pg.n2)
 }
 
-// Inv computes val^-1 mod n^2
+// Inv computes val^-1 mod n^2.
 func (pg PaillierGroup) Inv(val *big.Int) *big.Int {
 	return new(big.Int).ModInverse(val, pg.n2)
 }
 
-// Gexp computes g^exp mod n^2
+// Gexp computes g^exp mod n^2.
 func (pg PaillierGroup) Gexp(exp *big.Int) *big.Int {
 	return new(big.Int).Exp(pg.g, exp, pg.n2)
 }
 
-// Hexp computes h^exp mod n^2
+// Hexp computes h^exp mod n^2.
 func (pg PaillierGroup) Hexp(exp *big.Int) *big.Int {
 	return new(big.Int).Exp(pg.h, exp, pg.n2)
 }
 
-// Rand returns a random v ∈ [1, n^2 / 4)
+// Rand returns a random v ∈ [1, n^2 / 4).
 func (pg PaillierGroup) Rand() (*big.Int, error) {
-	return crypto.Rand(pg.n2d4)
+	return core.Rand(pg.n2d4)
 }
 
-// RandForEncrypt returns a random v ∈ [1, n / 4)
+// RandForEncrypt returns a random v ∈ [1, n / 4).
 func (pg PaillierGroup) RandForEncrypt() (*big.Int, error) {
-	return crypto.Rand(pg.nd4)
+	return core.Rand(pg.nd4)
 }
 
-// MarshalBinary serializes a paillier group to a byte sequence
+// MarshalBinary serializes a paillier group to a byte sequence.
 func (pg PaillierGroup) MarshalBinary() ([]byte, error) {
 	// Only serialize what's needed
 	// all values except g can be derived from n
 	// g is a random value
-	tv := new(paillierMarshal)
-	tv.N = pg.n.Bytes()
-	tv.G = pg.g.Bytes()
-	return bare.Marshal(tv)
+	n := pg.n.Bytes()
+	g := pg.g.Bytes()
+	b := core.NewByteSerializer(uint(len(n) + len(g)))
+	if _, err := b.WriteBytes(n); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err := b.WriteBytes(g); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return b.Bytes(), nil
 }
 
-// UnmarshalBinary deserializes a paillier group from a byte sequence
+// UnmarshalBinary deserializes a paillier group from a byte sequence.
 func (pg *PaillierGroup) UnmarshalBinary(data []byte) error {
-	tv := new(paillierMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	n, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	pg.n = new(big.Int).SetBytes(tv.N)
-	pg.g = new(big.Int).SetBytes(tv.G)
+	g, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	pg.n = new(big.Int).SetBytes(n)
+	pg.g = new(big.Int).SetBytes(g)
 	twoInvTwo := new(big.Int).ModInverse(big.NewInt(2), pg.n)
 	pg.h = new(big.Int).Add(pg.n, big.NewInt(1))
 	pg.n2 = new(big.Int).Mul(pg.n, pg.n)
@@ -173,9 +179,9 @@ func (pg *PaillierGroup) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Hash computes h(u, e, L) for encryption/decryption
-func (pg PaillierGroup) Hash(u *big.Int, e []*big.Int, data []byte) (*big.Int, error) {
-	if u == nil || len(e) == 0 || crypto.AnyNil(e...) {
+// Hash computes h(u, e, L) for encryption/decryption.
+func (PaillierGroup) Hash(u *big.Int, e []*big.Int, data []byte) (*big.Int, error) {
+	if u == nil || len(e) == 0 || core.AnyNil(e...) {
 		return nil, internal.ErrNilArguments
 	}
 	toHash := make([][]byte, len(e)+2)

@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gtank/merlin"
+
 	"github.com/coinbase/kryptology/pkg/accumulator"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
@@ -134,11 +136,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	mpc, err := new(accumulator.MembershipProofCommitting).New(wit, acc, params, pk)
+	mpc, err := new(accumulator.MembershipProofCommitting).New(wit, acc, params, pk, nil)
 	if err != nil {
 		panic(err)
 	}
-	challenge := curve.Scalar.Hash(mpc.GetChallengeBytes())
+	transcript := merlin.NewTranscript("main")
+	mpc.WriteChallengeContributionToTranscript(transcript)
+	buffer := transcript.ExtractBytes([]byte("challenge"), 64)
+	challenge := curve.Scalar.Hash(buffer)
 	proof := mpc.GenProof(challenge)
 	finalProof, err := proof.Finalize(acc, params, pk, challenge)
 	if err != nil {
@@ -151,7 +156,10 @@ func main() {
 	fmt.Println("ZK proof successfully generated!")
 	fmt.Printf("ZK proof value is %v\n", hex.EncodeToString(proofBytes))
 	fmt.Println("Verifying....")
-	challenge2 := finalProof.GetChallenge(curve)
+	transcript = merlin.NewTranscript("main")
+	finalProof.WriteChallengeContributionToTranscript(transcript)
+	buffer = transcript.ExtractBytes([]byte("challenge"), 64)
+	challenge2 := curve.Scalar.Hash(buffer)
 	if challenge.Cmp(challenge2) == 0 {
 		fmt.Println("proof verification succeeds!")
 	} else {

@@ -49,7 +49,7 @@ type BobRefresh struct {
 }
 
 var (
-	// Static type assertions
+	// Static type assertions.
 	_ protocol.Iterator = &AliceDkg{}
 	_ protocol.Iterator = &BobDkg{}
 	_ protocol.Iterator = &AliceSign{}
@@ -58,7 +58,7 @@ var (
 	_ protocol.Iterator = &BobRefresh{}
 )
 
-// NewAliceDkg creates a new protocol that can compute a DKG as Alice
+// NewAliceDkg creates a new protocol that can compute a DKG as Alice.
 func NewAliceDkg(curve *curves.Curve, version uint) *AliceDkg {
 	a := &AliceDkg{Alice: dkg.NewAlice(curve)}
 	a.steps = []func(*protocol.Message) (*protocol.Message, error){
@@ -209,12 +209,12 @@ func (b *BobDkg) Result(version uint) (*protocol.Message, error) {
 
 // NewAliceSign creates a new protocol that can compute a signature as Alice.
 // Requires dkg state that was produced at the end of DKG.Output().
-func NewAliceSign(curve *curves.Curve, hash hash.Hash, message []byte, dkgResultMessage *protocol.Message, version uint) (*AliceSign, error) {
+func NewAliceSign(curve *curves.Curve, h hash.Hash, message []byte, dkgResultMessage *protocol.Message, version uint) (*AliceSign, error) {
 	dkgResult, err := DecodeAliceDkgResult(dkgResultMessage)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	a := &AliceSign{Alice: sign.NewAlice(curve, hash, dkgResult)}
+	a := &AliceSign{Alice: sign.NewAlice(curve, h, dkgResult)}
 	a.steps = []func(message *protocol.Message) (*protocol.Message, error){
 		func(*protocol.Message) (*protocol.Message, error) {
 			aliceCommitment, err := a.Round1GenerateRandomSeed()
@@ -240,12 +240,12 @@ func NewAliceSign(curve *curves.Curve, hash hash.Hash, message []byte, dkgResult
 
 // NewBobSign creates a new protocol that can compute a signature as Bob.
 // Requires dkg state that was produced at the end of DKG.Output().
-func NewBobSign(curve *curves.Curve, hash hash.Hash, message []byte, dkgResultMessage *protocol.Message, version uint) (*BobSign, error) {
+func NewBobSign(curve *curves.Curve, h hash.Hash, message []byte, dkgResultMessage *protocol.Message, version uint) (*BobSign, error) {
 	dkgResult, err := DecodeBobDkgResult(dkgResultMessage)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	b := &BobSign{Bob: sign.NewBob(curve, hash, dkgResult)}
+	b := &BobSign{Bob: sign.NewBob(curve, h, dkgResult)}
 	b.steps = []func(message *protocol.Message) (*protocol.Message, error){
 		func(input *protocol.Message) (*protocol.Message, error) {
 			commitment, err := decodeSignRound2Input(input)
@@ -275,7 +275,7 @@ func NewBobSign(curve *curves.Curve, hash hash.Hash, message []byte, dkgResultMe
 
 // Result always returns an error.
 // Alice does not compute a signature in the DKLS protocol; only Bob computes the signature.
-func (a *AliceSign) Result(_ uint) (*protocol.Message, error) {
+func (*AliceSign) Result(_ uint) (*protocol.Message, error) {
 	return nil, errors.New("dkls.Alice does not produce a signature")
 }
 
@@ -292,7 +292,7 @@ func (b *BobSign) Result(version uint) (*protocol.Message, error) {
 	return encodeSignature(b.Bob.Signature, version)
 }
 
-// NewAliceRefresh creates a new protocol that can compute a key refresh as Alice
+// NewAliceRefresh creates a new protocol that can compute a key refresh as Alice.
 func NewAliceRefresh(curve *curves.Curve, dkgResultMessage *protocol.Message, version uint) (*AliceRefresh, error) {
 	dkgResult, err := DecodeAliceDkgResult(dkgResultMessage)
 	if err != nil {

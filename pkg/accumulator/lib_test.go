@@ -97,7 +97,6 @@ func TestAddAssignPolyG1(t *testing.T) {
 	for i := 0; i < len(poly5); i++ {
 		require.Equal(t, poly5[i].ToAffineCompressed(), poly1[i].ToAffineCompressed())
 	}
-
 }
 
 func TestAddAssignPolyG1Error(t *testing.T) {
@@ -159,12 +158,14 @@ func TestPushPoly(t *testing.T) {
 		curve.Scalar.New(1),
 	}
 	scalar := curve.Scalar.New(4)
-	result := append(poly, scalar)
+	result := poly[:]
+	result = append(result, scalar)
 	require.Equal(t, result[3], scalar)
 
 	// Push one more
 	scalar2 := curve.Scalar.New(5)
-	result2 := append(result, scalar2)
+	result2 := result[:]
+	result2 = append(result2, scalar2)
 	require.Equal(t, result2[4], scalar2)
 
 	// Push to a new polynomial

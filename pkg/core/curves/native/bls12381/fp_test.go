@@ -7,9 +7,8 @@
 package bls12381
 
 import (
-	crand "crypto/rand"
+	"crypto/rand"
 	"math/big"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,10 +17,10 @@ import (
 )
 
 func TestFpSetOne(t *testing.T) {
-	var fp fp
-	fp.SetOne()
-	require.NotNil(t, fp)
-	require.Equal(t, fp, r)
+	var fpObject fp
+	fpObject.SetOne()
+	require.NotNil(t, fpObject)
+	require.Equal(t, fpObject, r)
 }
 
 func TestFpSetUint64(t *testing.T) {
@@ -44,8 +43,8 @@ func TestFpAdd(t *testing.T) {
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		// Divide by 4 to prevent overflow false errors
-		l := rand.Uint64() >> 2
-		r := rand.Uint64() >> 2
+		l := randUnit64(t) >> 2
+		r := randUnit64(t) >> 2
 		e := l + r
 		lhs.SetUint64(l)
 		rhs.SetUint64(r)
@@ -69,8 +68,8 @@ func TestFpSub(t *testing.T) {
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		// Divide by 4 to prevent overflow false errors
-		l := rand.Uint64() >> 2
-		r := rand.Uint64() >> 2
+		l := randUnit64(t) >> 2
+		r := randUnit64(t) >> 2
 		if l < r {
 			l, r = r, l
 		}
@@ -97,8 +96,8 @@ func TestFpMul(t *testing.T) {
 	// Fuzz test
 	for i := 0; i < 25; i++ {
 		// Divide by 4 to prevent overflow false errors
-		l := rand.Uint32()
-		r := rand.Uint32()
+		l := randUnit32(t)
+		r := randUnit32(t)
 		e := uint64(l) * uint64(r)
 		lhs.SetUint64(uint64(l))
 		rhs.SetUint64(uint64(r))
@@ -117,7 +116,7 @@ func TestFpDouble(t *testing.T) {
 	require.Equal(t, &e, res.Double(&a))
 
 	for i := 0; i < 25; i++ {
-		tv := rand.Uint32()
+		tv := randUnit32(t)
 		ttv := uint64(tv) * 2
 		a.SetUint64(uint64(tv))
 		e.SetUint64(ttv)
@@ -136,7 +135,7 @@ func TestFpSquare(t *testing.T) {
 	require.Equal(t, 1, e.Equal(res.Square(&a)))
 
 	for i := 0; i < 25; i++ {
-		j := rand.Uint32()
+		j := randUnit32(t)
 		exp := uint64(j) * uint64(j)
 		e.SetUint64(exp)
 		a.SetUint64(uint64(j))
@@ -214,7 +213,7 @@ func TestFpBytes(t *testing.T) {
 	require.Equal(t, t1, t2)
 
 	for i := 0; i < 25; i++ {
-		t1.SetUint64(rand.Uint64())
+		t1.SetUint64(randUnit64(t))
 		seq = t1.Bytes()
 		_, suc = t2.SetBytes(&seq)
 		require.Equal(t, 1, suc)
@@ -242,7 +241,7 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 	var a fp
 	var tv2 [96]byte
 	for i := 0; i < 25; i++ {
-		_, _ = crand.Read(tv2[:])
+		_, _ = rand.Read(tv2[:])
 		e := new(big.Int).SetBytes(tv2[:])
 		e.Mod(e, biModulus)
 

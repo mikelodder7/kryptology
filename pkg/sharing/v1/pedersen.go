@@ -16,13 +16,13 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// Pedersen Verifiable Secret Sharing Scheme
+// Pedersen Verifiable Secret Sharing Scheme.
 type Pedersen struct {
 	threshold, limit uint32
 	generator        *curves.EcPoint
 }
 
-// PedersenResult contains all the data from calling Split
+// PedersenResult contains all the data from calling Split.
 type PedersenResult struct {
 	Blinding                     *big.Int
 	BlindingShares, SecretShares []*ShamirShare
@@ -30,7 +30,7 @@ type PedersenResult struct {
 	Verifiers                    []*ShareVerifier
 }
 
-// NewPedersen creates a new pedersen VSS
+// NewPedersen creates a new pedersen VSS.
 func NewPedersen(threshold, limit uint32, generator *curves.EcPoint) (*Pedersen, error) {
 	if limit < threshold {
 		return nil, fmt.Errorf("limit cannot be less than threshold")
@@ -54,11 +54,10 @@ func NewPedersen(threshold, limit uint32, generator *curves.EcPoint) (*Pedersen,
 	}, nil
 }
 
-// Split creates the verifiers, blinding and shares
+// Split creates the verifiers, blinding and shares.
 func (pd Pedersen) Split(secret []byte) (*PedersenResult, error) {
 	// generate a random blinding factor
 	blinding, err := crand.Int(crand.Reader, pd.generator.Curve.Params().N)
-
 	if err != nil {
 		return nil, err
 	}
@@ -105,15 +104,15 @@ func (pd Pedersen) Split(secret []byte) (*PedersenResult, error) {
 	}, nil
 }
 
-// Combine recreates the original secret from the shares
+// Combine recreates the original secret from the shares.
 func (pd Pedersen) Combine(shares ...*ShamirShare) ([]byte, error) {
 	field := curves.NewField(pd.generator.Curve.Params().N)
 	shamir := Shamir{pd.threshold, pd.limit, field}
 	return shamir.Combine(shares...)
 }
 
-// Verify checks a share for validity
-func (pd Pedersen) Verify(share *ShamirShare, blinding *ShamirShare, blindedverifiers []*ShareVerifier) (bool, error) {
+// Verify checks a share for validity.
+func (pd Pedersen) Verify(share, blinding *ShamirShare, blindedverifiers []*ShareVerifier) (bool, error) {
 	if len(blindedverifiers) < int(pd.threshold) {
 		return false, fmt.Errorf("not enough blindedverifiers to check")
 	}
@@ -164,12 +163,11 @@ func (pd Pedersen) Verify(share *ShamirShare, blinding *ShamirShare, blindedveri
 }
 
 // K256GeneratorFromHashedBytes computes a generator whose discrete log is unknown
-// from a bytes sequence
+// from a bytes sequence.
 func K256GeneratorFromHashedBytes(bytes []byte) (x, y *big.Int, err error) {
 	pt := new(curves.PointK256).Hash(bytes)
 	p, _ := pt.(*curves.PointK256)
 	x = p.X().BigInt()
 	y = p.Y().BigInt()
-	err = nil
-	return
+	return x, y, nil
 }

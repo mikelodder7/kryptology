@@ -32,7 +32,7 @@ import (
 // and https://signal.org/docs/specifications/xeddsa/#hash-functions
 // for more details.
 // This uses the KDF function similar to X3DH for each `value`
-// But changes the key just like XEdDSA where the prefix bytes change by a single bit
+// But changes the key just like XEdDSA where the prefix bytes change by a single bit.
 func Hash(info []byte, values ...[]byte) ([]byte, error) {
 	// Don't accept any nil arguments
 	if anyNil(values...) {
@@ -44,7 +44,8 @@ func Hash(info []byte, values ...[]byte) ([]byte, error) {
 	f := bytes.Repeat([]byte{0xFF}, 32)
 
 	for _, b := range values {
-		ikm := append(f, b...)
+		ikm := f
+		ikm = append(ikm, b...)
 		ikm = append(ikm, okm...)
 		kdf := hkdf.New(sha256.New, ikm, salt, info)
 		n, err := kdf.Read(okm)
@@ -70,7 +71,7 @@ func anyNil(values ...[]byte) bool {
 
 // ByteSub is a constant time algorithm for subtracting
 // 1 from the array as if it were a big number.
-// 0 is considered a wrap which resets to 0xFF
+// 0 is considered a wrap which resets to 0xFF.
 func ByteSub(b []byte) {
 	m := byte(1)
 	for i := 0; i < len(b); i++ {

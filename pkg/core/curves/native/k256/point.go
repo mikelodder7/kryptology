@@ -17,17 +17,17 @@ var (
 	k256PointIsogenyParams   native.IsogenyParams
 )
 
-func K256PointNew() *native.EllipticPoint {
+func PointNew() *native.EllipticPoint {
 	return &native.EllipticPoint{
 		X:          fp.K256FpNew(),
 		Y:          fp.K256FpNew(),
 		Z:          fp.K256FpNew(),
-		Params:     getK256PointParams(),
-		Arithmetic: &k256PointArithmetic{},
+		Params:     getPointParams(),
+		Arithmetic: &pointArithmetic{},
 	}
 }
 
-func k256PointParamsInit() {
+func pointParamsInit() {
 	k256PointParams = native.EllipticPointParams{
 		A: fp.K256FpNew(),
 		B: fp.K256FpNew().SetUint64(7),
@@ -48,76 +48,76 @@ func k256PointParamsInit() {
 	}
 }
 
-func getK256PointParams() *native.EllipticPointParams {
-	k256PointInitonce.Do(k256PointParamsInit)
+func getPointParams() *native.EllipticPointParams {
+	k256PointInitonce.Do(pointParamsInit)
 	return &k256PointParams
 }
 
-func getK256PointSswuParams() *native.SswuParams {
-	k256PointSswuInitOnce.Do(k256PointSswuParamsInit)
+func getPointSswuParams() *native.SswuParams {
+	k256PointSswuInitOnce.Do(pointSswuParamsInit)
 	return &k256PointSswuParams
 }
 
-func k256PointSswuParamsInit() {
+func pointSswuParamsInit() {
 	// Taken from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#section-8.7
-	//params := btcec.S256().Params()
+	// params := btcec.S256().Params()
 	//
-	//// c1 = (q - 3) / 4
-	//c1 := new(big.Int).Set(params.P)
-	//c1.Sub(c1, big.NewInt(3))
-	//c1.Rsh(c1, 2)
+	// // c1 = (q - 3) / 4
+	// c1 := new(big.Int).Set(params.P)
+	// c1.Sub(c1, big.NewInt(3))
+	// c1.Rsh(c1, 2)
 	//
-	//a, _ := new(big.Int).SetString("3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533", 16)
-	//b := big.NewInt(1771)
-	//z := big.NewInt(-11)
-	//z.Mod(z, params.P)
-	//// sqrt(-z^3)
-	//zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
-	//zTmp = zTmp.Neg(zTmp)
-	//zTmp.Mod(zTmp, params.P)
-	//c2 := new(big.Int).ModSqrt(zTmp, params.P)
+	// a, _ := new(big.Int).SetString("3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533", 16)
+	// b := big.NewInt(1771)
+	// z := big.NewInt(-11)
+	// z.Mod(z, params.P)
+	// // sqrt(-z^3)
+	// zTmp := new(big.Int).Exp(z, big.NewInt(3), nil)
+	// zTmp = zTmp.Neg(zTmp)
+	// zTmp.Mod(zTmp, params.P)
+	// c2 := new(big.Int).ModSqrt(zTmp, params.P)
 	//
-	//var tBytes [32]byte
-	//c1.FillBytes(tBytes[:])
-	//newC1 := [native.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newC1, &newC1)
-	//c2.FillBytes(tBytes[:])
-	//newC2 := [native.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newC2, &newC2)
-	//a.FillBytes(tBytes[:])
-	//newA := [native.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newA, &newA)
-	//b.FillBytes(tBytes[:])
-	//newB := [native.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newB, &newB)
-	//z.FillBytes(tBytes[:])
-	//newZ := [native.FieldLimbs]uint64{
-	//	binary.BigEndian.Uint64(tBytes[24:32]),
-	//	binary.BigEndian.Uint64(tBytes[16:24]),
-	//	binary.BigEndian.Uint64(tBytes[8:16]),
-	//	binary.BigEndian.Uint64(tBytes[:8]),
-	//}
-	//fp.K256FpNew().Arithmetic.ToMontgomery(&newZ, &newZ)
+	// var tBytes [32]byte
+	// c1.FillBytes(tBytes[:])
+	// newC1 := [native.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newC1, &newC1)
+	// c2.FillBytes(tBytes[:])
+	// newC2 := [native.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newC2, &newC2)
+	// a.FillBytes(tBytes[:])
+	// newA := [native.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newA, &newA)
+	// b.FillBytes(tBytes[:])
+	// newB := [native.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newB, &newB)
+	// z.FillBytes(tBytes[:])
+	// newZ := [native.FieldLimbs]uint64{
+	// 	binary.BigEndian.Uint64(tBytes[24:32]),
+	// 	binary.BigEndian.Uint64(tBytes[16:24]),
+	// 	binary.BigEndian.Uint64(tBytes[8:16]),
+	// 	binary.BigEndian.Uint64(tBytes[:8]),
+	// }
+	// fp.K256FpNew().Arithmetic.ToMontgomery(&newZ, &newZ)
 
 	k256PointSswuParams = native.SswuParams{
 		// (q -3) // 4
@@ -133,7 +133,7 @@ func k256PointSswuParamsInit() {
 	}
 }
 
-func k256PointIsogenyInit() {
+func pointIsogenyInit() {
 	k256PointIsogenyParams = native.IsogenyParams{
 		XNum: [][native.FieldLimbs]uint64{
 			{
@@ -236,17 +236,17 @@ func k256PointIsogenyInit() {
 	}
 }
 
-func getK256PointIsogenyParams() *native.IsogenyParams {
-	k256PointIsogenyInitOnce.Do(k256PointIsogenyInit)
+func getPointIsogenyParams() *native.IsogenyParams {
+	k256PointIsogenyInitOnce.Do(pointIsogenyInit)
 	return &k256PointIsogenyParams
 }
 
-type k256PointArithmetic struct{}
+type pointArithmetic struct{}
 
-func (k k256PointArithmetic) Hash(out *native.EllipticPoint, hash *native.EllipticPointHasher, msg, dst []byte) error {
+func (k pointArithmetic) Hash(out *native.EllipticPoint, hash *native.EllipticPointHasher, msg, dst []byte) error {
 	var u []byte
-	sswuParams := getK256PointSswuParams()
-	isoParams := getK256PointIsogenyParams()
+	sswuParams := getPointSswuParams()
+	isoParams := getPointIsogenyParams()
 
 	switch hash.Type() {
 	case native.XMD:
@@ -276,7 +276,7 @@ func (k k256PointArithmetic) Hash(out *native.EllipticPoint, hash *native.Ellipt
 	return nil
 }
 
-func (k k256PointArithmetic) Double(out, arg *native.EllipticPoint) {
+func (pointArithmetic) Double(out, arg *native.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 9)
 	var yy, zz, xy2, bzz, bzz3, bzz9 [native.FieldLimbs]uint64
@@ -320,7 +320,7 @@ func (k k256PointArithmetic) Double(out, arg *native.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k k256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
+func (pointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 7).
 	var xx, yy, zz, nXxYy, nYyZz, nXxZz [native.FieldLimbs]uint64
@@ -407,16 +407,16 @@ func (k k256PointArithmetic) Add(out, arg1, arg2 *native.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k k256PointArithmetic) IsOnCurve(arg *native.EllipticPoint) bool {
-	affine := K256PointNew()
+func (k pointArithmetic) IsOnCurve(arg *native.EllipticPoint) bool {
+	affine := PointNew()
 	k.ToAffine(affine, arg)
 	lhs := fp.K256FpNew().Square(affine.Y)
 	rhs := fp.K256FpNew()
-	k.RhsEq(rhs, affine.X)
+	k.RhsEquation(rhs, affine.X)
 	return lhs.Equal(rhs) == 1
 }
 
-func (k k256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
+func (pointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
 	var wasInverted int
 	var zero, x, y, z [native.FieldLimbs]uint64
 	f := arg.X.Arithmetic
@@ -438,9 +438,9 @@ func (k k256PointArithmetic) ToAffine(out, arg *native.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (k k256PointArithmetic) RhsEq(out, x *native.Field) {
+func (pointArithmetic) RhsEquation(out, x *native.Field) {
 	// Elliptic curve equation for secp256k1 is: y^2 = x^3 + 7
 	out.Square(x)
 	out.Mul(out, x)
-	out.Add(out, getK256PointParams().B)
+	out.Add(out, getPointParams().B)
 }

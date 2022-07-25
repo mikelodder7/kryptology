@@ -21,7 +21,7 @@ type PartialSignature struct {
 	Sig             []byte // 64-byte signature: R || s
 }
 
-// NewPartialSignature creates a new PartialSignature
+// NewPartialSignature creates a new PartialSignature.
 func NewPartialSignature(identifier byte, sig []byte) *PartialSignature {
 	if l := len(sig); l != signatureLength {
 		panic("ted25519: invalid partial signature length: " + strconv.Itoa(l))
@@ -29,12 +29,12 @@ func NewPartialSignature(identifier byte, sig []byte) *PartialSignature {
 	return &PartialSignature{ShareIdentifier: identifier, Sig: sig}
 }
 
-// R returns the R component of the signature
+// R returns the R component of the signature.
 func (sig *PartialSignature) R() []byte {
 	return sig.Sig[:32]
 }
 
-// S returns the s component of the signature
+// S returns the s component of the signature.
 func (sig *PartialSignature) S() []byte {
 	return sig.Sig[32:]
 }

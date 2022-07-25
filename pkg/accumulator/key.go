@@ -10,8 +10,6 @@ import (
 	"errors"
 	"fmt"
 
-	"git.sr.ht/~sircmpwn/go-bare"
-
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
@@ -26,41 +24,33 @@ func (sk *SecretKey) New(curve *curves.PairingCurve, seed []byte) (*SecretKey, e
 	return sk, nil
 }
 
-// GetPublicKey creates a public key from SecretKey sk
+// GetPublicKey creates a public key from SecretKey sk.
 func (sk SecretKey) GetPublicKey(curve *curves.PairingCurve) (*PublicKey, error) {
 	if sk.value == nil || curve == nil {
 		return nil, fmt.Errorf("curve and sk value cannot be nil")
 	}
-	value := curve.Scalar.Point().(curves.PairingPoint).OtherGroup().Generator().Mul(sk.value)
-	return &PublicKey{value.(curves.PairingPoint)}, nil
+	pairingPoint, ok := curve.Scalar.Point().(curves.PairingPoint)
+	if !ok {
+		return nil, errors.New("incorrect type conversion")
+	}
+	result, ok := pairingPoint.OtherGroup().Generator().Mul(sk.value).(curves.PairingPoint)
+	if !ok {
+		return nil, errors.New("incorrect type conversion")
+	}
+	return &PublicKey{result}, nil
 }
 
-// MarshalBinary converts SecretKey to bytes
+// MarshalBinary converts SecretKey to bytes.
 func (sk SecretKey) MarshalBinary() ([]byte, error) {
 	if sk.value == nil {
 		return nil, fmt.Errorf("sk cannot be empty")
 	}
-	tv := &structMarshal{
-		Value: sk.value.Bytes(),
-		Curve: sk.value.Point().CurveName(),
-	}
-	return bare.Marshal(tv)
+	return curves.ScalarMarshalBinary(sk.value)
 }
 
-// UnmarshalBinary sets SecretKey from bytes
+// UnmarshalBinary sets SecretKey from bytes.
 func (sk *SecretKey) UnmarshalBinary(data []byte) error {
-	tv := new(structMarshal)
-	err := bare.Unmarshal(data, tv)
-	if err != nil {
-		return err
-	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
-	}
-
-	value, err := curve.NewScalar().SetBytes(tv.Value)
-
+	value, err := curves.ScalarUnmarshalBinary(data)
 	if err != nil {
 		return err
 	}
@@ -68,7 +58,7 @@ func (sk *SecretKey) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// BatchAdditions computes product(y + sk) for y in additions and output the product
+// BatchAdditions computes product(y + sk) for y in additions and output the product.
 func (sk SecretKey) BatchAdditions(additions []Element) (Element, error) {
 	if sk.value == nil {
 		return nil, fmt.Errorf("secret key cannot be empty")
@@ -86,7 +76,7 @@ func (sk SecretKey) BatchAdditions(additions []Element) (Element, error) {
 	return mul, nil
 }
 
-// BatchDeletions computes 1/product(y + sk) for y in deletions and output it
+// BatchDeletions computes 1/product(y + sk) for y in deletions and output it.
 func (sk SecretKey) BatchDeletions(deletions []Element) (Element, error) {
 	v, err := sk.BatchAdditions(deletions)
 	if err != nil {
@@ -101,7 +91,7 @@ func (sk SecretKey) BatchDeletions(deletions []Element) (Element, error) {
 
 // CreateCoefficients creates the Batch Polynomial coefficients
 // See page 7 of https://eprint.iacr.org/2020/777.pdf
-func (sk SecretKey) CreateCoefficients(additions []Element, deletions []Element) ([]Element, error) {
+func (sk SecretKey) CreateCoefficients(additions, deletions []Element) ([]Element, error) {
 	if sk.value == nil {
 		return nil, fmt.Errorf("secret key should not be nil")
 	}
@@ -143,7 +133,7 @@ func (sk SecretKey) CreateCoefficients(additions []Element, deletions []Element)
 		}
 	}
 
-	//vD(x) * ∏ 1..n (yA_i + alpha)
+	// vD(x) * ∏ 1..n (yA_i + alpha)
 	bAdd, err := sk.BatchAdditions(additions)
 	if err != nil {
 		return nil, fmt.Errorf("error in sk batchAdditions")
@@ -203,37 +193,22 @@ func (sk SecretKey) CreateCoefficients(additions []Element, deletions []Element)
 	return result, nil
 }
 
-// PublicKey is the public key of accumulator, it should be sk * generator of G2
+// PublicKey is the public key of accumulator, it should be sk * generator of G2.
 type PublicKey struct {
 	value curves.PairingPoint
 }
 
-// MarshalBinary converts PublicKey to bytes
+// MarshalBinary converts PublicKey to bytes.
 func (pk PublicKey) MarshalBinary() ([]byte, error) {
 	if pk.value == nil {
 		return nil, fmt.Errorf("public key cannot be nil")
 	}
-	tv := &structMarshal{
-		Value: pk.value.ToAffineCompressed(),
-		Curve: pk.value.CurveName(),
-	}
-	return bare.Marshal(tv)
+	return curves.PointMarshalBinary(pk.value)
 }
 
-// UnmarshalBinary sets PublicKey from bytes
+// UnmarshalBinary sets PublicKey from bytes.
 func (pk *PublicKey) UnmarshalBinary(data []byte) error {
-	tv := new(structMarshal)
-	err := bare.Unmarshal(data, tv)
-	if err != nil {
-		return err
-	}
-	curve := curves.GetPairingCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
-	}
-
-	value, err := curve.NewScalar().Point().FromAffineCompressed(tv.Value)
-
+	value, err := curves.PointUnmarshalBinary(data)
 	if err != nil {
 		return err
 	}

@@ -111,10 +111,11 @@ func genPrimesArray(count int) []struct{ p, q *big.Int } {
 	return primesArray
 }
 
-// Creates a set of signers that are usable for testing
+// Creates a set of signers that are usable for testing.
 func setupSignersMap(t *testing.T, curve elliptic.Curve, playerThreshold, playerCnt int,
-	addRound1 bool, verify curves.EcdsaVerify, useDistributed bool) (*curves.EcPoint, map[uint32]*Signer) {
-
+	addRound1 bool, verify curves.EcdsaVerify, useDistributed bool) (*curves.EcPoint, map[uint32]*Signer,
+) {
+	t.Helper()
 	if playerThreshold > playerCnt {
 		t.Errorf("threshold cannot be larger than count")
 		t.FailNow()
@@ -367,12 +368,12 @@ func TestSignerSignRound2RepeatCall(t *testing.T) {
 	}
 }
 
-// Mocks for response proof
+// Mocks for response proof.
 type responseProofMock struct {
 	finalizeResult, finalizeWcResult *big.Int
 }
 
-// Have the compiler ensure we're meeting our interface requirements
+// Have the compiler ensure we're meeting our interface requirements.
 var _ proof.ResponseFinalizer = (*responseProofMock)(nil)
 
 func (m *responseProofMock) Finalize(vp *proof.ResponseVerifyParams) (*big.Int, error) {
@@ -399,7 +400,8 @@ func TestSignRound3(t *testing.T) {
 			for j := range signers {
 				s.state.betaj[j] = core.One
 				s.state.vuj[j] = core.One
-				p2p[j] = &P2PSend{&responseProofMock{th13een, th13een},
+				p2p[j] = &P2PSend{
+					&responseProofMock{th13een, th13een},
 					&responseProofMock{th13een, th13een},
 				}
 			}
@@ -484,7 +486,6 @@ func TestSignRound4(t *testing.T) {
 		// Sign
 		s.Round = 4
 		bcast, err := s.SignRound4(ones)
-
 		// signing round 4 completes without error
 		if err != nil {
 			t.Errorf("unexpected failure: %v", err)
@@ -646,6 +647,7 @@ func TestSignerSignRound6WorksP256(t *testing.T) {
 }
 
 func fullroundstest3Signers(t *testing.T, curve elliptic.Curve, msg []byte, verify curves.EcdsaVerify) {
+	t.Helper()
 	var err error
 	playerCnt := 5
 	playerMin := 3
@@ -818,7 +820,7 @@ func fullroundstest3Signers(t *testing.T, curve elliptic.Curve, msg []byte, veri
 	}
 }
 
-// Ensures that marshal-unmarshal Round1Bcast is the identity function
+// Ensures that marshal-unmarshal Round1Bcast is the identity function.
 func TestMarshalRound1BcastRoundTrip(t *testing.T) {
 	expected := Round1Bcast{
 		Identifier: 1337,
@@ -840,7 +842,7 @@ func TestMarshalRound1BcastRoundTrip(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// Ensures that marshal-unmarshal Round3Bcast is the identity function
+// Ensures that marshal-unmarshal Round3Bcast is the identity function.
 func TestMarshalRound3BcastRoundTrip(t *testing.T) {
 	expected := Round3Bcast{
 		deltaElement: tt.B10("22963319250927626464432314334264998185524558636490611781390004531598870711554"),
@@ -857,7 +859,7 @@ func TestMarshalRound3BcastRoundTrip(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// Ensures that marshal-unmarshal Round4Bcast is the identity function
+// Ensures that marshal-unmarshal Round4Bcast is the identity function.
 func TestMarshalRound4BcastRoundTrip(t *testing.T) {
 	// This is the same test as TestWitnessMarshalRoundTrip
 	expected := Round4Bcast{
@@ -876,7 +878,7 @@ func TestMarshalRound4BcastRoundTrip(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// Ensures that marshal-unmarshal Round5Bcast is the identity function
+// Ensures that marshal-unmarshal Round5Bcast is the identity function.
 func TestMarshalRound5BcastRoundTrip(t *testing.T) {
 	expected := Round5Bcast{
 		Rbar: &curves.EcPoint{
@@ -900,7 +902,7 @@ func TestMarshalRound5BcastRoundTrip(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// Ensures that marshal-unmarshal Round3Bcast is the identity function
+// Ensures that marshal-unmarshal Round3Bcast is the identity function.
 func TestMarshalRound6FullBcast(t *testing.T) {
 	expected := Round6FullBcast{
 		sElement: tt.B10("22963319250927626464432314334264998185524558636490611781390004531598870711554"),

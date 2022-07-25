@@ -136,6 +136,10 @@ type BenchScalar struct {
 	value *big.Int
 }
 
+func (s *BenchScalar) Pow(exp uint64) Scalar {
+	panic("implement me")
+}
+
 func (s *BenchScalar) Random(reader io.Reader) Scalar {
 	var v [32]byte
 	_, _ = reader.Read(v[:])
@@ -437,10 +441,3 @@ func (p *BenchPoint) SumOfProducts(points []Point, scalars []Scalar) Point {
 	}
 	return sumOfProductsPippenger(points, biScalars)
 }
-
-//func rhsK256(x *big.Int) *big.Int {
-//	// y^2 = x^3 + B
-//	x3, _ := mod.Exp(x, big.NewInt(3), btcec.S256().P)
-//	x3.Add(x3, btcec.S256().B)
-//	return x3.ModSqrt(x3, btcec.S256().P)
-//}

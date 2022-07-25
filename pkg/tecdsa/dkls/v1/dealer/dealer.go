@@ -26,6 +26,44 @@ import (
 // only use this function if you have a very good reason to.
 func GenerateAndDeal(curve *curves.Curve) (*dkg.AliceOutput, *dkg.BobOutput, error) {
 	aliceSecretShare, bobSecretShare, publicKey := produceKeyShares(curve)
+	return generateOTAndDeal(curve, aliceSecretShare, bobSecretShare, publicKey)
+}
+
+// SplitAndDeal will take an existing private key and split it into private key material for alice and bob which
+// they can later use in signing.
+func SplitAndDeal(curve *curves.Curve, privateKey curves.Scalar) (*dkg.AliceOutput, *dkg.BobOutput, error) {
+	if privateKey.IsZero() || privateKey.IsOne() {
+		return nil, nil, errors.New("invalid private key provided")
+	}
+	aliceSecretShare, bobSecretShare, err := splitPrivateKeyIntoKeyShares(curve, privateKey)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't split private key")
+	}
+	publicKey := curve.ScalarBaseMult(privateKey)
+	return generateOTAndDeal(curve, aliceSecretShare, bobSecretShare, publicKey)
+}
+
+func produceKeyShares(curve *curves.Curve) (aliceSecretShare, bobSecretShare curves.Scalar, publicKey curves.Point) {
+	aliceSecretShare = curve.Scalar.Random(rand.Reader)
+	bobSecretShare = curve.Scalar.Random(rand.Reader)
+	publicKey = curve.ScalarBaseMult(aliceSecretShare.Mul(bobSecretShare))
+	return aliceSecretShare, bobSecretShare, publicKey
+}
+
+func splitPrivateKeyIntoKeyShares(curve *curves.Curve, privateKey curves.Scalar) (curves.Scalar, curves.Scalar, error) {
+	aliceSecretShare := curve.Scalar.Random(rand.Reader)
+	aliceSecretShareInverse, err := aliceSecretShare.Invert()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't invert alice's secret share")
+	}
+
+	// According to DKLs, the DKG'd private key is (aliceSecretShare * bobSecretShare) == privateKey.
+	// Solving for bobSecretShare, we get: bobSecretShare == (aliceSecretShare)^{-1} * privateKey
+	bobSecretShare := aliceSecretShareInverse.Mul(privateKey)
+	return aliceSecretShare, bobSecretShare, nil
+}
+
+func generateOTAndDeal(curve *curves.Curve, aliceSecretShare, bobSecretShare curves.Scalar, publicKey curves.Point) (*dkg.AliceOutput, *dkg.BobOutput, error) {
 	aliceOTOutput, bobOTOutput, err := produceOTResults(curve)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't produce OT results")
@@ -41,13 +79,6 @@ func GenerateAndDeal(curve *curves.Curve) (*dkg.AliceOutput, *dkg.BobOutput, err
 		SeedOtResult:   bobOTOutput,
 	}
 	return alice, bob, nil
-}
-
-func produceKeyShares(curve *curves.Curve) (aliceSecretShare curves.Scalar, bobSecretShare curves.Scalar, publicKey curves.Point) {
-	aliceSecretShare = curve.Scalar.Random(rand.Reader)
-	bobSecretShare = curve.Scalar.Random(rand.Reader)
-	publicKey = curve.ScalarBaseMult(aliceSecretShare.Mul(bobSecretShare))
-	return aliceSecretShare, bobSecretShare, publicKey
 }
 
 func produceOTResults(curve *curves.Curve) (*simplest.ReceiverOutput, *simplest.SenderOutput, error) {

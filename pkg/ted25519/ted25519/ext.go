@@ -14,7 +14,7 @@ import (
 )
 
 // GeAdd returns the sum of two public keys, a and b.
-func GeAdd(a PublicKey, b PublicKey) PublicKey {
+func GeAdd(a, b PublicKey) PublicKey {
 	aPoint, err := new(curves.PointEd25519).FromAffineCompressed(a)
 	if err != nil {
 		panic("attempted to add invalid point: a")
@@ -38,7 +38,7 @@ func ExpandSeed(seed []byte) []byte {
 	return digest[:32]
 }
 
-// reverseBytes returns a new slice of the input bytes reversed
+// reverseBytes returns a new slice of the input bytes reversed.
 func reverseBytes(inBytes []byte) []byte {
 	outBytes := make([]byte, len(inBytes))
 
@@ -117,7 +117,7 @@ func ThresholdSign(
 
 	signature := make([]byte, SignatureSize)
 	copy(signature, R[:])
-	copy(signature[32:], s.Bytes()[:])
+	copy(signature[32:], s.Bytes())
 
 	return signature
 }

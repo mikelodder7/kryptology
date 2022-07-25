@@ -9,6 +9,7 @@ package accumulator
 import (
 	"testing"
 
+	"github.com/gtank/merlin"
 	"github.com/stretchr/testify/require"
 
 	"github.com/coinbase/kryptology/pkg/core/curves"
@@ -72,11 +73,14 @@ func TestMembershipProof(t *testing.T) {
 	require.NotNil(t, params.y)
 	require.NotNil(t, params.z)
 
-	mpc, err := new(MembershipProofCommitting).New(wit, acc, params, pk)
+	mpc, err := new(MembershipProofCommitting).New(wit, acc, params, pk, nil)
 	require.NoError(t, err)
 	testMPC(t, mpc)
 
-	challenge := curve.Scalar.Hash(mpc.GetChallengeBytes())
+	transcript := merlin.NewTranscript("TestMembershipProof")
+	mpc.WriteChallengeContributionToTranscript(transcript)
+	buffer := transcript.ExtractBytes([]byte("challenge"), 64)
+	challenge := curve.Scalar.Hash(buffer)
 	require.NotNil(t, challenge)
 
 	proof := mpc.GenProof(challenge)
@@ -87,8 +91,10 @@ func TestMembershipProof(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, finalProof)
 	testFinalProof(t, finalProof)
-
-	challenge2 := finalProof.GetChallenge(curve)
+	transcript = merlin.NewTranscript("TestMembershipProof")
+	finalProof.WriteChallengeContributionToTranscript(transcript)
+	buffer = transcript.ExtractBytes([]byte("challenge"), 64)
+	challenge2 := curve.Scalar.Hash(buffer)
 	require.Equal(t, challenge, challenge2)
 
 	// Check we can still have a valid proof even if accumulator and witness are updated
@@ -113,11 +119,14 @@ func TestMembershipProof(t *testing.T) {
 	require.NotNil(t, newParams.y)
 	require.NotNil(t, newParams.z)
 
-	newMPC, err := new(MembershipProofCommitting).New(wit, acc, newParams, pk)
+	newMPC, err := new(MembershipProofCommitting).New(wit, acc, newParams, pk, nil)
 	require.NoError(t, err)
 	testMPC(t, newMPC)
 
-	challenge3 := curve.Scalar.Hash(newMPC.GetChallengeBytes())
+	transcript = merlin.NewTranscript("TestMembershipProof")
+	newMPC.WriteChallengeContributionToTranscript(transcript)
+	buffer = transcript.ExtractBytes([]byte("challenge"), 64)
+	challenge3 := curve.Scalar.Hash(buffer)
 	require.NotNil(t, challenge3)
 
 	newProof := newMPC.GenProof(challenge3)
@@ -128,12 +137,16 @@ func TestMembershipProof(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, newFinalProof)
 	testFinalProof(t, newFinalProof)
+	transcript = merlin.NewTranscript("TestMembershipProof")
+	newFinalProof.WriteChallengeContributionToTranscript(transcript)
+	buffer = transcript.ExtractBytes([]byte("challenge"), 64)
 
-	challenge4 := newFinalProof.GetChallenge(curve)
+	challenge4 := curve.Scalar.Hash(buffer)
 	require.Equal(t, challenge3, challenge4)
 }
 
 func testMPC(t *testing.T, mpc *MembershipProofCommitting) {
+	t.Helper()
 	require.NotNil(t, mpc.eC)
 	require.NotNil(t, mpc.tSigma)
 	require.NotNil(t, mpc.tRho)
@@ -159,6 +172,7 @@ func testMPC(t *testing.T, mpc *MembershipProofCommitting) {
 }
 
 func testProof(t *testing.T, proof *MembershipProof) {
+	t.Helper()
 	require.NotNil(t, proof.eC)
 	require.NotNil(t, proof.tSigma)
 	require.NotNil(t, proof.tRho)
@@ -170,6 +184,7 @@ func testProof(t *testing.T, proof *MembershipProof) {
 }
 
 func testFinalProof(t *testing.T, finalProof *MembershipProofFinal) {
+	t.Helper()
 	require.NotNil(t, finalProof.accumulator)
 	require.NotNil(t, finalProof.eC)
 	require.NotNil(t, finalProof.tSigma)

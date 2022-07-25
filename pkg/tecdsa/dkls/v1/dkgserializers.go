@@ -27,7 +27,10 @@ func newDkgProtocolMessage(payload []byte, round string, version uint) *protocol
 	}
 }
 
-func registerTypes() {
+// The init() function is automatically called at import time and does not need to be invoked explicitly.
+// It is executed before any of the other functions in this file. https://go.dev/doc/effective_go#init
+// This ensures the proper values are registered before we try to use them.
+func init() {
 	gob.Register(&curves.ScalarK256{})
 	gob.Register(&curves.PointK256{})
 	gob.Register(&curves.ScalarP256{})
@@ -38,7 +41,6 @@ func encodeDkgRound1Output(commitment [32]byte, version uint) (*protocol.Message
 	if version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(&commitment); err != nil {
@@ -265,7 +267,6 @@ func EncodeAliceDkgOutput(result *dkg.AliceOutput, version uint) (*protocol.Mess
 	if version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(result); err != nil {
@@ -279,7 +280,6 @@ func DecodeAliceDkgResult(m *protocol.Message) (*dkg.AliceOutput, error) {
 	if m.Version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer(m.Payloads[payloadKey])
 	dec := gob.NewDecoder(buf)
 	decoded := new(dkg.AliceOutput)
@@ -294,7 +294,6 @@ func EncodeBobDkgOutput(result *dkg.BobOutput, version uint) (*protocol.Message,
 	if version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
-	registerTypes()
 	buf := bytes.NewBuffer([]byte{})
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(result); err != nil {
@@ -342,11 +341,12 @@ func ConvertAliceDkgOutputToV1(params *v0.Params, dkgResult []byte) (*protocol.M
 	}
 
 	var curve *curves.Curve
-	if params.Curve.Params().Name == curves.K256Name {
+	switch params.Curve.Params().Name {
+	case curves.K256Name:
 		curve = curves.K256()
-	} else if params.Curve.Params().Name == curves.P256Name {
+	case curves.P256Name:
 		curve = curves.P256()
-	} else {
+	default:
 		return nil, fmt.Errorf("unsupported curve %s", params.Curve.Params().Name)
 	}
 
@@ -411,11 +411,12 @@ func ConvertBobDkgOutputToV1(params *v0.Params, dkgResult []byte) (*protocol.Mes
 	}
 
 	var curve *curves.Curve
-	if params.Curve.Params().Name == curves.K256Name {
+	switch params.Curve.Params().Name {
+	case curves.K256Name:
 		curve = curves.K256()
-	} else if params.Curve.Params().Name == curves.P256Name {
+	case curves.P256Name:
 		curve = curves.P256()
-	} else {
+	default:
 		return nil, fmt.Errorf("unsupported curve %s", params.Curve.Params().Name)
 	}
 

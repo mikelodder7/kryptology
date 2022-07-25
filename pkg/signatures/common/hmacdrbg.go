@@ -13,7 +13,7 @@ import (
 
 // HmacDrbg is an HMAC deterministic random bit generator
 // that can use any hash function. Handles reseeding
-// automatically
+// automatically.
 type HmacDrbg struct {
 	k, v   []byte
 	count  int
@@ -33,7 +33,7 @@ func NewHmacDrbg(entropy, nonce, pers []byte, hasher func() hash.Hash) *HmacDrbg
 	}
 
 	drbg.update([][]byte{entropy, nonce, pers})
-	drbg.count += 1
+	drbg.count++
 	return drbg
 }
 

@@ -6,13 +6,13 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/protocol"
 )
 
-// Basic protocol interface implementation that calls the next step func in a pre-defined list
+// Basic protocol interface implementation that calls the next step func in a pre-defined list.
 type protoStepper struct {
 	steps []func(input *protocol.Message) (*protocol.Message, error)
 	step  int
 }
 
-// Next runs the next step in the protocol and reports errors or increments the step index
+// Next runs the next step in the protocol and reports errors or increments the step index.
 func (p *protoStepper) Next(input *protocol.Message) (*protocol.Message, error) {
 	if p.complete() {
 		return nil, protocol.ErrProtocolFinished
@@ -29,5 +29,5 @@ func (p *protoStepper) Next(input *protocol.Message) (*protocol.Message, error) 
 	return output, nil
 }
 
-// Reports true if the step index exceeds the number of steps
+// Reports true if the step index exceeds the number of steps.
 func (p *protoStepper) complete() bool { return p.step >= len(p.steps) /**/ }

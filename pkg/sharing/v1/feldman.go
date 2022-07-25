@@ -14,13 +14,13 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// Feldman Verifiable Secret Sharing Scheme
+// Feldman Verifiable Secret Sharing Scheme.
 type Feldman struct {
 	threshold, limit uint32
 	curve            elliptic.Curve
 }
 
-// FeldmanResult contains all the data from calling Split
+// FeldmanResult contains all the data from calling Split.
 type FeldmanResult struct {
 	SecretShares []*ShamirShare
 	Verifiers    []*ShareVerifier
@@ -63,7 +63,7 @@ func (f Feldman) Combine(shares ...*ShamirShare) ([]byte, error) {
 	return shamir.Combine(shares...)
 }
 
-// Verify checks a share for validity
+// Verify checks a share for validity.
 func (f Feldman) Verify(share *ShamirShare, verifiers []*ShareVerifier) (bool, error) {
 	if len(verifiers) < int(f.threshold) {
 		return false, fmt.Errorf("not enough verifiers to check")

@@ -17,10 +17,10 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// [spec] 10.2 and ProvePSF, VerifyPSF fig.15
+// [spec] 10.2 and ProvePSF, VerifyPSF fig.15.
 const PsfProofLength = 13
 
-// PsfProofParams contains the inputs to ProvePSF
+// PsfProofParams contains the inputs to ProvePSF.
 type PsfProofParams struct {
 	Curve     elliptic.Curve
 	SecretKey *SecretKey
@@ -28,7 +28,7 @@ type PsfProofParams struct {
 	Y         *curves.EcPoint
 }
 
-// PsfVerifyParams contains the inputs to VerifyPSF
+// PsfVerifyParams contains the inputs to VerifyPSF.
 type PsfVerifyParams struct {
 	Curve     elliptic.Curve
 	PublicKey *PublicKey
@@ -36,17 +36,18 @@ type PsfVerifyParams struct {
 	Y         *curves.EcPoint
 }
 
-// PsfProof is a slice of 13 big.Int's that prove that a Paillier modulus is square-free
+// PsfProof is a slice of 13 big.Int's that prove that a Paillier modulus is square-free.
 type PsfProof []*big.Int
 
 // Prove that a Paillier modulus is square-free
-// [spec] §10.fig 15
+// [spec] §10.fig 15.
 func (p *PsfProofParams) Prove() (PsfProof, error) {
 	// Verify that params are sane
 	if p.Curve == nil ||
 		p.SecretKey == nil ||
 		p.Pi == 0 ||
 		p.Y == nil {
+
 		return nil, internal.ErrNilArguments
 	}
 
@@ -67,7 +68,7 @@ func (p *PsfProofParams) Prove() (PsfProof, error) {
 		return nil, err
 	}
 	if len(x) != PsfProofLength {
-		return nil, fmt.Errorf("Challenges array is not correct length: want=%v got=%v", PsfProofLength, len(x))
+		return nil, fmt.Errorf("challenges array is not correct length: want=%v got=%v", PsfProofLength, len(x))
 	}
 
 	// 4. For i = [1, ... \ell]
@@ -93,7 +94,7 @@ func (p *PsfProofParams) Prove() (PsfProof, error) {
 }
 
 // Verify that a Paillier modulus is square-free
-// [spec] §10.fig 15
+// [spec] §10.fig 15.
 func (p PsfProof) Verify(psf *PsfVerifyParams) error {
 	// Verify that params are sane
 	if psf == nil ||
@@ -101,6 +102,7 @@ func (p PsfProof) Verify(psf *PsfVerifyParams) error {
 		psf.PublicKey == nil ||
 		psf.Pi == 0 ||
 		psf.Y == nil {
+
 		return internal.ErrNilArguments
 	}
 
@@ -144,16 +146,17 @@ func (p PsfProof) Verify(psf *PsfVerifyParams) error {
 
 // generateChallenges computes `l` deterministic numbers as
 // challenges for PsfProof which proves that the Paillier modulus is square free
-// [spec] fig.15 GenerateChallenges
-func generateChallenges(params *elliptic.CurveParams, N *big.Int, pi uint32, y *curves.EcPoint) ([]*big.Int, error) {
+// [spec] fig.15 GenerateChallenges.
+func generateChallenges(params *elliptic.CurveParams, capN *big.Int, pi uint32, y *curves.EcPoint) ([]*big.Int, error) {
 	if params == nil ||
 		y == nil ||
 		pi == 0 {
+
 		return nil, internal.ErrNilArguments
 	}
 
-	// 1. Set b = |N| // bit length of N
-	b := N.BitLen()
+	// 1. Set b = |capN| // bit length of capN
+	b := capN.BitLen()
 
 	// a modulus that is too small turns this function into an infinite loop
 	// need at least a byte to guarantee termination
@@ -182,7 +185,6 @@ func generateChallenges(params *elliptic.CurveParams, N *big.Int, pi uint32, y *
 	Pi := new(big.Int).SetUint64(uint64(pi))
 	// 6. while j ≤ l
 	for j < PsfProofLength {
-
 		bij := big.NewInt(j)
 		var ej []byte
 
@@ -204,8 +206,8 @@ func generateChallenges(params *elliptic.CurveParams, N *big.Int, pi uint32, y *
 		// 10. Truncate ej to b bits
 		xj := new(big.Int).SetBytes(ej[:b/8])
 
-		// 11. if x_j < Z_N* i.e. 0 < x_j and x_j < N
-		if xj.Cmp(crypto.Zero) == 1 && xj.Cmp(N) == -1 {
+		// 11. if x_j < Z_N* i.e. 0 < x_j and x_j < capN
+		if xj.Cmp(crypto.Zero) == 1 && xj.Cmp(capN) == -1 {
 			x[j] = xj
 
 			// 12 j = j + 1

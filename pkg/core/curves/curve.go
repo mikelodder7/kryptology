@@ -99,6 +99,8 @@ type Scalar interface {
 	Sqrt() (Scalar, error)
 	// Cube returns element*element*element
 	Cube() Scalar
+	// Pow returns the scalar exponentiated to the power of i
+	Pow(exp uint64) Scalar
 	// Add returns element+rhs
 	Add(rhs Scalar) Scalar
 	// Sub returns element-rhs
@@ -148,7 +150,7 @@ func unmarshalScalar(input []byte) (*Curve, []byte, error) {
 	return curve, input[i+1:], nil
 }
 
-func scalarMarshalBinary(scalar Scalar) ([]byte, error) {
+func ScalarMarshalBinary(scalar Scalar) ([]byte, error) {
 	// All scalars are 32 bytes long
 	// The last 32 bytes are the actual value
 	// The first remaining bytes are the curve name
@@ -161,7 +163,7 @@ func scalarMarshalBinary(scalar Scalar) ([]byte, error) {
 	return output, nil
 }
 
-func scalarUnmarshalBinary(input []byte) (Scalar, error) {
+func ScalarUnmarshalBinary(input []byte) (Scalar, error) {
 	// All scalars are 32 bytes long
 	// The first 32 bytes are the actual value
 	// The remaining bytes are the curve name
@@ -175,7 +177,7 @@ func scalarUnmarshalBinary(input []byte) (Scalar, error) {
 	return sc.Scalar.SetBytes(data)
 }
 
-func scalarMarshalText(scalar Scalar) ([]byte, error) {
+func ScalarMarshalText(scalar Scalar) ([]byte, error) {
 	// All scalars are 32 bytes long
 	// For text encoding we put the curve name first for readability
 	// separated by a colon, then the hex encoding of the scalar
@@ -188,7 +190,7 @@ func scalarMarshalText(scalar Scalar) ([]byte, error) {
 	return output, nil
 }
 
-func scalarUnmarshalText(input []byte) (Scalar, error) {
+func ScalarUnmarshalText(input []byte) (Scalar, error) {
 	if len(input) < scalarBytes*2+len(P256Name)+1 {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
@@ -204,14 +206,14 @@ func scalarUnmarshalText(input []byte) (Scalar, error) {
 	return curve.Scalar.SetBytes(t[:])
 }
 
-func scalarMarshalJson(scalar Scalar) ([]byte, error) {
+func ScalarMarshalJSON(scalar Scalar) ([]byte, error) {
 	m := make(map[string]string, 2)
 	m["type"] = scalar.Point().CurveName()
 	m["value"] = hex.EncodeToString(scalar.Bytes())
 	return json.Marshal(m)
 }
 
-func scalarUnmarshalJson(input []byte) (Scalar, error) {
+func ScalarUnmarshalJSON(input []byte) (Scalar, error) {
 	var m map[string]string
 
 	err := json.Unmarshal(input, &m)
@@ -233,7 +235,7 @@ func scalarUnmarshalJson(input []byte) (Scalar, error) {
 	return S, nil
 }
 
-// Point represents an elliptic curve point
+// Point represents an elliptic curve point.
 type Point interface {
 	Random(reader io.Reader) Point
 	Hash(bytes []byte) Point
@@ -265,7 +267,7 @@ type PairingPoint interface {
 	MultiPairing(...PairingPoint) Scalar
 }
 
-func pointMarshalBinary(point Point) ([]byte, error) {
+func PointMarshalBinary(point Point) ([]byte, error) {
 	// Always stores points in compressed form
 	// The first bytes are the curve name
 	// separated by a colon followed by the compressed point
@@ -279,7 +281,7 @@ func pointMarshalBinary(point Point) ([]byte, error) {
 	return output, nil
 }
 
-func pointUnmarshalBinary(input []byte) (Point, error) {
+func PointUnmarshalBinary(input []byte) (Point, error) {
 	if len(input) < scalarBytes+1+len(P256Name) {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
@@ -298,7 +300,7 @@ func pointUnmarshalBinary(input []byte) (Point, error) {
 	return curve.Point.FromAffineCompressed(input[i+1:])
 }
 
-func pointMarshalText(point Point) ([]byte, error) {
+func PointMarshalText(point Point) ([]byte, error) {
 	// Always stores points in compressed form
 	// The first bytes are the curve name
 	// separated by a colon followed by the compressed point
@@ -312,7 +314,7 @@ func pointMarshalText(point Point) ([]byte, error) {
 	return output, nil
 }
 
-func pointUnmarshalText(input []byte) (Point, error) {
+func PointUnmarshalText(input []byte) (Point, error) {
 	if len(input) < scalarBytes*2+1+len(P256Name) {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
@@ -336,14 +338,14 @@ func pointUnmarshalText(input []byte) (Point, error) {
 	return curve.Point.FromAffineCompressed(buffer)
 }
 
-func pointMarshalJson(point Point) ([]byte, error) {
+func PointMarshalJSON(point Point) ([]byte, error) {
 	m := make(map[string]string, 2)
 	m["type"] = point.CurveName()
 	m["value"] = hex.EncodeToString(point.ToAffineCompressed())
 	return json.Marshal(m)
 }
 
-func pointUnmarshalJson(input []byte) (Point, error) {
+func PointUnmarshalJSON(input []byte) (Point, error) {
 	var m map[string]string
 
 	err := json.Unmarshal(input, &m)
@@ -365,31 +367,31 @@ func pointUnmarshalJson(input []byte) (Point, error) {
 	return P, nil
 }
 
-// Curve represents a named elliptic curve with a scalar field and point group
+// Curve represents a named elliptic curve with a scalar field and point group.
 type Curve struct {
 	Scalar Scalar
 	Point  Point
 	Name   string
 }
 
-func (c Curve) ScalarBaseMult(sc Scalar) Point {
+func (c *Curve) ScalarBaseMult(sc Scalar) Point {
 	return c.Point.Generator().Mul(sc)
 }
 
-func (c Curve) NewGeneratorPoint() Point {
+func (c *Curve) NewGeneratorPoint() Point {
 	return c.Point.Generator()
 }
 
-func (c Curve) NewIdentityPoint() Point {
+func (c *Curve) NewIdentityPoint() Point {
 	return c.Point.Identity()
 }
 
-func (c Curve) NewScalar() Scalar {
+func (c *Curve) NewScalar() Scalar {
 	return c.Scalar.Zero()
 }
 
-// ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`
-func (c Curve) ToEllipticCurve() (elliptic.Curve, error) {
+// ToEllipticCurve returns the equivalent of this curve as the go interface `elliptic.Curve`.
+func (c *Curve) ToEllipticCurve() (elliptic.Curve, error) {
 	err := fmt.Errorf("can't convert %s", c.Name)
 	switch c.Name {
 	case K256Name:
@@ -418,7 +420,7 @@ func (c Curve) ToEllipticCurve() (elliptic.Curve, error) {
 }
 
 // PairingCurve represents a named elliptic curve
-// that supports pairings
+// that supports pairings.
 type PairingCurve struct {
 	Scalar  PairingScalar
 	PointG1 PairingPoint
@@ -427,35 +429,63 @@ type PairingCurve struct {
 	Name    string
 }
 
-func (c PairingCurve) ScalarG1BaseMult(sc Scalar) PairingPoint {
-	return c.PointG1.Generator().Mul(sc).(PairingPoint)
+func (c *PairingCurve) ScalarG1BaseMult(sc Scalar) PairingPoint {
+	pairingPoint, ok := c.PointG1.Generator().Mul(sc).(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-func (c PairingCurve) ScalarG2BaseMult(sc Scalar) PairingPoint {
-	return c.PointG2.Generator().Mul(sc).(PairingPoint)
+func (c *PairingCurve) ScalarG2BaseMult(sc Scalar) PairingPoint {
+	pairingPoint, ok := c.PointG2.Generator().Mul(sc).(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-func (c PairingCurve) NewG1GeneratorPoint() PairingPoint {
-	return c.PointG1.Generator().(PairingPoint)
+func (c *PairingCurve) NewG1GeneratorPoint() PairingPoint {
+	pairingPoint, ok := c.PointG1.Generator().(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-func (c PairingCurve) NewG2GeneratorPoint() PairingPoint {
-	return c.PointG2.Generator().(PairingPoint)
+func (c *PairingCurve) NewG2GeneratorPoint() PairingPoint {
+	pairingPoint, ok := c.PointG2.Generator().(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-func (c PairingCurve) NewG1IdentityPoint() PairingPoint {
-	return c.PointG1.Identity().(PairingPoint)
+func (c *PairingCurve) NewG1IdentityPoint() PairingPoint {
+	pairingPoint, ok := c.PointG1.Identity().(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-func (c PairingCurve) NewG2IdentityPoint() PairingPoint {
-	return c.PointG2.Identity().(PairingPoint)
+func (c *PairingCurve) NewG2IdentityPoint() PairingPoint {
+	pairingPoint, ok := c.PointG2.Identity().(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-func (c PairingCurve) NewScalar() PairingScalar {
-	return c.Scalar.Zero().(PairingScalar)
+func (c *PairingCurve) NewScalar() PairingScalar {
+	pairingPoint, ok := c.Scalar.Zero().(PairingScalar)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
-// GetCurveByName returns the correct `Curve` given the name
+// GetCurveByName returns the correct `Curve` given the name.
 func GetCurveByName(name string) *Curve {
 	switch name {
 	case K256Name:
@@ -496,7 +526,7 @@ func GetPairingCurveByName(name string) *PairingCurve {
 	}
 }
 
-// BLS12381G1 returns the BLS12-381 curve with points in G1
+// BLS12381G1 returns the BLS12-381 curve with points in G1.
 func BLS12381G1() *Curve {
 	bls12381g1Initonce.Do(bls12381g1Init)
 	return &bls12381g1
@@ -505,7 +535,7 @@ func BLS12381G1() *Curve {
 func bls12381g1Init() {
 	bls12381g1 = Curve{
 		Scalar: &ScalarBls12381{
-			Value: bls12381.Bls12381FqNew(),
+			Value: bls12381.FqNew(),
 			point: new(PointBls12381G1),
 		},
 		Point: new(PointBls12381G1).Identity(),
@@ -513,7 +543,7 @@ func bls12381g1Init() {
 	}
 }
 
-// BLS12381G2 returns the BLS12-381 curve with points in G2
+// BLS12381G2 returns the BLS12-381 curve with points in G2.
 func BLS12381G2() *Curve {
 	bls12381g2Initonce.Do(bls12381g2Init)
 	return &bls12381g2
@@ -522,7 +552,7 @@ func BLS12381G2() *Curve {
 func bls12381g2Init() {
 	bls12381g2 = Curve{
 		Scalar: &ScalarBls12381{
-			Value: bls12381.Bls12381FqNew(),
+			Value: bls12381.FqNew(),
 			point: new(PointBls12381G2),
 		},
 		Point: new(PointBls12381G2).Identity(),
@@ -533,7 +563,7 @@ func bls12381g2Init() {
 func BLS12381(preferredPoint Point) *PairingCurve {
 	return &PairingCurve{
 		Scalar: &ScalarBls12381{
-			Value: bls12381.Bls12381FqNew(),
+			Value: bls12381.FqNew(),
 			point: preferredPoint,
 		},
 		PointG1: &PointBls12381G1{
@@ -549,7 +579,7 @@ func BLS12381(preferredPoint Point) *PairingCurve {
 	}
 }
 
-// BLS12377G1 returns the BLS12-377 curve with points in G1
+// BLS12377G1 returns the BLS12-377 curve with points in G1.
 func BLS12377G1() *Curve {
 	bls12377g1Initonce.Do(bls12377g1Init)
 	return &bls12377g1
@@ -566,7 +596,7 @@ func bls12377g1Init() {
 	}
 }
 
-// BLS12377G2 returns the BLS12-377 curve with points in G2
+// BLS12377G2 returns the BLS12-377 curve with points in G2.
 func BLS12377G2() *Curve {
 	bls12377g2Initonce.Do(bls12377g2Init)
 	return &bls12377g2
@@ -583,7 +613,7 @@ func bls12377g2Init() {
 	}
 }
 
-// K256 returns the secp256k1 curve
+// K256 returns the secp256k1 curve.
 func K256() *Curve {
 	k256Initonce.Do(k256Init)
 	return &k256
@@ -667,10 +697,10 @@ func osswu3mod4(u *big.Int, p *sswuParams) (x, y *big.Int) {
 
 	tv4 := gxd.Mul(gxd) // tv4 = gxd^2
 	tv2 = gx1.Mul(gxd)  // tv2 = gx1 * gxd
-	tv4 = tv4.Mul(tv2)  //tv4 = tv4 * tv2
+	tv4 = tv4.Mul(tv2)  // tv4 = tv4 * tv2
 
 	y1 := tv4.Pow(field.NewElement(p.C1))
-	y1 = y1.Mul(tv2)    //y1 = y1 * tv2
+	y1 = y1.Mul(tv2)    // y1 = y1 * tv2
 	x2n := tv3.Mul(x1n) // x2n = tv3 * x1n
 
 	y2 := y1.Mul(field.NewElement(p.C2)) // y2 = y1 * c2
@@ -712,7 +742,7 @@ func osswu3mod4(u *big.Int, p *sswuParams) (x, y *big.Int) {
 		y.Mod(y, params.P)
 	}
 
-	return
+	return x, y
 }
 
 func expandMsgXmd(h hash.Hash, msg, domain []byte, outLen int) ([]byte, error) {
@@ -755,11 +785,11 @@ func expandMsgXmd(h hash.Hash, msg, domain []byte, outLen int) ([]byte, error) {
 		_, _ = h.Write([]byte{domainLen})
 
 		// b_1 || ... || b_(ell - 1)
-		copy(out[(i-1)*h.Size():i*h.Size()], bi[:])
+		copy(out[(i-1)*h.Size():i*h.Size()], bi)
 		bi = h.Sum(nil)
 	}
 	// b_ell
-	copy(out[(ell-1)*h.Size():], bi[:])
+	copy(out[(ell-1)*h.Size():], bi)
 	return out[:outLen], nil
 }
 

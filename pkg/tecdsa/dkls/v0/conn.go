@@ -8,26 +8,26 @@ package v0
 
 import "io"
 
-type pipeWrapper struct {
+type PipeWrapper struct {
 	r         *io.PipeReader
 	w         *io.PipeWriter
 	exchanged int // basically we only use this during testing, to track bytes exchanged
 }
 
-func (wrapper *pipeWrapper) Write(p []byte) (n int, err error) {
-	n, err = wrapper.w.Write(p)
+func (wrapper *PipeWrapper) Write(p []byte) (int, error) {
+	n, err := wrapper.w.Write(p)
 	wrapper.exchanged += n
-	return
+	return n, err
 }
 
-func (wrapper *pipeWrapper) Read(p []byte) (n int, err error) {
-	n, err = wrapper.r.Read(p)
+func (wrapper *PipeWrapper) Read(p []byte) (int, error) {
+	n, err := wrapper.r.Read(p)
 	wrapper.exchanged += n
-	return
+	return n, err
 }
 
-func NewPipeWrappers() (*pipeWrapper, *pipeWrapper) {
+func NewPipeWrappers() (*PipeWrapper, *PipeWrapper) {
 	leftOut, leftIn := io.Pipe()
 	rightOut, rightIn := io.Pipe()
-	return &pipeWrapper{r: leftOut, w: rightIn}, &pipeWrapper{r: rightOut, w: leftIn}
+	return &PipeWrapper{r: leftOut, w: rightIn}, &PipeWrapper{r: rightOut, w: leftIn}
 }

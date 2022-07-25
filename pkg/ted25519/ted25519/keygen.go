@@ -11,10 +11,10 @@ import (
 	"fmt"
 
 	"github.com/coinbase/kryptology/pkg/core/curves"
-	"github.com/coinbase/kryptology/pkg/sharing/v1"
+	v1 "github.com/coinbase/kryptology/pkg/sharing/v1"
 )
 
-// PublicKeyFromBytes converts byte array into PublicKey byte array
+// PublicKeyFromBytes converts byte array into PublicKey byte array.
 func PublicKeyFromBytes(bytes []byte) ([]byte, error) {
 	if l := len(bytes); l != PublicKeySize {
 		return nil, fmt.Errorf("invalid public key size: %d", l)
@@ -37,7 +37,7 @@ func NewKeyShare(identifier byte, secret []byte) *KeyShare {
 // Commitments is a collection of public keys with each coefficient of a polynomial as the secret keys.
 type Commitments []curves.Point
 
-// CommitmentsToBytes converts commitments to bytes
+// CommitmentsToBytes converts commitments to bytes.
 func (commitments Commitments) CommitmentsToBytes() [][]byte {
 	bytes := make([][]byte, len(commitments))
 
@@ -48,7 +48,7 @@ func (commitments Commitments) CommitmentsToBytes() [][]byte {
 	return bytes
 }
 
-// CommitmentsFromBytes converts bytes to commitments
+// CommitmentsFromBytes converts bytes to commitments.
 func CommitmentsFromBytes(bytes [][]byte) (Commitments, error) {
 	comms := make([]curves.Point, len(bytes))
 	for i, pubKeyBytes := range bytes {
@@ -64,7 +64,7 @@ func CommitmentsFromBytes(bytes [][]byte) (Commitments, error) {
 	return comms, nil
 }
 
-// KeyShareFromBytes converts byte array into KeyShare type
+// KeyShareFromBytes converts byte array into KeyShare type.
 func KeyShareFromBytes(bytes []byte) *KeyShare {
 	field := curves.NewField(curves.Ed25519Order())
 	element := field.ElementFromBytes(bytes[4:])
@@ -74,7 +74,7 @@ func KeyShareFromBytes(bytes []byte) *KeyShare {
 	return &KeyShare{&v1.ShamirShare{Identifier: identifier, Value: element}}
 }
 
-// ShareConfiguration sets threshold and limit for the protocol
+// ShareConfiguration sets threshold and limit for the protocol.
 type ShareConfiguration struct {
 	T int // threshold
 	N int // total shares
@@ -119,7 +119,7 @@ func generateSharableKey() (PublicKey, []byte, error) {
 // GenerateSharedKey generates a random key, splits it, and returns the public key, shares, and VSS commitments.
 func GenerateSharedKey(config *ShareConfiguration) (PublicKey, []*KeyShare, Commitments, error) {
 	pub, priv, err := generateSharableKey()
-	//pub, priv, err := ed25519.GenerateKey(nil)
+	// pub, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -151,11 +151,11 @@ func split(secret []byte, config *ShareConfiguration) ([]curves.Point, []*v1.Sha
 	field := curves.NewField(curves.Ed25519Order())
 	shamir, err := v1.NewShamir(config.T, config.N, field)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in NewShamir")
+		return nil, nil, fmt.Errorf("error in NewShamir")
 	}
 	shares, poly, err := shamir.GetSharesAndPolynomial(secret)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in GetSharesAndPolynomial")
+		return nil, nil, fmt.Errorf("error in GetSharesAndPolynomial")
 	}
 
 	// Generate the verifiable commitments to the polynomial for the shares
@@ -168,7 +168,7 @@ func split(secret []byte, config *ShareConfiguration) ([]curves.Point, []*v1.Sha
 		copy(reverseInput[:], reverseC)
 		cScalar, err := new(curves.ScalarEd25519).SetBytesCanonical(reverseInput[:])
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error in SetBytesCanonical reverseC")
+			return nil, nil, fmt.Errorf("error in SetBytesCanonical reverseC")
 		}
 		v := curves.ED25519().Point.Generator().Mul(cScalar)
 		verifiers[i] = v
@@ -215,10 +215,10 @@ func (share *KeyShare) VerifyVSS(commitments Commitments, config *ShareConfigura
 		i = i.Mul(x)
 
 		var iBytes [32]byte
-		copy(iBytes[:], i.Bytes()[:])
+		copy(iBytes[:], i.Bytes())
 		iScalar, err := new(curves.ScalarEd25519).SetBytesCanonical(iBytes[:])
 		if err != nil {
-			return false, fmt.Errorf("Error in SetBytesCanonical iBytes")
+			return false, fmt.Errorf("error in SetBytesCanonical iBytes")
 		}
 		c := commitments[j].Mul(iScalar)
 

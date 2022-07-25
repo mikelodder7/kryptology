@@ -22,15 +22,15 @@ import (
 // must use proofs of possession to defend against rogue-key attacks.
 
 const (
-	// Public key size in G1
+	// Public key size in G1.
 	PublicKeySize = 48
-	// Signature size in G2
+	// Signature size in G2.
 	SignatureSize = 96
-	// Proof of Possession in G2
+	// Proof of Possession in G2.
 	ProofOfPossessionSize = 96
 )
 
-// Represents a public key in G1
+// Represents a public key in G1.
 type PublicKey struct {
 	value bls12381.G1
 }
@@ -39,7 +39,7 @@ type PublicKey struct {
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (pk PublicKey) MarshalBinary() ([]byte, error) {
+func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	out := pk.value.ToCompressed()
 	return out[:], nil
 }
@@ -49,7 +49,7 @@ func (pk PublicKey) MarshalBinary() ([]byte, error) {
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
 // If successful, it will assign the public key
-// otherwise it will return an error
+// otherwise it will return an error.
 func (pk *PublicKey) UnmarshalBinary(data []byte) error {
 	if len(data) != PublicKeySize {
 		return fmt.Errorf("public key must be %d bytes", PublicKeySize)
@@ -67,7 +67,7 @@ func (pk *PublicKey) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Represents a BLS signature in G2
+// Represents a BLS signature in G2.
 type Signature struct {
 	Value bls12381.G2
 }
@@ -76,13 +76,13 @@ type Signature struct {
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (sig Signature) MarshalBinary() ([]byte, error) {
+func (sig *Signature) MarshalBinary() ([]byte, error) {
 	out := sig.Value.ToCompressed()
 	return out[:], nil
 }
 
-func (sig Signature) verify(pk *PublicKey, message []byte, signDst string) (bool, error) {
-	return pk.verifySignature(message, &sig, signDst)
+func (sig *Signature) verify(pk *PublicKey, message []byte, signDst string) (bool, error) {
+	return pk.verifySignature(message, sig, signDst)
 }
 
 // The AggregateVerify algorithm checks an aggregated signature over
@@ -91,11 +91,11 @@ func (sig Signature) verify(pk *PublicKey, message []byte, signDst string) (bool
 // Each message must be different or this will return false
 // See section 3.1.1 from
 // https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-03
-func (sig Signature) aggregateVerify(pks []*PublicKey, msgs [][]byte, signDst string) (bool, error) {
+func (sig *Signature) aggregateVerify(pks []*PublicKey, msgs [][]byte, signDst string) (bool, error) {
 	return sig.coreAggregateVerify(pks, msgs, signDst)
 }
 
-func (sig Signature) coreAggregateVerify(pks []*PublicKey, msgs [][]byte, signDst string) (bool, error) {
+func (sig *Signature) coreAggregateVerify(pks []*PublicKey, msgs [][]byte, signDst string) (bool, error) {
 	if len(pks) < 1 {
 		return false, fmt.Errorf("at least one key is required")
 	}
@@ -134,7 +134,7 @@ func (sig Signature) coreAggregateVerify(pks []*PublicKey, msgs [][]byte, signDs
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
 // If successful, it will assign the Signature
-// otherwise it will return an error
+// otherwise it will return an error.
 func (sig *Signature) UnmarshalBinary(data []byte) error {
 	if len(data) != SignatureSize {
 		return fmt.Errorf("signature must be %d bytes", SignatureSize)
@@ -153,8 +153,8 @@ func (sig *Signature) UnmarshalBinary(data []byte) error {
 }
 
 // Get the corresponding public key from a secret key
-// Verifies the public key is in the correct subgroup
-func (sk SecretKey) GetPublicKey() (*PublicKey, error) {
+// Verifies the public key is in the correct subgroup.
+func (sk *SecretKey) GetPublicKey() (*PublicKey, error) {
 	result := new(bls12381.G1).Generator()
 	result.Mul(result, sk.value)
 	if result.InCorrectSubgroup() == 0 || result.IsIdentity() == 1 {
@@ -170,8 +170,8 @@ func (sk SecretKey) GetPublicKey() (*PublicKey, error) {
 // hashed to a point in G2 as described in to
 // https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1
 // See Section 2.6 in https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-03
-// nil message is not permitted but empty slice is allowed
-func (sk SecretKey) createSignature(message []byte, dst string) (*Signature, error) {
+// nil message is not permitted but empty slice is allowed.
+func (sk *SecretKey) createSignature(message []byte, dst string) (*Signature, error) {
 	if message == nil {
 		return nil, fmt.Errorf("message cannot be nil")
 	}
@@ -188,7 +188,7 @@ func (sk SecretKey) createSignature(message []byte, dst string) (*Signature, err
 
 // Verify a signature is valid for the message under this public key.
 // See Section 2.7 in https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-03
-func (pk PublicKey) verifySignature(message []byte, signature *Signature, dst string) (bool, error) {
+func (pk *PublicKey) verifySignature(message []byte, signature *Signature, dst string) (bool, error) {
 	if signature == nil || message == nil || pk.value.IsIdentity() == 1 {
 		return false, fmt.Errorf("signature and message and public key cannot be nil or zero")
 	}
@@ -207,7 +207,7 @@ func (pk PublicKey) verifySignature(message []byte, signature *Signature, dst st
 	return engine.Check(), nil
 }
 
-// Combine public keys into one aggregated key
+// Combine public keys into one aggregated key.
 func aggregatePublicKeys(pks ...*PublicKey) (*PublicKey, error) {
 	if len(pks) < 1 {
 		return nil, fmt.Errorf("at least one public key is required")
@@ -225,7 +225,7 @@ func aggregatePublicKeys(pks ...*PublicKey) (*PublicKey, error) {
 	return &PublicKey{value: *result}, nil
 }
 
-// Combine signatures into one aggregated signature
+// Combine signatures into one aggregated signature.
 func aggregateSignatures(sigs ...*Signature) (*Signature, error) {
 	if len(sigs) < 1 {
 		return nil, fmt.Errorf("at least one signature is required")
@@ -254,7 +254,7 @@ type ProofOfPossession struct {
 
 // Generates a proof-of-possession (PoP) for this secret key. The PoP signature should be verified before
 // before accepting any aggregate signatures related to the corresponding pubkey.
-func (sk SecretKey) createProofOfPossession(popDst string) (*ProofOfPossession, error) {
+func (sk *SecretKey) createProofOfPossession(popDst string) (*ProofOfPossession, error) {
 	pk, err := sk.GetPublicKey()
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func (sk SecretKey) createProofOfPossession(popDst string) (*ProofOfPossession, 
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (pop ProofOfPossession) MarshalBinary() ([]byte, error) {
+func (pop *ProofOfPossession) MarshalBinary() ([]byte, error) {
 	out := pop.value.ToCompressed()
 	return out[:], nil
 }
@@ -284,7 +284,7 @@ func (pop ProofOfPossession) MarshalBinary() ([]byte, error) {
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
 // If successful, it will assign the Signature
-// otherwise it will return an error
+// otherwise it will return an error.
 func (pop *ProofOfPossession) UnmarshalBinary(data []byte) error {
 	p2 := new(Signature)
 	err := p2.UnmarshalBinary(data)
@@ -297,7 +297,7 @@ func (pop *ProofOfPossession) UnmarshalBinary(data []byte) error {
 
 // Verifies that PoP is valid for this pubkey. In order to prevent rogue key attacks, a PoP must be validated
 // for each pubkey in an aggregated signature.
-func (pop ProofOfPossession) verify(pk *PublicKey, popDst string) (bool, error) {
+func (pop *ProofOfPossession) verify(pk *PublicKey, popDst string) (bool, error) {
 	if pk == nil {
 		return false, fmt.Errorf("public key cannot be nil")
 	}
@@ -319,13 +319,13 @@ type MultiSignature struct {
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (sig MultiSignature) MarshalBinary() ([]byte, error) {
+func (sig *MultiSignature) MarshalBinary() ([]byte, error) {
 	out := sig.value.ToCompressed()
 	return out[:], nil
 }
 
-// Check a multisignature is valid for a multipublickey and a message
-func (sig MultiSignature) verify(pk *MultiPublicKey, message []byte, signDst string) (bool, error) {
+// Check a multisignature is valid for a multipublickey and a message.
+func (sig *MultiSignature) verify(pk *MultiPublicKey, message []byte, signDst string) (bool, error) {
 	if pk == nil {
 		return false, fmt.Errorf("public key cannot be nil")
 	}
@@ -338,7 +338,7 @@ func (sig MultiSignature) verify(pk *MultiPublicKey, message []byte, signDst str
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
 // If successful, it will assign the Signature
-// otherwise it will return an error
+// otherwise it will return an error.
 func (sig *MultiSignature) UnmarshalBinary(data []byte) error {
 	if len(data) != SignatureSize {
 		return fmt.Errorf("multi signature must be %v bytes", SignatureSize)
@@ -352,7 +352,7 @@ func (sig *MultiSignature) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Represents accumulated multiple Public Keys in G1 for verifying a multisignature
+// Represents accumulated multiple Public Keys in G1 for verifying a multisignature.
 type MultiPublicKey struct {
 	value bls12381.G1
 }
@@ -361,7 +361,7 @@ type MultiPublicKey struct {
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (pk MultiPublicKey) MarshalBinary() ([]byte, error) {
+func (pk *MultiPublicKey) MarshalBinary() ([]byte, error) {
 	out := pk.value.ToCompressed()
 	return out[:], nil
 }
@@ -371,7 +371,7 @@ func (pk MultiPublicKey) MarshalBinary() ([]byte, error) {
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
 // If successful, it will assign the public key
-// otherwise it will return an error
+// otherwise it will return an error.
 func (pk *MultiPublicKey) UnmarshalBinary(data []byte) error {
 	if len(data) != PublicKeySize {
 		return fmt.Errorf("multi public key must be %v bytes", PublicKeySize)
@@ -385,9 +385,9 @@ func (pk *MultiPublicKey) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Check a multisignature is valid for a multipublickey and a message
-func (pk MultiPublicKey) verify(message []byte, sig *MultiSignature, signDst string) (bool, error) {
-	return sig.verify(&pk, message, signDst)
+// Check a multisignature is valid for a multipublickey and a message.
+func (pk *MultiPublicKey) verify(message []byte, sig *MultiSignature, signDst string) (bool, error) {
+	return sig.verify(pk, message, signDst)
 }
 
 // PartialSignature represents threshold Gap Diffie-Hellman BLS signature
@@ -399,8 +399,8 @@ type PartialSignature struct {
 }
 
 // partialSign creates a partial signature that can be combined with other partial signatures
-// to yield a complete signature
-func (sks SecretKeyShare) partialSign(message []byte, signDst string) (*PartialSignature, error) {
+// to yield a complete signature.
+func (sks *SecretKeyShare) partialSign(message []byte, signDst string) (*PartialSignature, error) {
 	if len(message) == 0 {
 		return nil, fmt.Errorf("message cannot be empty or nil")
 	}
@@ -408,7 +408,7 @@ func (sks SecretKeyShare) partialSign(message []byte, signDst string) (*PartialS
 
 	var blob [SecretKeySize]byte
 	copy(blob[:], internal.ReverseScalarBytes(sks.value))
-	s, err := bls12381.Bls12381FqNew().SetBytes(&blob)
+	s, err := bls12381.FqNew().SetBytes(&blob)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +419,7 @@ func (sks SecretKeyShare) partialSign(message []byte, signDst string) (*PartialS
 	return &PartialSignature{Identifier: sks.identifier, Signature: *result}, nil
 }
 
-// combineSigs gathers partial signatures and yields a complete signature
+// combineSigs gathers partial signatures and yields a complete signature.
 func combineSigs(partials []*PartialSignature) (*Signature, error) {
 	if len(partials) < 2 {
 		return nil, fmt.Errorf("must have at least 2 partial signatures")
@@ -430,7 +430,6 @@ func combineSigs(partials []*PartialSignature) (*Signature, error) {
 
 	// Don't know the actual values so put the minimum
 	xVars, yVars, err := splitXY(partials)
-
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +438,7 @@ func combineSigs(partials []*PartialSignature) (*Signature, error) {
 	sig := new(bls12381.G2).Identity()
 
 	// Lagrange interpolation
-	basis := bls12381.Bls12381FqNew().SetOne()
+	basis := bls12381.FqNew().SetOne()
 	for i, xi := range xVars {
 		basis.SetOne()
 
@@ -448,8 +447,8 @@ func combineSigs(partials []*PartialSignature) (*Signature, error) {
 				continue
 			}
 
-			num := bls12381.Bls12381FqNew().Neg(xj)     // - x_m
-			den := bls12381.Bls12381FqNew().Sub(xi, xj) // x_j - x_m
+			num := bls12381.FqNew().Neg(xj)     // - x_m
+			den := bls12381.FqNew().Sub(xi, xj) // x_j - x_m
 			_, wasInverted := den.Invert(den)
 			// wasInverted == false if den == 0
 			if !wasInverted {
@@ -467,7 +466,7 @@ func combineSigs(partials []*PartialSignature) (*Signature, error) {
 	return &Signature{Value: *sig}, nil
 }
 
-// Ensure no duplicates x values and convert x values to field elements
+// Ensure no duplicates x values and convert x values to field elements.
 func splitXY(partials []*PartialSignature) ([]*native.Field, []*bls12381.G2, error) {
 	x := make([]*native.Field, len(partials))
 	y := make([]*bls12381.G2, len(partials))
@@ -485,7 +484,7 @@ func splitXY(partials []*PartialSignature) ([]*native.Field, []*bls12381.G2, err
 			return nil, nil, fmt.Errorf("signature is not in the correct subgroup")
 		}
 		dup[sp.Identifier] = true
-		x[i] = bls12381.Bls12381FqNew().SetUint64(uint64(sp.Identifier))
+		x[i] = bls12381.FqNew().SetUint64(uint64(sp.Identifier))
 		y[i] = &sp.Signature
 	}
 	return x, y, nil

@@ -11,49 +11,66 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 	dkg "github.com/coinbase/kryptology/pkg/dkg/frost"
 	"github.com/coinbase/kryptology/pkg/sharing"
 )
 
-var (
-	testCurve = curves.ED25519()
-	ctx       = "string to prevent replay attack"
-)
+var testCurve = curves.ED25519()
 
 // Create two DKG participants.
-func PrepareDkgOutput(t *testing.T) (*dkg.DkgParticipant, *dkg.DkgParticipant) {
+func prepareDkgOutput(t *testing.T) (*dkg.DkgParticipant, *dkg.DkgParticipant) {
+	t.Helper()
 	// Initiate two participants and running DKG round 1
-	p1, err := dkg.NewDkgParticipant(1, 2, ctx, testCurve, 2)
+	p1, err := dkg.NewDkgParticipant(1, 2, testCurve, []uint32{1, 2})
 	require.NoError(t, err)
-	p2, err := dkg.NewDkgParticipant(2, 2, ctx, testCurve, 1)
+	p2, err := dkg.NewDkgParticipant(2, 2, testCurve, []uint32{1, 2})
 	require.NoError(t, err)
-	bcast1, p2psend1, _ := p1.Round1(nil)
-	bcast2, p2psend2, _ := p2.Round1(nil)
-	bcast := make(map[uint32]*dkg.Round1Bcast)
+
+	// FROST DKG Round 1 - Commit
+	commitment1, _ := p1.Round1Commit()
+	commitment2, _ := p2.Round1Commit()
+
+	// FROST DKG Round 2 - Open Commitments
+	commitments := make(map[uint32]*core.Commitment, 2)
+	commitments[p1.Id] = commitment1
+	commitments[p2.Id] = commitment2
+	opening1, _ := p1.Round2Open(commitments)
+	opening2, _ := p2.Round2Open(commitments)
+	openings := make(map[uint32]*core.Witness, 2)
+	openings[p1.Id] = opening1
+	openings[p2.Id] = opening2
+
+	// FROST DKG Round 3
+	bcast1, p2psend1, err := p1.Round3FrostDkgFirstRound(nil, openings)
+	require.NoError(t, err)
+	bcast2, p2psend2, err := p2.Round3FrostDkgFirstRound(nil, openings)
+	require.NoError(t, err)
+
+	// FROST DKG Round 4
+	bcast := make(map[uint32]*dkg.Round3Bcast)
 	p2p1 := make(map[uint32]*sharing.ShamirShare)
 	p2p2 := make(map[uint32]*sharing.ShamirShare)
 	bcast[1] = bcast1
 	bcast[2] = bcast2
 	p2p1[2] = p2psend2[1]
 	p2p2[1] = p2psend1[2]
-
-	// Running DKG round 2
-	_, _ = p1.Round2(bcast, p2p1)
-	_, _ = p2.Round2(bcast, p2p2)
+	_, _ = p1.Round4FrostDkgSecondRound(bcast, p2p1)
+	_, _ = p2.Round4FrostDkgSecondRound(bcast, p2p2)
 	return p1, p2
 }
 
-// Test FROST signing round 1
+// Test FROST signing round 1.
 func TestSignRound1Works(t *testing.T) {
-	p1, p2 := PrepareDkgOutput(t)
+	p1, p2 := prepareDkgOutput(t)
 	require.NotNil(t, p1)
 	require.NotNil(t, p2)
 
 	scheme, _ := sharing.NewShamir(2, 2, testCurve)
 	lCoeffs, err := scheme.LagrangeCoeffs([]uint32{p1.Id, p2.Id})
 	require.NoError(t, err)
-	signer1, err := NewSigner(p1, 1, 2, lCoeffs, []uint32{1, 2}, &Ed25519ChallengeDeriver{})
+	signer1, err := NewSigner(p1, 1, 2, lCoeffs, []uint32{1, 2}, DeriveChallenge)
 	require.NoError(t, err)
 	round1Out, _ := signer1.SignRound1()
 	require.NotNil(t, round1Out.Ei)
@@ -67,34 +84,34 @@ func TestSignRound1Works(t *testing.T) {
 }
 
 func TestSignRound1RepeatCall(t *testing.T) {
-	p1, p2 := PrepareDkgOutput(t)
+	p1, p2 := prepareDkgOutput(t)
 	scheme, _ := sharing.NewShamir(2, 2, testCurve)
 	lCoeffs, err := scheme.LagrangeCoeffs([]uint32{p1.Id, p2.Id})
 	require.NoError(t, err)
-	signer1, _ := NewSigner(p1, 1, 2, lCoeffs, []uint32{1, 2}, &Ed25519ChallengeDeriver{})
+	signer1, _ := NewSigner(p1, 1, 2, lCoeffs, []uint32{1, 2}, DeriveChallenge)
 	_, err = signer1.SignRound1()
 	require.NoError(t, err)
 	_, err = signer1.SignRound1()
 	require.Error(t, err)
 }
 
-func PrepareNewSigners(t *testing.T) (*Signer, *Signer) {
+func prepareNewSigners(t *testing.T) (*Signer, *Signer) {
+	t.Helper()
 	threshold := uint32(2)
 	limit := uint32(2)
-	p1, p2 := PrepareDkgOutput(t)
+	p1, p2 := prepareDkgOutput(t)
 	require.Equal(t, p1.VerificationKey, p2.VerificationKey)
 	scheme, err := sharing.NewShamir(threshold, limit, testCurve)
-	// field = sharing.NewField(p1.curve.Params().N)
 	require.NotNil(t, scheme)
 	require.NoError(t, err)
 	lCoeffs, err := scheme.LagrangeCoeffs([]uint32{p1.Id, p2.Id})
 	require.NotNil(t, lCoeffs[1])
 	require.NotNil(t, lCoeffs[2])
 	require.NoError(t, err)
-	signer1, err := NewSigner(p1, p1.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, &Ed25519ChallengeDeriver{})
+	signer1, err := NewSigner(p1, p1.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, DeriveChallenge)
 	require.NotNil(t, signer1)
 	require.NoError(t, err)
-	signer2, err := NewSigner(p2, p2.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, &Ed25519ChallengeDeriver{})
+	signer2, err := NewSigner(p2, p2.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, DeriveChallenge)
 	require.NotNil(t, signer2)
 	require.NoError(t, err)
 	return signer1, signer2
@@ -102,7 +119,7 @@ func PrepareNewSigners(t *testing.T) (*Signer, *Signer) {
 
 func TestSignRound2Works(t *testing.T) {
 	// Preparing round 2 inputs
-	signer1, signer2 := PrepareNewSigners(t)
+	signer1, signer2 := prepareNewSigners(t)
 	require.Equal(t, signer1.verificationKey, signer2.verificationKey)
 	require.NotNil(t, signer1)
 	require.NotNil(t, signer2)
@@ -126,7 +143,7 @@ func TestSignRound2Works(t *testing.T) {
 
 func TestSignRound2RepeatCall(t *testing.T) {
 	// Preparing round 2 inputs
-	signer1, signer2 := PrepareNewSigners(t)
+	signer1, signer2 := prepareNewSigners(t)
 	require.NotNil(t, signer1)
 	require.NotNil(t, signer2)
 	round1Out1, _ := signer1.SignRound1()
@@ -145,7 +162,7 @@ func TestSignRound2RepeatCall(t *testing.T) {
 
 func TestSignRound2BadInput(t *testing.T) {
 	// Preparing round 2 inputs
-	signer1, signer2 := PrepareNewSigners(t)
+	signer1, signer2 := prepareNewSigners(t)
 	_, _ = signer1.SignRound1()
 	round1Out2, _ := signer2.SignRound1()
 	round2Input := make(map[uint32]*Round1Bcast)
@@ -158,7 +175,7 @@ func TestSignRound2BadInput(t *testing.T) {
 	require.Error(t, err)
 
 	// Preparing round 2 inputs
-	signer1, signer2 = PrepareNewSigners(t)
+	signer1, signer2 = prepareNewSigners(t)
 	round1Out1, _ := signer1.SignRound1()
 	round1Out2, _ = signer2.SignRound1()
 	round2Input = make(map[uint32]*Round1Bcast)
@@ -169,7 +186,7 @@ func TestSignRound2BadInput(t *testing.T) {
 	require.Error(t, err)
 
 	// Preparing round 2 inputs
-	signer1, signer2 = PrepareNewSigners(t)
+	signer1, signer2 = prepareNewSigners(t)
 	round1Out1, _ = signer1.SignRound1()
 	round1Out2, _ = signer2.SignRound1()
 	round2Input = make(map[uint32]*Round1Bcast)
@@ -182,7 +199,7 @@ func TestSignRound2BadInput(t *testing.T) {
 	require.Error(t, err)
 
 	// Preparing round 2 inputs
-	signer1, signer2 = PrepareNewSigners(t)
+	signer1, signer2 = prepareNewSigners(t)
 	round1Out1, _ = signer1.SignRound1()
 	round1Out2, _ = signer2.SignRound1()
 	round2Input = make(map[uint32]*Round1Bcast)
@@ -195,7 +212,7 @@ func TestSignRound2BadInput(t *testing.T) {
 	require.Error(t, err)
 
 	// Preparing round 2 inputs
-	signer1, signer2 = PrepareNewSigners(t)
+	signer1, signer2 = prepareNewSigners(t)
 	round1Out1, _ = signer1.SignRound1()
 	round1Out2, _ = signer2.SignRound1()
 	round2Input = make(map[uint32]*Round1Bcast)
@@ -209,11 +226,12 @@ func TestSignRound2BadInput(t *testing.T) {
 	require.Error(t, err)
 }
 
-func PrepareRound3Input(t *testing.T) (*Signer, *Signer, map[uint32]*Round2Bcast) {
+func prepareRound3Input(t *testing.T) (*Signer, *Signer, map[uint32]*Round2Bcast) {
+	t.Helper()
 	// Running sign round 1
 	threshold := uint32(2)
 	limit := uint32(2)
-	p1, p2 := PrepareDkgOutput(t)
+	p1, p2 := prepareDkgOutput(t)
 	require.Equal(t, p1.VerificationKey, p2.VerificationKey)
 	scheme, err := sharing.NewShamir(threshold, limit, testCurve)
 	require.NotNil(t, scheme)
@@ -223,10 +241,10 @@ func PrepareRound3Input(t *testing.T) (*Signer, *Signer, map[uint32]*Round2Bcast
 	require.NotNil(t, lCoeffs[2])
 	require.NoError(t, err)
 
-	signer1, err := NewSigner(p1, p1.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, &Ed25519ChallengeDeriver{})
+	signer1, err := NewSigner(p1, p1.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, DeriveChallenge)
 	require.NotNil(t, signer1)
 	require.NoError(t, err)
-	signer2, err := NewSigner(p2, p2.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, &Ed25519ChallengeDeriver{})
+	signer2, err := NewSigner(p2, p2.Id, threshold, lCoeffs, []uint32{p1.Id, p2.Id}, DeriveChallenge)
 	require.NotNil(t, signer2)
 	require.NoError(t, err)
 
@@ -247,35 +265,31 @@ func PrepareRound3Input(t *testing.T) (*Signer, *Signer, map[uint32]*Round2Bcast
 }
 
 func TestSignRound3Works(t *testing.T) {
-	signer1, signer2, round3Input := PrepareRound3Input(t)
-	round3Out1, err := signer1.SignRound3(round3Input)
+	signer1, signer2, round3Input := prepareRound3Input(t)
+	signature1, err := signer1.SignRound3(round3Input)
 	require.NoError(t, err)
-	require.NotNil(t, round3Out1)
-	round3Out2, err := signer2.SignRound3(round3Input)
+	require.NotNil(t, signature1)
+	signature2, err := signer2.SignRound3(round3Input)
 	require.NoError(t, err)
-	require.NotNil(t, round3Out2)
+	require.NotNil(t, signature2)
 	// signer1 and signer2 outputs the same signature
-	require.Equal(t, round3Out1.Z, round3Out2.Z)
-	require.Equal(t, round3Out1.C, round3Out2.C)
+	require.Equal(t, signature1.Z, signature2.Z)
+	require.Equal(t, signature1.R.ToAffineCompressed(), signature2.R.ToAffineCompressed())
 
 	// test verify method
 	msg := []byte("message")
-	signature := &Signature{
-		round3Out1.Z,
-		round3Out1.C,
-	}
 	vk := signer1.verificationKey
-	ok, err := Verify(signer1.curve, signer1.challengeDeriver, vk, msg, signature)
+	ok, err := Verify(signer1.curve, vk, msg, signature1)
 	require.True(t, ok)
 	require.NoError(t, err)
 
-	ok, err = Verify(signer2.curve, signer2.challengeDeriver, vk, msg, signature)
+	ok, err = Verify(signer2.curve, vk, msg, signature2)
 	require.True(t, ok)
 	require.NoError(t, err)
 }
 
 func TestSignRound3RepeatCall(t *testing.T) {
-	signer1, _, round3Input := PrepareRound3Input(t)
+	signer1, _, round3Input := prepareRound3Input(t)
 	_, err := signer1.SignRound3(round3Input)
 	require.NoError(t, err)
 	_, err = signer1.SignRound3(round3Input)
@@ -283,7 +297,7 @@ func TestSignRound3RepeatCall(t *testing.T) {
 }
 
 func TestSignRound3BadInput(t *testing.T) {
-	signer1, _, round3Input := PrepareRound3Input(t)
+	signer1, _, round3Input := prepareRound3Input(t)
 
 	// Actual test: nil input
 	round3Input[signer1.id] = nil
@@ -294,19 +308,19 @@ func TestSignRound3BadInput(t *testing.T) {
 	require.Error(t, err)
 
 	// Actual test: set invalid length of round3Input
-	signer1, _, round3Input = PrepareRound3Input(t)
+	signer1, _, round3Input = prepareRound3Input(t)
 	round3Input[100] = round3Input[signer1.id]
 	_, err = signer1.SignRound3(round3Input)
 	require.Error(t, err)
 
 	// Actual test: maul the round3Input
-	signer1, _, round3Input = PrepareRound3Input(t)
+	signer1, _, round3Input = prepareRound3Input(t)
 	round3Input[signer1.id].Zi = round3Input[signer1.id].Zi.Add(testCurve.Scalar.New(2))
 	_, err = signer1.SignRound3(round3Input)
 	require.Error(t, err)
 
 	// Actual test: set non-zero smallD and smallE
-	signer1, _, round3Input = PrepareRound3Input(t)
+	signer1, _, round3Input = prepareRound3Input(t)
 	signer1.state.smallD = testCurve.Scalar.New(1)
 	_, err = signer1.SignRound3(round3Input)
 	require.Error(t, err)
@@ -320,31 +334,43 @@ func TestFullRoundsWorks(t *testing.T) {
 	// Prepare DKG participants
 	participants := make(map[uint32]*dkg.DkgParticipant, limit)
 	for i := 1; i <= limit; i++ {
-		otherIds := make([]uint32, limit-1)
-		idx := 0
-		for j := 1; j <= limit; j++ {
-			if i == j {
-				continue
-			}
-			otherIds[idx] = uint32(j)
-			idx++
+		participantIds := make([]uint32, limit)
+		for j := 0; j < limit; j++ {
+			participantIds[j] = uint32(j + 1)
 		}
-		p, err := dkg.NewDkgParticipant(uint32(i), uint32(threshold), ctx, testCurve, otherIds...)
+		p, err := dkg.NewDkgParticipant(uint32(i), uint32(threshold), testCurve, participantIds)
 		require.NoError(t, err)
 		participants[uint32(i)] = p
 	}
 
-	// FROST DKG round 1
-	rnd1Bcast := make(map[uint32]*dkg.Round1Bcast, len(participants))
-	rnd1P2p := make(map[uint32]dkg.Round1P2PSend, len(participants))
+	// Prepare the fixed string used to prevent replay attack.
+	// FROST DKG round 1 - Commit
+	commitments := make(map[uint32]*core.Commitment, limit)
+	for _, participant := range participants {
+		commitment, err := participant.Round1Commit()
+		require.NoError(t, err)
+		commitments[participant.Id] = commitment
+	}
+
+	// FROST DKG round 2 - Open
+	openings := make(map[uint32]*core.Witness, limit)
+	for _, participant := range participants {
+		opening, err := participant.Round2Open(commitments)
+		require.NoError(t, err)
+		openings[participant.Id] = opening
+	}
+
+	// FROST DKG round 3
+	rnd1Bcast := make(map[uint32]*dkg.Round3Bcast, len(participants))
+	rnd1P2p := make(map[uint32]dkg.Round3P2PSend, len(participants))
 	for id, p := range participants {
-		bcast, p2psend, err := p.Round1(nil)
+		bcast, p2psend, err := p.Round3FrostDkgFirstRound(nil, openings)
 		require.NoError(t, err)
 		rnd1Bcast[id] = bcast
 		rnd1P2p[id] = p2psend
 	}
 
-	// FROST DKG round 2
+	// FROST DKG round 4
 	for id := range rnd1Bcast {
 		rnd1P2pForP := make(map[uint32]*sharing.ShamirShare)
 		for jid := range rnd1P2p {
@@ -353,7 +379,7 @@ func TestFullRoundsWorks(t *testing.T) {
 			}
 			rnd1P2pForP[jid] = rnd1P2p[jid][id]
 		}
-		_, err := participants[id].Round2(rnd1Bcast, rnd1P2pForP)
+		_, err := participants[id].Round4FrostDkgSecondRound(rnd1Bcast, rnd1P2pForP)
 		require.NoError(t, err)
 	}
 
@@ -366,7 +392,7 @@ func TestFullRoundsWorks(t *testing.T) {
 	require.NoError(t, err)
 	signers := make(map[uint32]*Signer, threshold)
 	for _, id := range signerIds {
-		signers[id], err = NewSigner(participants[id], id, uint32(threshold), lCoeffs, signerIds, &Ed25519ChallengeDeriver{})
+		signers[id], err = NewSigner(participants[id], id, uint32(threshold), lCoeffs, signerIds, DeriveChallenge)
 		require.NoError(t, err)
 		require.NotNil(t, signers[id].skShare)
 	}
@@ -389,7 +415,7 @@ func TestFullRoundsWorks(t *testing.T) {
 	}
 
 	// Running sign round 3
-	result := make(map[uint32]*Round3Bcast, threshold)
+	result := make(map[uint32]*Signature, threshold)
 	for id := range signers {
 		round3Out, err := signers[id].SignRound3(round3Input)
 		require.NoError(t, err)
@@ -398,7 +424,5 @@ func TestFullRoundsWorks(t *testing.T) {
 
 	// Every signer has the same output Schnorr signature
 	require.Equal(t, result[1].Z, result[3].Z)
-	// require.Equal(t, z, result[3].Z)
-	require.Equal(t, result[1].C, result[3].C)
-	// require.Equal(t, c, result[3].C)
+	require.Equal(t, result[1].R.ToAffineCompressed(), result[3].R.ToAffineCompressed())
 }

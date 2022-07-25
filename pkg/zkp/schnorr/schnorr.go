@@ -49,7 +49,7 @@ func NewProver(curve *curves.Curve, basepoint curves.Point, uniqueSessionId []by
 }
 
 // Prove generates and returns a Schnorr proof, given the scalar witness `x`.
-// in the process, it will actually also construct the statement (just one curve mult in this case)
+// in the process, it will actually also construct the statement (just one curve mult in this case).
 func (p *Prover) Prove(x curves.Scalar) (*Proof, error) {
 	// assumes that params, and pub are already populated. populates the fields c and s...
 	var err error

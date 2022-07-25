@@ -44,7 +44,7 @@ func TestMultiPairing(t *testing.T) {
 		var bytes [64]byte
 		g1s[i] = new(G1).Generator()
 		g2s[i] = new(G2).Generator()
-		sc[i] = Bls12381FqNew()
+		sc[i] = FqNew()
 		_, _ = crand.Read(bytes[:])
 		sc[i].SetBytesWide(&bytes)
 		if i&1 == 0 {

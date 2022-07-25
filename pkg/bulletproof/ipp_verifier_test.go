@@ -11,7 +11,7 @@ import (
 )
 
 func TestIPPVerifyHappyPath(t *testing.T) {
-	curve := curves.ED25519()
+	curve := curves.BLS12377G1()
 	vecLength := 256
 	prover, err := NewInnerProductProver(vecLength, []byte("test"), *curve)
 	require.NoError(t, err)

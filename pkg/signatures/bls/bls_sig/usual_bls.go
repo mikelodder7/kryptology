@@ -38,7 +38,7 @@ type BlsScheme interface {
 }
 
 // generateKeys creates 32 bytes of random data to be fed to
-// generateKeysWithSeed
+// generateKeysWithSeed.
 func generateKeys() (*PublicKey, *SecretKey, error) {
 	ikm, err := generateRandBytes(32)
 	if err != nil {
@@ -47,7 +47,7 @@ func generateKeys() (*PublicKey, *SecretKey, error) {
 	return generateKeysWithSeed(ikm)
 }
 
-// generateKeysWithSeed generates a BLS key pair given input key material (ikm)
+// generateKeysWithSeed generates a BLS key pair given input key material (ikm).
 func generateKeysWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
 	sk, err := new(SecretKey).Generate(ikm)
 	if err != nil {
@@ -60,7 +60,7 @@ func generateKeysWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
 	return pk, sk, nil
 }
 
-// thresholdGenerateKeys will generate random secret key shares and the corresponding public key
+// thresholdGenerateKeys will generate random secret key shares and the corresponding public key.
 func thresholdGenerateKeys(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	pk, sk, err := generateKeys()
 	if err != nil {
@@ -74,7 +74,7 @@ func thresholdGenerateKeys(threshold, total uint) (*PublicKey, []*SecretKeyShare
 }
 
 // thresholdGenerateKeysWithSeed will generate random secret key shares and the corresponding public key
-// using the corresponding seed `ikm`
+// using the corresponding seed `ikm`.
 func thresholdGenerateKeysWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	pk, sk, err := generateKeysWithSeed(ikm)
 	if err != nil {
@@ -103,46 +103,46 @@ func NewSigBasicWithDst(signDst string) *SigBasic {
 	return &SigBasic{dst: signDst}
 }
 
-// Creates a new BLS key pair
-func (b SigBasic) Keygen() (*PublicKey, *SecretKey, error) {
+// Creates a new BLS key pair.
+func (SigBasic) Keygen() (*PublicKey, *SecretKey, error) {
 	return generateKeys()
 }
 
 // Creates a new BLS key pair
 // Input key material (ikm) MUST be at least 32 bytes long,
 // but it MAY be longer.
-func (b SigBasic) KeygenWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
+func (SigBasic) KeygenWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
 	return generateKeysWithSeed(ikm)
 }
 
 // ThresholdKeyGen generates a public key and `total` secret key shares such that
-// `threshold` of them can be combined in signatures
-func (b SigBasic) ThresholdKeygen(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
+// `threshold` of them can be combined in signatures.
+func (SigBasic) ThresholdKeygen(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	return thresholdGenerateKeys(threshold, total)
 }
 
 // ThresholdKeyGen generates a public key and `total` secret key shares such that
-// `threshold` of them can be combined in signatures
-func (b SigBasic) ThresholdKeygenWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
+// `threshold` of them can be combined in signatures.
+func (SigBasic) ThresholdKeygenWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	return thresholdGenerateKeysWithSeed(ikm, threshold, total)
 }
 
-// Computes a signature in G2 from sk, a secret key, and a message
+// Computes a signature in G2 from sk, a secret key, and a message.
 func (b SigBasic) Sign(sk *SecretKey, msg []byte) (*Signature, error) {
 	return sk.createSignature(msg, b.dst)
 }
 
-// Compute a partial signature in G2 that can be combined with other partial signature
+// Compute a partial signature in G2 that can be combined with other partial signature.
 func (b SigBasic) PartialSign(sks *SecretKeyShare, msg []byte) (*PartialSignature, error) {
 	return sks.partialSign(msg, b.dst)
 }
 
-// CombineSignatures takes partial signatures to yield a completed signature
-func (b SigBasic) CombineSignatures(sigs ...*PartialSignature) (*Signature, error) {
+// CombineSignatures takes partial signatures to yield a completed signature.
+func (SigBasic) CombineSignatures(sigs ...*PartialSignature) (*Signature, error) {
 	return combineSigs(sigs)
 }
 
-// Checks that a signature is valid for the message under the public key pk
+// Checks that a signature is valid for the message under the public key pk.
 func (b SigBasic) Verify(pk *PublicKey, msg []byte, sig *Signature) (bool, error) {
 	return pk.verifySignature(msg, sig, b.dst)
 }
@@ -179,27 +179,27 @@ func NewSigAugWithDst(signDst string) *SigAug {
 	return &SigAug{dst: signDst}
 }
 
-// Creates a new BLS key pair
-func (b SigAug) Keygen() (*PublicKey, *SecretKey, error) {
+// Creates a new BLS key pair.
+func (SigAug) Keygen() (*PublicKey, *SecretKey, error) {
 	return generateKeys()
 }
 
 // Creates a new BLS secret key
 // Input key material (ikm) MUST be at least 32 bytes long,
 // but it MAY be longer.
-func (b SigAug) KeygenWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
+func (SigAug) KeygenWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
 	return generateKeysWithSeed(ikm)
 }
 
 // ThresholdKeyGen generates a public key and `total` secret key shares such that
-// `threshold` of them can be combined in signatures
-func (b SigAug) ThresholdKeygen(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
+// `threshold` of them can be combined in signatures.
+func (SigAug) ThresholdKeygen(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	return thresholdGenerateKeys(threshold, total)
 }
 
 // ThresholdKeyGen generates a public key and `total` secret key shares such that
-// `threshold` of them can be combined in signatures
-func (b SigAug) ThresholdKeygenWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
+// `threshold` of them can be combined in signatures.
+func (SigAug) ThresholdKeygenWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	return thresholdGenerateKeysWithSeed(ikm, threshold, total)
 }
 
@@ -215,30 +215,30 @@ func (b SigAug) Sign(sk *SecretKey, msg []byte) (*Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := pk.MarshalBinary()
+	marshaled, err := pk.MarshalBinary()
 	if err != nil {
-		return nil, fmt.Errorf("MarshalBinary failed")
+		return nil, fmt.Errorf("marshal binary failed")
 	}
-	bytes = append(bytes, msg...)
-	return sk.createSignature(bytes, b.dst)
+	marshaled = append(marshaled, msg...)
+	return sk.createSignature(marshaled, b.dst)
 }
 
-// Compute a partial signature in G2 that can be combined with other partial signature
+// Compute a partial signature in G2 that can be combined with other partial signature.
 func (b SigAug) PartialSign(sks *SecretKeyShare, pk *PublicKey, msg []byte) (*PartialSignature, error) {
 	if len(msg) == 0 {
 		return nil, fmt.Errorf("message cannot be empty or nil")
 	}
 
-	bytes, err := pk.MarshalBinary()
+	marshaled, err := pk.MarshalBinary()
 	if err != nil {
-		return nil, fmt.Errorf("MarshalBinary failed")
+		return nil, fmt.Errorf("marshal binary failed")
 	}
-	bytes = append(bytes, msg...)
-	return sks.partialSign(bytes, b.dst)
+	marshaled = append(marshaled, msg...)
+	return sks.partialSign(marshaled, b.dst)
 }
 
-// CombineSignatures takes partial signatures to yield a completed signature
-func (b SigAug) CombineSignatures(sigs ...*PartialSignature) (*Signature, error) {
+// CombineSignatures takes partial signatures to yield a completed signature.
+func (SigAug) CombineSignatures(sigs ...*PartialSignature) (*Signature, error) {
 	return combineSigs(sigs)
 }
 
@@ -278,7 +278,7 @@ func (b SigAug) AggregateVerify(pks []*PublicKey, msgs [][]byte, sigs []*Signatu
 }
 
 // SigEth2 supports signatures on Eth2.
-// Internally is an alias for SigPop
+// Internally is an alias for SigPop.
 type SigEth2 = SigPop
 
 // NewSigEth2 Creates a new BLS ETH2 signature scheme with the standard domain separation tag used for signatures.
@@ -307,27 +307,27 @@ func NewSigPopWithDst(signDst, popDst string) (*SigPop, error) {
 	return &SigPop{sigDst: signDst, popDst: popDst}, nil
 }
 
-// Creates a new BLS key pair
-func (b SigPop) Keygen() (*PublicKey, *SecretKey, error) {
+// Creates a new BLS key pair.
+func (SigPop) Keygen() (*PublicKey, *SecretKey, error) {
 	return generateKeys()
 }
 
 // Creates a new BLS secret key
 // Input key material (ikm) MUST be at least 32 bytes long,
 // but it MAY be longer.
-func (b SigPop) KeygenWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
+func (SigPop) KeygenWithSeed(ikm []byte) (*PublicKey, *SecretKey, error) {
 	return generateKeysWithSeed(ikm)
 }
 
 // ThresholdKeyGen generates a public key and `total` secret key shares such that
-// `threshold` of them can be combined in signatures
-func (b SigPop) ThresholdKeygen(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
+// `threshold` of them can be combined in signatures.
+func (SigPop) ThresholdKeygen(threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	return thresholdGenerateKeys(threshold, total)
 }
 
 // ThresholdKeyGen generates a public key and `total` secret key shares such that
-// `threshold` of them can be combined in signatures
-func (b SigPop) ThresholdKeygenWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
+// `threshold` of them can be combined in signatures.
+func (SigPop) ThresholdKeygenWithSeed(ikm []byte, threshold, total uint) (*PublicKey, []*SecretKeyShare, error) {
 	return thresholdGenerateKeysWithSeed(ikm, threshold, total)
 }
 
@@ -338,13 +338,13 @@ func (b SigPop) Sign(sk *SecretKey, msg []byte) (*Signature, error) {
 	return sk.createSignature(msg, b.sigDst)
 }
 
-// Compute a partial signature in G2 that can be combined with other partial signature
+// Compute a partial signature in G2 that can be combined with other partial signature.
 func (b SigPop) PartialSign(sks *SecretKeyShare, msg []byte) (*PartialSignature, error) {
 	return sks.partialSign(msg, b.sigDst)
 }
 
-// CombineSignatures takes partial signatures to yield a completed signature
-func (b SigPop) CombineSignatures(sigs ...*PartialSignature) (*Signature, error) {
+// CombineSignatures takes partial signatures to yield a completed signature.
+func (SigPop) CombineSignatures(sigs ...*PartialSignature) (*Signature, error) {
 	return combineSigs(sigs)
 }
 
@@ -374,7 +374,7 @@ func (b SigPop) AggregateVerify(pks []*PublicKey, msgs [][]byte, sigs []*Signatu
 // Combine many signatures together to form a Multisignature.
 // Multisignatures can be created when multiple signers jointly
 // generate signatures over the same message.
-func (b SigPop) AggregateSignatures(sigs ...*Signature) (*MultiSignature, error) {
+func (SigPop) AggregateSignatures(sigs ...*Signature) (*MultiSignature, error) {
 	g1, err := aggregateSignatures(sigs...)
 	if err != nil {
 		return nil, err
@@ -384,7 +384,7 @@ func (b SigPop) AggregateSignatures(sigs ...*Signature) (*MultiSignature, error)
 
 // Combine many public keys together to form a Multipublickey.
 // Multipublickeys are used to verify multisignatures.
-func (b SigPop) AggregatePublicKeys(pks ...*PublicKey) (*MultiPublicKey, error) {
+func (SigPop) AggregatePublicKeys(pks ...*PublicKey) (*MultiPublicKey, error) {
 	g2, err := aggregatePublicKeys(pks...)
 	if err != nil {
 		return nil, err

@@ -69,7 +69,7 @@ func SenderStreamOTRun(sender *Sender, rw io.ReadWriter) error {
 	if err != nil {
 		return err
 	}
-	if err = enc.Encode(proof); err != nil {
+	if err := enc.Encode(proof); err != nil {
 		return err
 	}
 

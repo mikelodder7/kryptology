@@ -125,7 +125,7 @@ func TestDkgProto(t *testing.T) {
 	})
 }
 
-// DKG > Result > NewDklsSign > Sign > Result
+// DKG > Result > NewDklsSign > Sign > Result.
 func TestDkgSignProto(t *testing.T) {
 	// Setup
 	params, err := NewParams(btcec.S256(), curves.NewK256Scalar())

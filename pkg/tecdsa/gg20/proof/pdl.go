@@ -23,7 +23,7 @@ import (
 )
 
 // PdlProofParams encapsulates the parameters for ProvePDL in
-// [spec] fig 14
+// [spec] fig 14.
 type PdlProofParams struct {
 	Curve               elliptic.Curve
 	DealerParams        *dealer.ProofParams
@@ -33,7 +33,7 @@ type PdlProofParams struct {
 }
 
 // PdlProof is the proof generated in
-// [spec] fig 14
+// [spec] fig 14.
 type PdlProof struct {
 	z, e, s, s1, s2 *big.Int
 }
@@ -42,35 +42,35 @@ type pdlProofJSON struct {
 	Z, E, S, S1, S2 *big.Int
 }
 
-func (pdlp PdlProof) MarshalJSON() ([]byte, error) {
+func (p PdlProof) MarshalJSON() ([]byte, error) {
 	data := pdlProofJSON{
-		Z:  pdlp.z,
-		E:  pdlp.e,
-		S:  pdlp.s,
-		S1: pdlp.s1,
-		S2: pdlp.s2,
+		Z:  p.z,
+		E:  p.e,
+		S:  p.s,
+		S1: p.s1,
+		S2: p.s2,
 	}
 	return json.Marshal(data)
 }
 
-func (pdlp *PdlProof) UnmarshalJSON(bytes []byte) error {
+func (p *PdlProof) UnmarshalJSON(bytes []byte) error {
 	data := new(pdlProofJSON)
 
 	err := json.Unmarshal(bytes, &data)
 	if err != nil {
 		return err
 	}
-	pdlp.z = data.Z
-	pdlp.e = data.E
-	pdlp.s = data.S
-	pdlp.s1 = data.S1
-	pdlp.s2 = data.S2
+	p.z = data.Z
+	p.e = data.E
+	p.s = data.S
+	p.s1 = data.S1
+	p.s2 = data.S2
 
 	return nil
 }
 
 // PdlVerifyParams encapsulates the parameters for VerifyPDL in
-// [spec] fig 14
+// [spec] fig 14.
 type PdlVerifyParams struct {
 	Curve          elliptic.Curve
 	DealerParams   *dealer.ProofParams
@@ -80,16 +80,17 @@ type PdlVerifyParams struct {
 }
 
 // randPdlParams are the random values generated in
-// [spec] fig 14
+// [spec] fig 14.
 type randPdlParams struct {
 	alpha, beta, gamma, rho *big.Int
 }
 
 // Prove generates a PdlProof as specified in
-// [spec] fig 14
+// [spec] fig 14.
 func (p PdlProofParams) Prove() (*PdlProof, error) {
 	if p.C == nil || p.DealerParams == nil || p.PointR == nil || p.PointX == nil ||
 		p.Pk == nil || p.Curve == nil || p.ScalarX == nil || p.ScalarR == nil {
+
 		return nil, fmt.Errorf("invalid params")
 	}
 	// step 1
@@ -161,13 +162,14 @@ func (p PdlProofParams) Prove() (*PdlProof, error) {
 }
 
 // Verify checks the PdlProof as specified in
-// [spec] fig 14
+// [spec] fig 14.
 func (p PdlProof) Verify(pv *PdlVerifyParams) error {
 	if p.z == nil || p.e == nil || p.s1 == nil || p.s2 == nil || p.s == nil {
 		return fmt.Errorf("proof values cannot be nil")
 	}
 	if pv == nil || pv.Curve == nil || pv.C == nil || pv.Pk == nil ||
 		pv.PointX == nil || pv.PointR == nil || pv.DealerParams == nil {
+
 		return fmt.Errorf("proof verify params cannot be nil")
 	}
 	// step 1
@@ -283,7 +285,7 @@ func (p PdlProof) wHatConstruct(pv *PdlVerifyParams) (*big.Int, error) {
 }
 
 // randPdl computes the random values for Prove in
-// [spec] fig 14
+// [spec] fig 14.
 func randPdl(p PdlProofParams) (*randPdlParams, error) {
 	// The rings in which to operate
 	q3, err := crypto.Exp(p.Curve.Params().N, big.NewInt(3), nil)

@@ -9,10 +9,10 @@ func xorBytes(a, b [DigestSize]byte) (c [DigestSize]byte) {
 	for i := 0; i < DigestSize; i++ {
 		c[i] = a[i] ^ b[i]
 	}
-	return
+	return c
 }
 
-// initChoice initializes the receiver's choice array from the PackedRandomChoiceBits array
+// initChoice initializes the receiver's choice array from the PackedRandomChoiceBits array.
 func (receiver *Receiver) initChoice() {
 	// unpack the random values in PackedRandomChoiceBits into bits in Choice
 	receiver.Output.RandomChoiceBits = make([]int, receiver.batchSize)
@@ -28,26 +28,26 @@ func ExtractBitFromByteVector(vector []byte, index int) byte {
 	return vector[index>>3] >> (index & 0x07) & 0x01
 }
 
-type pipeWrapper struct {
+type PipeWrapper struct {
 	r         *io.PipeReader
 	w         *io.PipeWriter
 	exchanged int // used this during testing, to track bytes exchanged
 }
 
-func (wrapper *pipeWrapper) Write(p []byte) (n int, err error) {
-	n, err = wrapper.w.Write(p)
+func (wrapper *PipeWrapper) Write(p []byte) (int, error) {
+	n, err := wrapper.w.Write(p)
 	wrapper.exchanged += n
-	return
+	return n, err
 }
 
-func (wrapper *pipeWrapper) Read(p []byte) (n int, err error) {
-	n, err = wrapper.r.Read(p)
+func (wrapper *PipeWrapper) Read(p []byte) (int, error) {
+	n, err := wrapper.r.Read(p)
 	wrapper.exchanged += n
-	return
+	return n, err
 }
 
-func NewPipeWrappers() (*pipeWrapper, *pipeWrapper) {
+func NewPipeWrappers() (*PipeWrapper, *PipeWrapper) {
 	leftOut, leftIn := io.Pipe()
 	rightOut, rightIn := io.Pipe()
-	return &pipeWrapper{r: leftOut, w: rightIn}, &pipeWrapper{r: rightOut, w: leftIn}
+	return &PipeWrapper{r: leftOut, w: rightIn}, &PipeWrapper{r: rightOut, w: leftIn}
 }

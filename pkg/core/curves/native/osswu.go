@@ -1,13 +1,14 @@
 package native
 
 // SswuParams for computing the Simplified SWU mapping
-// for hash to curve implementations
+// for hash to curve implementations.
 type SswuParams struct {
 	C1, C2, A, B, Z [FieldLimbs]uint64
 }
 
 // Osswu3mod4 computes the simplified map optmized for 3 mod 4 primes
 // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#appendix-G.2.1
+//nolint:ifshort,nolintlint // looks good as is and nolintlint is flaky.
 func (p *SswuParams) Osswu3mod4(u *Field) (x, y *Field) {
 	var tv1, tv2, tv3, tv4, xd, x1n, x2n, gxd, gx1, aNeg, zA, y1, y2 [FieldLimbs]uint64
 	var wasInverted int
@@ -41,7 +42,7 @@ func (p *SswuParams) Osswu3mod4(u *Field) (x, y *Field) {
 	u.Arithmetic.Mul(&tv4, &tv4, &tv2) // tv4 = tv4 * tv2
 
 	Pow(&y1, &tv4, &p.C1, u.Params, u.Arithmetic) // y1 = tv4^C1
-	u.Arithmetic.Mul(&y1, &y1, &tv2)              //y1 = y1 * tv2
+	u.Arithmetic.Mul(&y1, &y1, &tv2)              // y1 = y1 * tv2
 	u.Arithmetic.Mul(&x2n, &tv3, &x1n)            // x2n = tv3 * x1n
 
 	u.Arithmetic.Mul(&y2, &y1, &p.C2)    // y2 = y1 * c2
@@ -78,5 +79,5 @@ func (p *SswuParams) Osswu3mod4(u *Field) (x, y *Field) {
 		y.Neg(y)
 	}
 
-	return
+	return x, y
 }

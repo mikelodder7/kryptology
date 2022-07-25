@@ -53,21 +53,21 @@ func (s *ScalarBls12381) Hash(bytes []byte) Scalar {
 	copy(t[:48], internal.ReverseScalarBytes(xmd))
 
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().SetBytesWide(&t),
+		Value: bls12381.FqNew().SetBytesWide(&t),
 		point: s.point,
 	}
 }
 
 func (s *ScalarBls12381) Zero() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().SetZero(),
+		Value: bls12381.FqNew().SetZero(),
 		point: s.point,
 	}
 }
 
 func (s *ScalarBls12381) One() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().SetOne(),
+		Value: bls12381.FqNew().SetOne(),
 		point: s.point,
 	}
 }
@@ -91,7 +91,7 @@ func (s *ScalarBls12381) IsEven() bool {
 }
 
 func (s *ScalarBls12381) New(value int) Scalar {
-	t := bls12381.Bls12381FqNew()
+	t := bls12381.FqNew()
 	v := big.NewInt(int64(value))
 	if value < 0 {
 		v.Mod(v, t.Params.BiModulus)
@@ -113,13 +113,22 @@ func (s *ScalarBls12381) Cmp(rhs Scalar) int {
 
 func (s *ScalarBls12381) Square() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().Square(s.Value),
+		Value: bls12381.FqNew().Square(s.Value),
 		point: s.point,
 	}
 }
 
+func (s *ScalarBls12381) Pow(exp uint64) Scalar {
+	expFieldLimb := [native.FieldLimbs]uint64{exp, 0, 0, 0}
+	out := ScalarBls12381{Value: bls12381.FqNew(), point: s.point}
+	native.Pow(&out.Value.Value, &s.Value.Value, &expFieldLimb, s.Value.Params, s.Value.Arithmetic)
+	return &ScalarBls12381{
+		Value: out.Value,
+	}
+}
+
 func (s *ScalarBls12381) Double() Scalar {
-	v := bls12381.Bls12381FqNew().Double(s.Value)
+	v := bls12381.FqNew().Double(s.Value)
 	return &ScalarBls12381{
 		Value: v,
 		point: s.point,
@@ -127,7 +136,7 @@ func (s *ScalarBls12381) Double() Scalar {
 }
 
 func (s *ScalarBls12381) Invert() (Scalar, error) {
-	value, wasInverted := bls12381.Bls12381FqNew().Invert(s.Value)
+	value, wasInverted := bls12381.FqNew().Invert(s.Value)
 	if !wasInverted {
 		return nil, fmt.Errorf("inverse doesn't exist")
 	}
@@ -138,7 +147,7 @@ func (s *ScalarBls12381) Invert() (Scalar, error) {
 }
 
 func (s *ScalarBls12381) Sqrt() (Scalar, error) {
-	value, wasSquare := bls12381.Bls12381FqNew().Sqrt(s.Value)
+	value, wasSquare := bls12381.FqNew().Sqrt(s.Value)
 	if !wasSquare {
 		return nil, fmt.Errorf("not a square")
 	}
@@ -149,7 +158,7 @@ func (s *ScalarBls12381) Sqrt() (Scalar, error) {
 }
 
 func (s *ScalarBls12381) Cube() Scalar {
-	value := bls12381.Bls12381FqNew().Square(s.Value)
+	value := bls12381.FqNew().Square(s.Value)
 	value.Mul(value, s.Value)
 	return &ScalarBls12381{
 		Value: value,
@@ -161,7 +170,7 @@ func (s *ScalarBls12381) Add(rhs Scalar) Scalar {
 	r, ok := rhs.(*ScalarBls12381)
 	if ok {
 		return &ScalarBls12381{
-			Value: bls12381.Bls12381FqNew().Add(s.Value, r.Value),
+			Value: bls12381.FqNew().Add(s.Value, r.Value),
 			point: s.point,
 		}
 	} else {
@@ -173,7 +182,7 @@ func (s *ScalarBls12381) Sub(rhs Scalar) Scalar {
 	r, ok := rhs.(*ScalarBls12381)
 	if ok {
 		return &ScalarBls12381{
-			Value: bls12381.Bls12381FqNew().Sub(s.Value, r.Value),
+			Value: bls12381.FqNew().Sub(s.Value, r.Value),
 			point: s.point,
 		}
 	} else {
@@ -185,7 +194,7 @@ func (s *ScalarBls12381) Mul(rhs Scalar) Scalar {
 	r, ok := rhs.(*ScalarBls12381)
 	if ok {
 		return &ScalarBls12381{
-			Value: bls12381.Bls12381FqNew().Mul(s.Value, r.Value),
+			Value: bls12381.FqNew().Mul(s.Value, r.Value),
 			point: s.point,
 		}
 	} else {
@@ -200,7 +209,7 @@ func (s *ScalarBls12381) MulAdd(y, z Scalar) Scalar {
 func (s *ScalarBls12381) Div(rhs Scalar) Scalar {
 	r, ok := rhs.(*ScalarBls12381)
 	if ok {
-		v, wasInverted := bls12381.Bls12381FqNew().Invert(r.Value)
+		v, wasInverted := bls12381.FqNew().Invert(r.Value)
 		if !wasInverted {
 			return nil
 		}
@@ -216,7 +225,7 @@ func (s *ScalarBls12381) Div(rhs Scalar) Scalar {
 
 func (s *ScalarBls12381) Neg() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().Neg(s.Value),
+		Value: bls12381.FqNew().Neg(s.Value),
 		point: s.point,
 	}
 }
@@ -226,7 +235,7 @@ func (s *ScalarBls12381) SetBigInt(v *big.Int) (Scalar, error) {
 		return nil, fmt.Errorf("invalid value")
 	}
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().SetBigInt(v),
+		Value: bls12381.FqNew().SetBigInt(v),
 		point: s.point,
 	}, nil
 }
@@ -246,7 +255,7 @@ func (s *ScalarBls12381) SetBytes(bytes []byte) (Scalar, error) {
 	}
 	var seq [32]byte
 	copy(seq[:], internal.ReverseScalarBytes(bytes))
-	value, err := bls12381.Bls12381FqNew().SetBytes(&seq)
+	value, err := bls12381.FqNew().SetBytes(&seq)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +271,7 @@ func (s *ScalarBls12381) SetBytesWide(bytes []byte) (Scalar, error) {
 	var seq [64]byte
 	copy(seq[:], bytes)
 	return &ScalarBls12381{
-		bls12381.Bls12381FqNew().SetBytesWide(&seq), s.point,
+		bls12381.FqNew().SetBytesWide(&seq), s.point,
 	}, nil
 }
 
@@ -272,14 +281,14 @@ func (s *ScalarBls12381) Point() Point {
 
 func (s *ScalarBls12381) Clone() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().Set(s.Value),
+		Value: bls12381.FqNew().Set(s.Value),
 		point: s.point,
 	}
 }
 
 func (s *ScalarBls12381) SetPoint(p Point) PairingScalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew().Set(s.Value),
+		Value: bls12381.FqNew().Set(s.Value),
 		point: p,
 	}
 }
@@ -289,11 +298,11 @@ func (s *ScalarBls12381) Order() *big.Int {
 }
 
 func (s *ScalarBls12381) MarshalBinary() ([]byte, error) {
-	return scalarMarshalBinary(s)
+	return ScalarMarshalBinary(s)
 }
 
 func (s *ScalarBls12381) UnmarshalBinary(input []byte) error {
-	sc, err := scalarUnmarshalBinary(input)
+	sc, err := ScalarUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -307,11 +316,11 @@ func (s *ScalarBls12381) UnmarshalBinary(input []byte) error {
 }
 
 func (s *ScalarBls12381) MarshalText() ([]byte, error) {
-	return scalarMarshalText(s)
+	return ScalarMarshalText(s)
 }
 
 func (s *ScalarBls12381) UnmarshalText(input []byte) error {
-	sc, err := scalarUnmarshalText(input)
+	sc, err := ScalarUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -325,11 +334,11 @@ func (s *ScalarBls12381) UnmarshalText(input []byte) error {
 }
 
 func (s *ScalarBls12381) MarshalJSON() ([]byte, error) {
-	return scalarMarshalJson(s)
+	return ScalarMarshalJSON(s)
 }
 
 func (s *ScalarBls12381) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	sc, err := ScalarUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -347,19 +356,19 @@ func (p *PointBls12381G1) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointBls12381G1) Hash(bytes []byte) Point {
-	var domain = []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_")
+func (*PointBls12381G1) Hash(bytes []byte) Point {
+	domain := []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_")
 	pt := new(bls12381.G1).Hash(native.EllipticPointHasherSha256(), bytes, domain)
 	return &PointBls12381G1{Value: pt}
 }
 
-func (p *PointBls12381G1) Identity() Point {
+func (*PointBls12381G1) Identity() Point {
 	return &PointBls12381G1{
 		Value: new(bls12381.G1).Identity(),
 	}
 }
 
-func (p *PointBls12381G1) Generator() Point {
+func (*PointBls12381G1) Generator() Point {
 	return &PointBls12381G1{
 		Value: new(bls12381.G1).Generator(),
 	}
@@ -383,9 +392,9 @@ func (p *PointBls12381G1) Double() Point {
 	return &PointBls12381G1{new(bls12381.G1).Double(p.Value)}
 }
 
-func (p *PointBls12381G1) Scalar() Scalar {
+func (*PointBls12381G1) Scalar() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew(),
+		Value: bls12381.FqNew(),
 		point: new(PointBls12381G1),
 	}
 }
@@ -439,7 +448,7 @@ func (p *PointBls12381G1) Equal(rhs Point) bool {
 	}
 }
 
-func (p *PointBls12381G1) Set(x, y *big.Int) (Point, error) {
+func (*PointBls12381G1) Set(x, y *big.Int) (Point, error) {
 	value, err := new(bls12381.G1).SetBigInt(x, y)
 	if err != nil {
 		return nil, fmt.Errorf("invalid coordinates")
@@ -457,7 +466,7 @@ func (p *PointBls12381G1) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (p *PointBls12381G1) FromAffineCompressed(bytes []byte) (Point, error) {
+func (*PointBls12381G1) FromAffineCompressed(bytes []byte) (Point, error) {
 	var b [bls12381.FieldBytes]byte
 	copy(b[:], bytes)
 	value, err := new(bls12381.G1).FromCompressed(&b)
@@ -467,7 +476,7 @@ func (p *PointBls12381G1) FromAffineCompressed(bytes []byte) (Point, error) {
 	return &PointBls12381G1{value}, nil
 }
 
-func (p *PointBls12381G1) FromAffineUncompressed(bytes []byte) (Point, error) {
+func (*PointBls12381G1) FromAffineUncompressed(bytes []byte) (Point, error) {
 	var b [96]byte
 	copy(b[:], bytes)
 	value, err := new(bls12381.G1).FromUncompressed(&b)
@@ -477,11 +486,11 @@ func (p *PointBls12381G1) FromAffineUncompressed(bytes []byte) (Point, error) {
 	return &PointBls12381G1{value}, nil
 }
 
-func (p *PointBls12381G1) CurveName() string {
+func (*PointBls12381G1) CurveName() string {
 	return "BLS12381G1"
 }
 
-func (p *PointBls12381G1) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (*PointBls12381G1) SumOfProducts(points []Point, scalars []Scalar) Point {
 	nPoints := make([]*bls12381.G1, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
@@ -505,8 +514,12 @@ func (p *PointBls12381G1) SumOfProducts(points []Point, scalars []Scalar) Point 
 	return &PointBls12381G1{value}
 }
 
-func (p *PointBls12381G1) OtherGroup() PairingPoint {
-	return new(PointBls12381G2).Identity().(PairingPoint)
+func (*PointBls12381G1) OtherGroup() PairingPoint {
+	pairingPoint, ok := new(PointBls12381G2).Identity().(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
 func (p *PointBls12381G1) Pairing(rhs PairingPoint) Scalar {
@@ -522,7 +535,7 @@ func (p *PointBls12381G1) Pairing(rhs PairingPoint) Scalar {
 	return &ScalarBls12381Gt{value}
 }
 
-func (p *PointBls12381G1) MultiPairing(points ...PairingPoint) Scalar {
+func (*PointBls12381G1) MultiPairing(points ...PairingPoint) Scalar {
 	return multiPairing(points...)
 }
 
@@ -534,16 +547,16 @@ func (p *PointBls12381G1) Y() *big.Int {
 	return p.Value.GetY().BigInt()
 }
 
-func (p *PointBls12381G1) Modulus() *big.Int {
+func (*PointBls12381G1) Modulus() *big.Int {
 	return bls12381modulus
 }
 
 func (p *PointBls12381G1) MarshalBinary() ([]byte, error) {
-	return pointMarshalBinary(p)
+	return PointMarshalBinary(p)
 }
 
 func (p *PointBls12381G1) UnmarshalBinary(input []byte) error {
-	pt, err := pointUnmarshalBinary(input)
+	pt, err := PointUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -556,11 +569,11 @@ func (p *PointBls12381G1) UnmarshalBinary(input []byte) error {
 }
 
 func (p *PointBls12381G1) MarshalText() ([]byte, error) {
-	return pointMarshalText(p)
+	return PointMarshalText(p)
 }
 
 func (p *PointBls12381G1) UnmarshalText(input []byte) error {
-	pt, err := pointUnmarshalText(input)
+	pt, err := PointUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -573,11 +586,11 @@ func (p *PointBls12381G1) UnmarshalText(input []byte) error {
 }
 
 func (p *PointBls12381G1) MarshalJSON() ([]byte, error) {
-	return pointMarshalJson(p)
+	return PointMarshalJSON(p)
 }
 
 func (p *PointBls12381G1) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	pt, err := PointUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -595,19 +608,19 @@ func (p *PointBls12381G2) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointBls12381G2) Hash(bytes []byte) Point {
-	var domain = []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
+func (*PointBls12381G2) Hash(bytes []byte) Point {
+	domain := []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
 	pt := new(bls12381.G2).Hash(native.EllipticPointHasherSha256(), bytes, domain)
 	return &PointBls12381G2{Value: pt}
 }
 
-func (p *PointBls12381G2) Identity() Point {
+func (*PointBls12381G2) Identity() Point {
 	return &PointBls12381G2{
 		Value: new(bls12381.G2).Identity(),
 	}
 }
 
-func (p *PointBls12381G2) Generator() Point {
+func (*PointBls12381G2) Generator() Point {
 	return &PointBls12381G2{
 		Value: new(bls12381.G2).Generator(),
 	}
@@ -631,9 +644,9 @@ func (p *PointBls12381G2) Double() Point {
 	return &PointBls12381G2{new(bls12381.G2).Double(p.Value)}
 }
 
-func (p *PointBls12381G2) Scalar() Scalar {
+func (*PointBls12381G2) Scalar() Scalar {
 	return &ScalarBls12381{
-		Value: bls12381.Bls12381FqNew(),
+		Value: bls12381.FqNew(),
 		point: new(PointBls12381G2),
 	}
 }
@@ -687,7 +700,7 @@ func (p *PointBls12381G2) Equal(rhs Point) bool {
 	}
 }
 
-func (p *PointBls12381G2) Set(x, y *big.Int) (Point, error) {
+func (*PointBls12381G2) Set(x, y *big.Int) (Point, error) {
 	value, err := new(bls12381.G2).SetBigInt(x, y)
 	if err != nil {
 		return nil, fmt.Errorf("invalid coordinates")
@@ -705,9 +718,9 @@ func (p *PointBls12381G2) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (p *PointBls12381G2) FromAffineCompressed(bytes []byte) (Point, error) {
+func (*PointBls12381G2) FromAffineCompressed(x []byte) (Point, error) {
 	var b [bls12381.WideFieldBytes]byte
-	copy(b[:], bytes)
+	copy(b[:], x)
 	value, err := new(bls12381.G2).FromCompressed(&b)
 	if err != nil {
 		return nil, err
@@ -715,9 +728,9 @@ func (p *PointBls12381G2) FromAffineCompressed(bytes []byte) (Point, error) {
 	return &PointBls12381G2{value}, nil
 }
 
-func (p *PointBls12381G2) FromAffineUncompressed(bytes []byte) (Point, error) {
+func (*PointBls12381G2) FromAffineUncompressed(x []byte) (Point, error) {
 	var b [bls12381.DoubleWideFieldBytes]byte
-	copy(b[:], bytes)
+	copy(b[:], x)
 	value, err := new(bls12381.G2).FromUncompressed(&b)
 	if err != nil {
 		return nil, err
@@ -725,11 +738,11 @@ func (p *PointBls12381G2) FromAffineUncompressed(bytes []byte) (Point, error) {
 	return &PointBls12381G2{value}, nil
 }
 
-func (p *PointBls12381G2) CurveName() string {
+func (*PointBls12381G2) CurveName() string {
 	return "BLS12381G2"
 }
 
-func (p *PointBls12381G2) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (*PointBls12381G2) SumOfProducts(points []Point, scalars []Scalar) Point {
 	nPoints := make([]*bls12381.G2, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
@@ -753,8 +766,12 @@ func (p *PointBls12381G2) SumOfProducts(points []Point, scalars []Scalar) Point 
 	return &PointBls12381G2{value}
 }
 
-func (p *PointBls12381G2) OtherGroup() PairingPoint {
-	return new(PointBls12381G1).Identity().(PairingPoint)
+func (*PointBls12381G2) OtherGroup() PairingPoint {
+	pairingPoint, ok := new(PointBls12381G1).Identity().(PairingPoint)
+	if !ok {
+		return nil
+	}
+	return pairingPoint
 }
 
 func (p *PointBls12381G2) Pairing(rhs PairingPoint) Scalar {
@@ -770,7 +787,7 @@ func (p *PointBls12381G2) Pairing(rhs PairingPoint) Scalar {
 	return &ScalarBls12381Gt{value}
 }
 
-func (p *PointBls12381G2) MultiPairing(points ...PairingPoint) Scalar {
+func (*PointBls12381G2) MultiPairing(points ...PairingPoint) Scalar {
 	return multiPairing(points...)
 }
 
@@ -784,16 +801,16 @@ func (p *PointBls12381G2) Y() *big.Int {
 	return new(big.Int).SetBytes(y[bls12381.WideFieldBytes:])
 }
 
-func (p *PointBls12381G2) Modulus() *big.Int {
+func (*PointBls12381G2) Modulus() *big.Int {
 	return bls12381modulus
 }
 
 func (p *PointBls12381G2) MarshalBinary() ([]byte, error) {
-	return pointMarshalBinary(p)
+	return PointMarshalBinary(p)
 }
 
 func (p *PointBls12381G2) UnmarshalBinary(input []byte) error {
-	pt, err := pointUnmarshalBinary(input)
+	pt, err := PointUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -806,11 +823,11 @@ func (p *PointBls12381G2) UnmarshalBinary(input []byte) error {
 }
 
 func (p *PointBls12381G2) MarshalText() ([]byte, error) {
-	return pointMarshalText(p)
+	return PointMarshalText(p)
 }
 
 func (p *PointBls12381G2) UnmarshalText(input []byte) error {
-	pt, err := pointUnmarshalText(input)
+	pt, err := PointUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -823,11 +840,11 @@ func (p *PointBls12381G2) UnmarshalText(input []byte) error {
 }
 
 func (p *PointBls12381G2) MarshalJSON() ([]byte, error) {
-	return pointMarshalJson(p)
+	return PointMarshalJSON(p)
 }
 
 func (p *PointBls12381G2) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	pt, err := PointUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -862,7 +879,7 @@ func multiPairing(points ...PairingPoint) Scalar {
 	return &ScalarBls12381Gt{value}
 }
 
-func (s *ScalarBls12381Gt) Random(reader io.Reader) Scalar {
+func (*ScalarBls12381Gt) Random(reader io.Reader) Scalar {
 	value, err := new(bls12381.Gt).Random(reader)
 	if err != nil {
 		return nil
@@ -882,11 +899,11 @@ func (s *ScalarBls12381Gt) Hash(bytes []byte) Scalar {
 	return s.Random(reader)
 }
 
-func (s *ScalarBls12381Gt) Zero() Scalar {
+func (*ScalarBls12381Gt) Zero() Scalar {
 	return &ScalarBls12381Gt{new(bls12381.Gt)}
 }
 
-func (s *ScalarBls12381Gt) One() Scalar {
+func (*ScalarBls12381Gt) One() Scalar {
 	return &ScalarBls12381Gt{new(bls12381.Gt).SetOne()}
 }
 
@@ -899,11 +916,11 @@ func (s *ScalarBls12381Gt) IsOne() bool {
 }
 
 func (s *ScalarBls12381Gt) MarshalBinary() ([]byte, error) {
-	return scalarMarshalBinary(s)
+	return ScalarMarshalBinary(s)
 }
 
 func (s *ScalarBls12381Gt) UnmarshalBinary(input []byte) error {
-	sc, err := scalarUnmarshalBinary(input)
+	sc, err := ScalarUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -916,11 +933,11 @@ func (s *ScalarBls12381Gt) UnmarshalBinary(input []byte) error {
 }
 
 func (s *ScalarBls12381Gt) MarshalText() ([]byte, error) {
-	return scalarMarshalText(s)
+	return ScalarMarshalText(s)
 }
 
 func (s *ScalarBls12381Gt) UnmarshalText(input []byte) error {
-	sc, err := scalarUnmarshalText(input)
+	sc, err := ScalarUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -933,11 +950,11 @@ func (s *ScalarBls12381Gt) UnmarshalText(input []byte) error {
 }
 
 func (s *ScalarBls12381Gt) MarshalJSON() ([]byte, error) {
-	return scalarMarshalJson(s)
+	return ScalarMarshalJSON(s)
 }
 
 func (s *ScalarBls12381Gt) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	sc, err := ScalarUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -959,7 +976,7 @@ func (s *ScalarBls12381Gt) IsEven() bool {
 	return data[0]&1 == 0
 }
 
-func (s *ScalarBls12381Gt) New(input int) Scalar {
+func (*ScalarBls12381Gt) New(input int) Scalar {
 	var data [bls12381.GtFieldBytes]byte
 	data[3] = byte(input >> 24 & 0xFF)
 	data[2] = byte(input >> 16 & 0xFF)
@@ -988,6 +1005,18 @@ func (s *ScalarBls12381Gt) Square() Scalar {
 	}
 }
 
+func (s *ScalarBls12381Gt) Pow(exp uint64) Scalar {
+	out := s.Clone()
+
+	for j := 63; j >= 0; j-- {
+		square := out.Square()
+		squareMul := square.Mul(square)
+		out = cSelect(out, square, squareMul, (exp>>j)&1)
+	}
+
+	return out
+}
+
 func (s *ScalarBls12381Gt) Double() Scalar {
 	return &ScalarBls12381Gt{
 		new(bls12381.Gt).Double(s.Value),
@@ -1004,7 +1033,7 @@ func (s *ScalarBls12381Gt) Invert() (Scalar, error) {
 	}, nil
 }
 
-func (s *ScalarBls12381Gt) Sqrt() (Scalar, error) {
+func (*ScalarBls12381Gt) Sqrt() (Scalar, error) {
 	// Not implemented
 	return nil, nil
 }
@@ -1082,7 +1111,7 @@ func (s *ScalarBls12381Gt) BigInt() *big.Int {
 	return new(big.Int).SetBytes(bytes[:])
 }
 
-func (s *ScalarBls12381Gt) Point() Point {
+func (*ScalarBls12381Gt) Point() Point {
 	return &PointBls12381G1{Value: new(bls12381.G1).Identity()}
 }
 
@@ -1091,7 +1120,7 @@ func (s *ScalarBls12381Gt) Bytes() []byte {
 	return bytes[:]
 }
 
-func (s *ScalarBls12381Gt) SetBytes(bytes []byte) (Scalar, error) {
+func (*ScalarBls12381Gt) SetBytes(bytes []byte) (Scalar, error) {
 	var b [bls12381.GtFieldBytes]byte
 	copy(b[:], bytes)
 	ss, isCanonical := new(bls12381.Gt).SetBytes(&b)
@@ -1101,9 +1130,8 @@ func (s *ScalarBls12381Gt) SetBytes(bytes []byte) (Scalar, error) {
 	return &ScalarBls12381Gt{ss}, nil
 }
 
-func (s *ScalarBls12381Gt) SetBytesWide(bytes []byte) (Scalar, error) {
-	l := len(bytes)
-	if l != bls12381.GtFieldBytes*2 {
+func (*ScalarBls12381Gt) SetBytesWide(bytes []byte) (Scalar, error) {
+	if l := len(bytes); l != bls12381.GtFieldBytes*2 {
 		return nil, fmt.Errorf("invalid byte sequence")
 	}
 	var b [bls12381.GtFieldBytes]byte

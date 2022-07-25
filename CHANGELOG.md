@@ -5,6 +5,32 @@ All notable changes to this repo will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.11.0
+- Add PS signatures
+- Add group signature interface
+- Frost One Round Signing
+- Bulletproof Batch Prove and Verification
+
+## 1.10.0
+- Changed accumulator proof interface
+- Release Bulletproofs
+- Frost DKG to handle correct rounds
+- Fix BLS signature share unmarshalling bug
+- Fix Mina secret key unmarshalling bug
+
+## v1.9.1
+
+### Fixed
+- Fixed an issue resulting from not calling gob.Register
+
+## v1.9.0
+
+### Changed
+- Refactored pallas to use new abstraction
+
+### Fixed
+- Fixed a bug in serializing dkg output of DKLs v1
+
 ## v1.8.0
 
 - BLS12-381 is now constant time.

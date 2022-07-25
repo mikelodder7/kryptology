@@ -36,14 +36,14 @@ type (
 		SetDebug(log io.Writer)
 	}
 
-	// Basic protocol interface implementation that calls the next step func in a pre-defined list
+	// Basic protocol interface implementation that calls the next step func in a pre-defined list.
 	protoStepper struct {
 		steps []func(rw io.ReadWriter) error
 		step  uint
 		log   io.Writer //nolint:structcheck // This is only used in some of the protocols.
 	}
 
-	// DKG protocols produce the following result on successful completion
+	// DKG protocols produce the following result on successful completion.
 	DkgResult struct {
 		DkgState []byte
 		Pubkey   *curves.EcPoint
@@ -74,7 +74,7 @@ type (
 )
 
 var (
-	// Static type assertions
+	// Static type assertions.
 	_ ProtocolIterator = &AliceDkg{}
 	_ ProtocolIterator = &BobDkg{}
 	_ ProtocolIterator = &AliceSign{}
@@ -85,10 +85,10 @@ var (
 	errNoSig               = fmt.Errorf("dkls.Alice does not produce a signature")
 )
 
-// Reports true if the step index exceeds the number of steps
+// Reports true if the step index exceeds the number of steps.
 func (p *protoStepper) complete() bool { return int(p.step) >= len(p.steps) }
 
-// Next runs the next step in the protocol and reports errors or increments the step index
+// Next runs the next step in the protocol and reports errors or increments the step index.
 func (p *protoStepper) Next(rw io.ReadWriter) error {
 	// Signal EOF if the protocol has completed.
 	if p.complete() {
@@ -105,7 +105,7 @@ func (p *protoStepper) Next(rw io.ReadWriter) error {
 	return nil
 }
 
-// NewAliceDkg creates a new protocol that can compute a DKG as Alice
+// NewAliceDkg creates a new protocol that can compute a DKG as Alice.
 func NewAliceDkg(params *Params) *AliceDkg {
 	a := &AliceDkg{Alice: NewAlice(params)}
 	a.steps = []func(rw io.ReadWriter) error{
@@ -123,7 +123,7 @@ func NewAliceDkg(params *Params) *AliceDkg {
 	return a
 }
 
-// NewBobDkg Creates a new protocol that can compute a DKG as Bob
+// NewBobDkg Creates a new protocol that can compute a DKG as Bob.
 func NewBobDkg(params *Params) *BobDkg {
 	b := &BobDkg{Bob: NewBob(params)}
 	b.steps = []func(rw io.ReadWriter) error{
@@ -215,7 +215,7 @@ func (b *BobDkg) Result() (interface{}, error) {
 
 // Creates a new protocol that can compute a signature as Alice.
 // Requires dkg state that was produced at the end of DKG.Result().
-func NewAliceSign(params *Params, msg []byte, dkgResult []byte) (*AliceSign, error) {
+func NewAliceSign(params *Params, msg, dkgResult []byte) (*AliceSign, error) {
 	// Reconstitute Alice
 	alice, err := DecodeAlice(params, dkgResult)
 	if err != nil {
@@ -232,7 +232,7 @@ func NewAliceSign(params *Params, msg []byte, dkgResult []byte) (*AliceSign, err
 
 // NewBobSign creates a new protocol that can compute a signature as Bob.
 // Requires dkg state that was produced at the end of DKG.Result().
-func NewBobSign(params *Params, msg []byte, dkgResult []byte) (*BobSign, error) {
+func NewBobSign(params *Params, msg, dkgResult []byte) (*BobSign, error) {
 	// Reconstitute Bob
 	bob, err := DecodeBob(params, dkgResult)
 	if err != nil {
@@ -254,7 +254,7 @@ func (a *AliceSign) SetDebug(log io.Writer) {
 
 // Result always returns errNoSig.
 // Alice does not compute a signature in the DKLS protocol; only Bob computes the signature.
-func (a *AliceSign) Result() (interface{}, error) {
+func (*AliceSign) Result() (interface{}, error) {
 	return nil, errNoSig
 }
 
@@ -264,17 +264,16 @@ func (b *BobSign) SetDebug(log io.Writer) {
 
 // If the signing protocol completed successfully, returns the signature that
 // Bob computed as a *core.EcdsaSignature.
-func (d *BobSign) Result() (interface{}, error) {
+func (b *BobSign) Result() (interface{}, error) {
 	// We can't produce a signature until the protocol completes
-	if !d.complete() {
+	if !b.complete() {
 		return nil, errProtocolNotComplete
 	}
-	if d.bob == nil {
+	if b.bob == nil {
 		// Object wasn't created with NewXSign()
 		return nil, errNotInitialized
-
 	}
-	return d.bob.Sig, nil
+	return b.bob.Sig, nil
 }
 
 // Encodes an alice object as a byte sequence after DKG has been completed.

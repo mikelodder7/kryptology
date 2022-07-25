@@ -45,7 +45,7 @@ func decodeSignRound2Input(m *protocol.Message) ([32]byte, error) {
 	return decoded, nil
 }
 
-func encodeSignRound2Output(output *sign.SignRound2Output, version uint) (*protocol.Message, error) {
+func encodeSignRound2Output(output *sign.Round2Output, version uint) (*protocol.Message, error) {
 	if version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
@@ -57,20 +57,20 @@ func encodeSignRound2Output(output *sign.SignRound2Output, version uint) (*proto
 	return newSignProtocolMessage(buf.Bytes(), "2", version), nil
 }
 
-func decodeSignRound3Input(m *protocol.Message) (*sign.SignRound2Output, error) {
+func decodeSignRound3Input(m *protocol.Message) (*sign.Round2Output, error) {
 	if m.Version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
 	buf := bytes.NewBuffer(m.Payloads[payloadKey])
 	dec := gob.NewDecoder(buf)
-	decoded := &sign.SignRound2Output{}
+	decoded := &sign.Round2Output{}
 	if err := dec.Decode(&decoded); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return decoded, nil
 }
 
-func encodeSignRound3Output(output *sign.SignRound3Output, version uint) (*protocol.Message, error) {
+func encodeSignRound3Output(output *sign.Round3Output, version uint) (*protocol.Message, error) {
 	if version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
@@ -82,13 +82,13 @@ func encodeSignRound3Output(output *sign.SignRound3Output, version uint) (*proto
 	return newSignProtocolMessage(buf.Bytes(), "3", version), nil
 }
 
-func decodeSignRound4Input(m *protocol.Message) (*sign.SignRound3Output, error) {
+func decodeSignRound4Input(m *protocol.Message) (*sign.Round3Output, error) {
 	if m.Version != protocol.Version1 {
 		return nil, errors.New("only version 1 is supported")
 	}
 	buf := bytes.NewBuffer(m.Payloads[payloadKey])
 	dec := gob.NewDecoder(buf)
-	decoded := &sign.SignRound3Output{}
+	decoded := &sign.Round3Output{}
 	if err := dec.Decode(&decoded); err != nil {
 		return nil, errors.WithStack(err)
 	}

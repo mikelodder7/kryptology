@@ -10,51 +10,67 @@ import (
 	crand "crypto/rand"
 	"fmt"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
 
 	"github.com/coinbase/kryptology/internal"
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// ProofVerEnc is a proof of verifiable encryption for a discrete log
+// ProofVerEnc is a proof of verifiable encryption for a discrete log.
 type ProofVerEnc struct {
 	challenge, schnorr1, schnorr2 curves.Scalar
 }
 
-type proofMarshal struct {
-	Challenge []byte `bare:"challenge"`
-	Schnorr1  []byte `bare:"schnorr1"`
-	Schnorr2  []byte `bare:"schnorr2"`
-	Curve     string `bare:"curve"`
-}
-
 func (pf ProofVerEnc) MarshalBinary() ([]byte, error) {
-	tv := new(proofMarshal)
-	tv.Challenge = pf.challenge.Bytes()
-	tv.Schnorr1 = pf.schnorr1.Bytes()
-	tv.Schnorr2 = pf.schnorr2.Bytes()
-	tv.Curve = pf.challenge.Point().CurveName()
-
-	return bare.Marshal(tv)
+	challenge, err := curves.ScalarMarshalBinary(pf.challenge)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	schnorr1, err := curves.ScalarMarshalBinary(pf.schnorr1)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	schnorr2, err := curves.ScalarMarshalBinary(pf.schnorr2)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	b := core.NewByteSerializer(uint(len(challenge) + len(schnorr1) + len(schnorr2)))
+	if _, err = b.WriteBytes(challenge); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(schnorr1); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(schnorr2); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return b.Bytes(), nil
 }
 
 func (pf *ProofVerEnc) UnmarshalBinary(data []byte) error {
-	tv := new(proofMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	challengeBytes, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	schnorr1Bytes, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	schnorr2Bytes, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	challenge, err := curves.ScalarUnmarshalBinary(challengeBytes)
 	if err != nil {
 		return err
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-
-	challenge, err := curve.Scalar.SetBytes(tv.Challenge)
+	schnorr1, err := curves.ScalarUnmarshalBinary(schnorr1Bytes)
 	if err != nil {
 		return err
 	}
-	schnorr1, err := curve.Scalar.SetBytes(tv.Schnorr1)
-	if err != nil {
-		return err
-	}
-	schnorr2, err := curve.Scalar.SetBytes(tv.Schnorr2)
+	schnorr2, err := curves.ScalarUnmarshalBinary(schnorr2Bytes)
 	if err != nil {
 		return err
 	}
@@ -97,7 +113,8 @@ func (ek EncryptionKey) VerifiableEncrypt(msg []byte, params *EncryptParams) (*C
 		h = ek.Value.Generator()
 	} else {
 		// If domain is provided, calculate h using domain as part of the input, then encrypt
-		genBytes := append(params.Domain, ek.Value.ToAffineUncompressed()...)
+		genBytes := params.Domain
+		genBytes = append(genBytes, ek.Value.ToAffineUncompressed()...)
 		genBytes = append(genBytes, cnonce...)
 		h = ek.Value.Hash(genBytes)
 	}
@@ -163,15 +180,16 @@ func (ek EncryptionKey) VerifyDomainEncryptProof(nonce []byte, ciphertext *Ciphe
 		return internal.ErrNilArguments
 	}
 
-	genBytes := append(nonce, ek.Value.ToAffineUncompressed()...)
-	genBytes = append(genBytes, ciphertext.Nonce[:]...)
+	genBytes := nonce
+	genBytes = append(genBytes, ek.Value.ToAffineUncompressed()...)
+	genBytes = append(genBytes, ciphertext.Nonce...)
 	h := ek.Value.Hash(genBytes)
 	return ek.verify(nonce, ciphertext, proof, h)
 }
 
 // VerifyEncryptProof a Proof of Verifiable Encryption
 // that was generated with EncryptAndProve or
-// EncryptAndProveBlinding
+// EncryptAndProveBlinding.
 func (ek EncryptionKey) VerifyEncryptProof(nonce []byte, ciphertext *CipherText, proof *ProofVerEnc) error {
 	if ciphertext == nil || proof == nil {
 		return internal.ErrNilArguments

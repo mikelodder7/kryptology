@@ -22,8 +22,10 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves/native/k256/fq"
 )
 
-var oldK256Initonce sync.Once
-var oldK256 Koblitz256
+var (
+	oldK256Initonce sync.Once
+	oldK256         Koblitz256
+)
 
 type Koblitz256 struct {
 	*elliptic.CurveParams
@@ -50,33 +52,33 @@ func (curve *Koblitz256) Params() *elliptic.CurveParams {
 	return curve.CurveParams
 }
 
-func (curve *Koblitz256) IsOnCurve(x, y *big.Int) bool {
-	_, err := secp256k1.K256PointNew().SetBigInt(x, y)
+func (*Koblitz256) IsOnCurve(x, y *big.Int) bool {
+	_, err := secp256k1.PointNew().SetBigInt(x, y)
 	return err == nil
 }
 
-func (curve *Koblitz256) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
-	p1, err := secp256k1.K256PointNew().SetBigInt(x1, y1)
+func (*Koblitz256) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
+	p1, err := secp256k1.PointNew().SetBigInt(x1, y1)
 	if err != nil {
 		return nil, nil
 	}
-	p2, err := secp256k1.K256PointNew().SetBigInt(x2, y2)
+	p2, err := secp256k1.PointNew().SetBigInt(x2, y2)
 	if err != nil {
 		return nil, nil
 	}
 	return p1.Add(p1, p2).BigInt()
 }
 
-func (curve *Koblitz256) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
-	p1, err := secp256k1.K256PointNew().SetBigInt(x1, y1)
+func (*Koblitz256) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
+	p1, err := secp256k1.PointNew().SetBigInt(x1, y1)
 	if err != nil {
 		return nil, nil
 	}
 	return p1.Double(p1).BigInt()
 }
 
-func (curve *Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
-	p1, err := secp256k1.K256PointNew().SetBigInt(Bx, By)
+func (*Koblitz256) ScalarMult(capBx, capBy *big.Int, k []byte) (*big.Int, *big.Int) {
+	p1, err := secp256k1.PointNew().SetBigInt(capBx, capBy)
 	if err != nil {
 		return nil, nil
 	}
@@ -89,14 +91,14 @@ func (curve *Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.I
 	return p1.Mul(p1, s).BigInt()
 }
 
-func (curve *Koblitz256) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
+func (*Koblitz256) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 	var bytes [32]byte
 	copy(bytes[:], internal.ReverseScalarBytes(k))
 	s, err := fq.K256FqNew().SetBytes(&bytes)
 	if err != nil {
 		return nil, nil
 	}
-	p1 := secp256k1.K256PointNew().Generator()
+	p1 := secp256k1.PointNew().Generator()
 	return p1.Mul(p1, s).BigInt()
 }
 
@@ -117,7 +119,7 @@ func (s *ScalarK256) Random(reader io.Reader) Scalar {
 	return s.Hash(seed[:])
 }
 
-func (s *ScalarK256) Hash(bytes []byte) Scalar {
+func (*ScalarK256) Hash(bytes []byte) Scalar {
 	dst := []byte("secp256k1_XMD:SHA-256_SSWU_RO_")
 	xmd := native.ExpandMsgXmd(native.EllipticPointHasherSha256(), bytes, dst, 48)
 	var t [64]byte
@@ -128,13 +130,13 @@ func (s *ScalarK256) Hash(bytes []byte) Scalar {
 	}
 }
 
-func (s *ScalarK256) Zero() Scalar {
+func (*ScalarK256) Zero() Scalar {
 	return &ScalarK256{
 		value: fq.K256FqNew().SetZero(),
 	}
 }
 
-func (s *ScalarK256) One() Scalar {
+func (*ScalarK256) One() Scalar {
 	return &ScalarK256{
 		value: fq.K256FqNew().SetOne(),
 	}
@@ -156,7 +158,7 @@ func (s *ScalarK256) IsEven() bool {
 	return s.value.Bytes()[0]&1 == 0
 }
 
-func (s *ScalarK256) New(value int) Scalar {
+func (*ScalarK256) New(value int) Scalar {
 	t := fq.K256FqNew()
 	v := big.NewInt(int64(value))
 	if value < 0 {
@@ -179,6 +181,15 @@ func (s *ScalarK256) Cmp(rhs Scalar) int {
 func (s *ScalarK256) Square() Scalar {
 	return &ScalarK256{
 		value: fq.K256FqNew().Square(s.value),
+	}
+}
+
+func (s *ScalarK256) Pow(exp uint64) Scalar {
+	expFieldLimb := [native.FieldLimbs]uint64{exp, 0, 0, 0}
+	out := ScalarK256{value: fq.K256FqNew()}
+	native.Pow(&out.value.Value, &s.value.Value, &expFieldLimb, s.value.Params, s.value.Arithmetic)
+	return &ScalarK256{
+		value: out.value,
 	}
 }
 
@@ -209,7 +220,7 @@ func (s *ScalarK256) Sqrt() (Scalar, error) {
 }
 
 func (s *ScalarK256) Cube() Scalar {
-	value := fq.K256FqNew().Mul(s.value, s.value)
+	value := fq.K256FqNew().Square(s.value)
 	value.Mul(value, s.value)
 	return &ScalarK256{
 		value,
@@ -273,7 +284,7 @@ func (s *ScalarK256) Neg() Scalar {
 	}
 }
 
-func (s *ScalarK256) SetBigInt(v *big.Int) (Scalar, error) {
+func (*ScalarK256) SetBigInt(v *big.Int) (Scalar, error) {
 	if v == nil {
 		return nil, fmt.Errorf("'v' cannot be nil")
 	}
@@ -292,7 +303,7 @@ func (s *ScalarK256) Bytes() []byte {
 	return internal.ReverseScalarBytes(t[:])
 }
 
-func (s *ScalarK256) SetBytes(bytes []byte) (Scalar, error) {
+func (*ScalarK256) SetBytes(bytes []byte) (Scalar, error) {
 	if len(bytes) != 32 {
 		return nil, fmt.Errorf("invalid length")
 	}
@@ -307,7 +318,7 @@ func (s *ScalarK256) SetBytes(bytes []byte) (Scalar, error) {
 	}, nil
 }
 
-func (s *ScalarK256) SetBytesWide(bytes []byte) (Scalar, error) {
+func (*ScalarK256) SetBytesWide(bytes []byte) (Scalar, error) {
 	if len(bytes) != 64 {
 		return nil, fmt.Errorf("invalid length")
 	}
@@ -318,7 +329,7 @@ func (s *ScalarK256) SetBytesWide(bytes []byte) (Scalar, error) {
 	}, nil
 }
 
-func (s *ScalarK256) Point() Point {
+func (*ScalarK256) Point() Point {
 	return new(PointK256).Identity()
 }
 
@@ -329,11 +340,11 @@ func (s *ScalarK256) Clone() Scalar {
 }
 
 func (s *ScalarK256) MarshalBinary() ([]byte, error) {
-	return scalarMarshalBinary(s)
+	return ScalarMarshalBinary(s)
 }
 
 func (s *ScalarK256) UnmarshalBinary(input []byte) error {
-	sc, err := scalarUnmarshalBinary(input)
+	sc, err := ScalarUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -346,11 +357,11 @@ func (s *ScalarK256) UnmarshalBinary(input []byte) error {
 }
 
 func (s *ScalarK256) MarshalText() ([]byte, error) {
-	return scalarMarshalText(s)
+	return ScalarMarshalText(s)
 }
 
 func (s *ScalarK256) UnmarshalText(input []byte) error {
-	sc, err := scalarUnmarshalText(input)
+	sc, err := ScalarUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -363,11 +374,11 @@ func (s *ScalarK256) UnmarshalText(input []byte) error {
 }
 
 func (s *ScalarK256) MarshalJSON() ([]byte, error) {
-	return scalarMarshalJson(s)
+	return ScalarMarshalJSON(s)
 }
 
 func (s *ScalarK256) UnmarshalJSON(input []byte) error {
-	sc, err := scalarUnmarshalJson(input)
+	sc, err := ScalarUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}
@@ -385,9 +396,8 @@ func (p *PointK256) Random(reader io.Reader) Point {
 	return p.Hash(seed[:])
 }
 
-func (p *PointK256) Hash(bytes []byte) Point {
-	value, err := secp256k1.K256PointNew().Hash(bytes, native.EllipticPointHasherSha256())
-
+func (*PointK256) Hash(bytes []byte) Point {
+	value, err := secp256k1.PointNew().Hash(bytes, native.EllipticPointHasherSha256())
 	// TODO: change hash to return an error also
 	if err != nil {
 		return nil
@@ -396,15 +406,15 @@ func (p *PointK256) Hash(bytes []byte) Point {
 	return &PointK256{value}
 }
 
-func (p *PointK256) Identity() Point {
+func (*PointK256) Identity() Point {
 	return &PointK256{
-		value: secp256k1.K256PointNew().Identity(),
+		value: secp256k1.PointNew().Identity(),
 	}
 }
 
-func (p *PointK256) Generator() Point {
+func (*PointK256) Generator() Point {
 	return &PointK256{
-		value: secp256k1.K256PointNew().Generator(),
+		value: secp256k1.PointNew().Generator(),
 	}
 }
 
@@ -421,16 +431,16 @@ func (p *PointK256) IsOnCurve() bool {
 }
 
 func (p *PointK256) Double() Point {
-	value := secp256k1.K256PointNew().Double(p.value)
+	value := secp256k1.PointNew().Double(p.value)
 	return &PointK256{value}
 }
 
-func (p *PointK256) Scalar() Scalar {
+func (*PointK256) Scalar() Scalar {
 	return new(ScalarK256).Zero()
 }
 
 func (p *PointK256) Neg() Point {
-	value := secp256k1.K256PointNew().Neg(p.value)
+	value := secp256k1.PointNew().Neg(p.value)
 	return &PointK256{value}
 }
 
@@ -440,7 +450,7 @@ func (p *PointK256) Add(rhs Point) Point {
 	}
 	r, ok := rhs.(*PointK256)
 	if ok {
-		value := secp256k1.K256PointNew().Add(p.value, r.value)
+		value := secp256k1.PointNew().Add(p.value, r.value)
 		return &PointK256{value}
 	} else {
 		return nil
@@ -453,7 +463,7 @@ func (p *PointK256) Sub(rhs Point) Point {
 	}
 	r, ok := rhs.(*PointK256)
 	if ok {
-		value := secp256k1.K256PointNew().Sub(p.value, r.value)
+		value := secp256k1.PointNew().Sub(p.value, r.value)
 		return &PointK256{value}
 	} else {
 		return nil
@@ -466,7 +476,7 @@ func (p *PointK256) Mul(rhs Scalar) Point {
 	}
 	r, ok := rhs.(*ScalarK256)
 	if ok {
-		value := secp256k1.K256PointNew().Mul(p.value, r.value)
+		value := secp256k1.PointNew().Mul(p.value, r.value)
 		return &PointK256{value}
 	} else {
 		return nil
@@ -482,8 +492,8 @@ func (p *PointK256) Equal(rhs Point) bool {
 	}
 }
 
-func (p *PointK256) Set(x, y *big.Int) (Point, error) {
-	value, err := secp256k1.K256PointNew().SetBigInt(x, y)
+func (*PointK256) Set(x, y *big.Int) (Point, error) {
+	value, err := secp256k1.PointNew().SetBigInt(x, y)
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +504,7 @@ func (p *PointK256) ToAffineCompressed() []byte {
 	var x [33]byte
 	x[0] = byte(2)
 
-	t := secp256k1.K256PointNew().ToAffine(p.value)
+	t := secp256k1.PointNew().ToAffine(p.value)
 
 	x[0] |= t.Y.Bytes()[0] & 1
 
@@ -506,7 +516,7 @@ func (p *PointK256) ToAffineCompressed() []byte {
 func (p *PointK256) ToAffineUncompressed() []byte {
 	var out [65]byte
 	out[0] = byte(4)
-	t := secp256k1.K256PointNew().ToAffine(p.value)
+	t := secp256k1.PointNew().ToAffine(p.value)
 	arr := t.X.Bytes()
 	copy(out[1:33], internal.ReverseScalarBytes(arr[:]))
 	arr = t.Y.Bytes()
@@ -531,9 +541,9 @@ func (p *PointK256) FromAffineCompressed(bytes []byte) (Point, error) {
 		return nil, err
 	}
 
-	value := secp256k1.K256PointNew().Identity()
+	value := secp256k1.PointNew().Identity()
 	rhs := fp.K256FpNew()
-	p.value.Arithmetic.RhsEq(rhs, x)
+	p.value.Arithmetic.RhsEquation(rhs, x)
 	// test that rhs is quadratic residue
 	// if not, then this Point is at infinity
 	y, wasQr := fp.K256FpNew().Sqrt(rhs)
@@ -550,7 +560,7 @@ func (p *PointK256) FromAffineCompressed(bytes []byte) (Point, error) {
 	return &PointK256{value}, nil
 }
 
-func (p *PointK256) FromAffineUncompressed(bytes []byte) (Point, error) {
+func (*PointK256) FromAffineUncompressed(bytes []byte) (Point, error) {
 	var arr [native.FieldBytes]byte
 	if len(bytes) != 65 {
 		return nil, fmt.Errorf("invalid byte sequence")
@@ -569,7 +579,7 @@ func (p *PointK256) FromAffineUncompressed(bytes []byte) (Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	value := secp256k1.K256PointNew()
+	value := secp256k1.PointNew()
 	value.X = x
 	value.Y = y
 	value.Z.SetOne()
@@ -580,7 +590,7 @@ func (p *PointK256) CurveName() string {
 	return p.value.Params.Name
 }
 
-func (p *PointK256) SumOfProducts(points []Point, scalars []Scalar) Point {
+func (*PointK256) SumOfProducts(points []Point, scalars []Scalar) Point {
 	nPoints := make([]*native.EllipticPoint, len(points))
 	nScalars := make([]*native.Field, len(scalars))
 	for i, pt := range points {
@@ -597,7 +607,7 @@ func (p *PointK256) SumOfProducts(points []Point, scalars []Scalar) Point {
 		}
 		nScalars[i] = s.value
 	}
-	value := secp256k1.K256PointNew()
+	value := secp256k1.PointNew()
 	_, err := value.SumOfProducts(nPoints, nScalars)
 	if err != nil {
 		return nil
@@ -613,16 +623,16 @@ func (p *PointK256) Y() *native.Field {
 	return p.value.GetY()
 }
 
-func (p *PointK256) Params() *elliptic.CurveParams {
+func (*PointK256) Params() *elliptic.CurveParams {
 	return K256Curve().Params()
 }
 
 func (p *PointK256) MarshalBinary() ([]byte, error) {
-	return pointMarshalBinary(p)
+	return PointMarshalBinary(p)
 }
 
 func (p *PointK256) UnmarshalBinary(input []byte) error {
-	pt, err := pointUnmarshalBinary(input)
+	pt, err := PointUnmarshalBinary(input)
 	if err != nil {
 		return err
 	}
@@ -635,11 +645,11 @@ func (p *PointK256) UnmarshalBinary(input []byte) error {
 }
 
 func (p *PointK256) MarshalText() ([]byte, error) {
-	return pointMarshalText(p)
+	return PointMarshalText(p)
 }
 
 func (p *PointK256) UnmarshalText(input []byte) error {
-	pt, err := pointUnmarshalText(input)
+	pt, err := PointUnmarshalText(input)
 	if err != nil {
 		return err
 	}
@@ -652,11 +662,11 @@ func (p *PointK256) UnmarshalText(input []byte) error {
 }
 
 func (p *PointK256) MarshalJSON() ([]byte, error) {
-	return pointMarshalJson(p)
+	return PointMarshalJSON(p)
 }
 
 func (p *PointK256) UnmarshalJSON(input []byte) error {
-	pt, err := pointUnmarshalJson(input)
+	pt, err := PointUnmarshalJSON(input)
 	if err != nil {
 		return err
 	}

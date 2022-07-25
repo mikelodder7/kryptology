@@ -16,8 +16,10 @@ import (
 	bls "github.com/coinbase/kryptology/pkg/signatures/bls/bls_sig"
 )
 
-const LIMIT = 4
-const THRESHOLD = 2
+const (
+	LIMIT     = 4
+	THRESHOLD = 2
+)
 
 func main() {
 	var threshold int

@@ -14,7 +14,7 @@ import (
 )
 
 // inc computes the incremented commitment in the extension ring:
-// (N+1)^\alpha * \beta^N  mod N^2
+// (N+1)^\alpha * \beta^N  mod N^2.
 func inc(alpha, beta, n *big.Int) (*big.Int, error) {
 	if core.AnyNil(n, alpha, beta) {
 		return nil, internal.ErrNilArguments
@@ -29,7 +29,7 @@ func inc(alpha, beta, n *big.Int) (*big.Int, error) {
 	return pedersen(np1, beta, alpha, n, nn) // (N+1)^\alpha * \beta^N  mod N^2
 }
 
-// Computes Pedersen's commitment: g^\alpha * h^beta (mod N~)
+// Computes Pedersen's commitment: g^\alpha * h^beta (mod N~).
 func pedersen(g, h, alpha, beta, n *big.Int) (*big.Int, error) {
 	// Don't accept nil inputs
 	if core.AnyNil(g, h, alpha, beta, n) {
@@ -49,7 +49,7 @@ func pedersen(g, h, alpha, beta, n *big.Int) (*big.Int, error) {
 	return core.Mul(gAlpha, hBeta, n)
 }
 
-// Computes Claus Schnorr's proof: xy+z \in Z
+// Computes Claus Schnorr's proof: xy+z \in Z.
 func schnorr(x, y, z *big.Int) (*big.Int, error) {
 	// Don't accept nil inputs
 	if core.AnyNil(x, y, z) {

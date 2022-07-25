@@ -44,8 +44,8 @@ func BenchmarkSign(b *testing.B) {
 	b.ReportMetric(float64(bytes)/float64(b.N), "bytes/op")
 }
 
-// Helper function that runs signing
-func testSign(alice *Alice, bob *Bob, alicePipe *pipeWrapper, bobPipe *pipeWrapper) error {
+// Helper function that runs signing.
+func testSign(alice *Alice, bob *Bob, alicePipe, bobPipe *PipeWrapper) error {
 	// ^^^ a bit clunky that we have to pass these in, but i don't see an easier way as far as benchmarking the bytes
 	errors := make(chan error, 2) // warning: if one party errors, the other will sit there forever. add timeouts.
 

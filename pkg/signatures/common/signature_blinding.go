@@ -10,5 +10,5 @@ import (
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-// SignatureBlinding is a value used for computing blind signatures
+// SignatureBlinding is a value used for computing blind signatures.
 type SignatureBlinding = curves.PairingScalar

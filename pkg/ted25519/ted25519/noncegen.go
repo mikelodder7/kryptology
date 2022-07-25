@@ -21,19 +21,19 @@ type NonceShare struct {
 	*KeyShare
 }
 
-// NewNonceShare is a NonceShare construction
+// NewNonceShare is a NonceShare construction.
 func NewNonceShare(identifier byte, secret []byte) *NonceShare {
 	return &NonceShare{NewKeyShare(identifier, secret)}
 }
 
-// NonceShareFromBytes unmashals a NonceShare from its bytes representation
+// NonceShareFromBytes unmashals a NonceShare from its bytes representation.
 func NonceShareFromBytes(bytes []byte) *NonceShare {
 	return &NonceShare{KeyShareFromBytes(bytes)}
 }
 
 func generateSharableNonce(s *KeyShare, p PublicKey, m Message) (PublicKey, []byte, error) {
 	// Create an HKDF reader that produces random bytes that we will use to create a nonce
-	hkdf, err := generateRandomHkdf(s, p, m)
+	hkdfReader, err := generateRandomHKDF(s, p, m)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -45,7 +45,7 @@ func generateSharableNonce(s *KeyShare, p PublicKey, m Message) (PublicKey, []by
 	// split it and aggregate.
 	//
 	// WARN: This operation is not constant time and we are dealing with a secret value
-	nonce, err := curves.NewField(curves.Ed25519Order()).RandomElement(hkdf)
+	nonce, err := curves.NewField(curves.Ed25519Order()).RandomElement(hkdfReader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -100,8 +100,8 @@ func (n NonceShare) Add(other *NonceShare) *NonceShare {
 	}
 }
 
-// generateRandomHkdf returns an HMAC-based extract-and-expand Key Derivation Function (see RFC 5869).
-func generateRandomHkdf(s *KeyShare, p PublicKey, m Message) (io.Reader, error) {
+// generateRandomHKDF returns an HMAC-based extract-and-expand Key Derivation Function (see RFC 5869).
+func generateRandomHKDF(s *KeyShare, p PublicKey, m Message) (io.Reader, error) {
 	// We _must_ introduce randomness to the HKDF to make the output non-deterministic because deterministic nonces open
 	// up threshold schemes to potential nonce-reuse attacks. We continue to use the HKDF that takes in context about
 	// what is going to be signed as it adds some protection against bad local randomness.

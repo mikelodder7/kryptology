@@ -16,7 +16,7 @@ import (
 	"hash"
 )
 
-// Size of random values and hash outputs are determined by our hash function
+// Size of random values and hash outputs are determined by our hash function.
 const Size = sha256.Size
 
 type (
@@ -39,12 +39,12 @@ type (
 	}
 )
 
-// MarshalJSON encodes Witness in JSON
+// MarshalJSON encodes Witness in JSON.
 func (w Witness) MarshalJSON() ([]byte, error) {
 	return json.Marshal(witnessJSON{w.Msg, w.r})
 }
 
-// UnmarshalJSON decodes JSON into a Witness struct
+// UnmarshalJSON decodes JSON into a Witness struct.
 func (w *Witness) UnmarshalJSON(data []byte) error {
 	witness := &witnessJSON{}
 	err := json.Unmarshal(data, witness)
@@ -97,8 +97,8 @@ func Open(c Commitment, d Witness) (bool, error) {
 }
 
 // ComputeHMAC computes HMAC(hash_fn, msg, key)
-// Takes in a hash function to use for HMAC
-func ComputeHMAC(f func() hash.Hash, msg []byte, k []byte) ([]byte, error) {
+// Takes in a hash function to use for HMAC.
+func ComputeHMAC(f func() hash.Hash, msg, k []byte) ([]byte, error) {
 	if f == nil {
 		return nil, fmt.Errorf("hash function cannot be nil")
 	}

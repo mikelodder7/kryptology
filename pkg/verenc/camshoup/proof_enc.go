@@ -10,47 +10,57 @@ import (
 	"fmt"
 	"math/big"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
 
 	"github.com/coinbase/kryptology/internal"
-	mod "github.com/coinbase/kryptology/pkg/core"
+	"github.com/coinbase/kryptology/pkg/core"
 )
 
-// ProofVerEnc is a proof of verifiable encryption for a discrete log
+// ProofVerEnc is a proof of verifiable encryption for a discrete log.
 type ProofVerEnc struct {
 	challenge, r *big.Int
 	m            []*big.Int
 }
 
-type proofMarshal struct {
-	M         [][]byte `bare:"m"`
-	R         []byte   `bare:"r"`
-	Challenge []byte   `bare:"challenge"`
-}
-
 func (pf ProofVerEnc) MarshalBinary() ([]byte, error) {
-	tv := new(proofMarshal)
-	tv.R = pf.r.Bytes()
-	tv.Challenge = pf.challenge.Bytes()
-	tv.M = make([][]byte, len(pf.m))
+	challenge := pf.challenge.Bytes()
+	r := pf.r.Bytes()
+	mA := make([][]byte, len(pf.m))
 	for i, m := range pf.m {
-		tv.M[i] = m.Bytes()
+		mA[i] = m.Bytes()
 	}
-
-	return bare.Marshal(tv)
+	b := core.NewByteSerializer(uint(len(challenge) + len(r) + len(mA)*len(r)))
+	if _, err := b.WriteBytes(r); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err := b.WriteBytes(challenge); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err := b.WriteByteArray(mA); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return b.Bytes(), nil
 }
 
 func (pf *ProofVerEnc) UnmarshalBinary(data []byte) error {
-	tv := new(proofMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	r, err := b.ReadBytes()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	pf.r = new(big.Int).SetBytes(tv.R)
-	pf.challenge = new(big.Int).SetBytes(tv.Challenge)
-	pf.m = make([]*big.Int, len(tv.M))
-	for i, m := range tv.M {
-		pf.m[i] = new(big.Int).SetBytes(m)
+	challenge, err := b.ReadBytes()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	m, err := b.ReadByteArray()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	pf.r = new(big.Int).SetBytes(r)
+	pf.challenge = new(big.Int).SetBytes(challenge)
+	pf.m = make([]*big.Int, len(m))
+	for i, d := range m {
+		pf.m[i] = new(big.Int).SetBytes(d)
 	}
 	return nil
 }
@@ -81,7 +91,7 @@ func (ek EncryptionKey) EncryptAndProve(nonce []byte, msgs []*big.Int) (*CipherT
 // Not using t = g^m*h^s as the idemix protocol does not use it.
 // Guess is that since the knowledge of m is proved in the credential attribute proving protocol.
 // Use this function if the proof will be part of more proofs.
-func (ek EncryptionKey) EncryptAndProveBlindings(nonce []byte, msgs []*big.Int, blindings []*big.Int) (*CipherText, *ProofVerEnc, error) {
+func (ek EncryptionKey) EncryptAndProveBlindings(nonce []byte, msgs, blindings []*big.Int) (*CipherText, *ProofVerEnc, error) {
 	if len(msgs) != len(blindings) {
 		return nil, nil, fmt.Errorf("number of messages %d != number of blindings %d", len(msgs), len(blindings))
 	}
@@ -95,7 +105,7 @@ func (ek EncryptionKey) EncryptAndProveBlindings(nonce []byte, msgs []*big.Int, 
 		if msgs[i] == nil {
 			return nil, nil, internal.ErrNilArguments
 		}
-		if b.Cmp(mod.Zero) == 0 {
+		if b.Cmp(core.Zero) == 0 {
 			return nil, nil, internal.ErrZeroValue
 		}
 	}
@@ -117,10 +127,7 @@ func (ek EncryptionKey) EncryptAndProveBlindings(nonce []byte, msgs []*big.Int, 
 	if err != nil {
 		return nil, nil, err
 	}
-	ciphertextTValues, err := ek.ciphertextTestValues(rBlinding, hs, blindings)
-	if err != nil {
-		return nil, nil, err
-	}
+	ciphertextTValues := ek.ciphertextTestValues(rBlinding, hs, blindings)
 
 	challenge, err := ek.fiatShamir(nonce, ciphertext, ciphertextTValues)
 	if err != nil {
@@ -141,8 +148,8 @@ func (ek EncryptionKey) EncryptAndProveBlindings(nonce []byte, msgs []*big.Int, 
 	}, nil
 }
 
-// ciphertextTestValues computes commitments for the ciphertext when proving encryption is correct
-func (ek EncryptionKey) ciphertextTestValues(r, hash *big.Int, msgs []*big.Int) (*CipherText, error) {
+// ciphertextTestValues computes commitments for the ciphertext when proving encryption is correct.
+func (ek EncryptionKey) ciphertextTestValues(r, hash *big.Int, msgs []*big.Int) *CipherText {
 	twoR := new(big.Int).Lsh(r, 1)
 	twoMsgs := make([]*big.Int, len(msgs))
 	for i, m := range msgs {
@@ -151,11 +158,11 @@ func (ek EncryptionKey) ciphertextTestValues(r, hash *big.Int, msgs []*big.Int) 
 	u := ek.computeU(twoR)
 	e := ek.computeE(twoMsgs, twoR)
 	v := ek.computeV(twoR, hash, false)
-	return &CipherText{u, v, e}, nil
+	return &CipherText{u, v, e}
 }
 
-// fiatShamir computes h(n, g, Y2, Y3, Y1, C.U, C.V, C.E, CT.U, CT.V, CT.E)
-func (ek EncryptionKey) fiatShamir(nonce []byte, ciphertext *CipherText, ciphertextTValues *CipherText) (*big.Int, error) {
+// fiatShamir computes h(n, g, Y2, Y3, Y1, C.U, C.V, C.E, CT.U, CT.V, CT.E).
+func (ek EncryptionKey) fiatShamir(nonce []byte, ciphertext, ciphertextTValues *CipherText) (*big.Int, error) {
 	hValues := make([][]byte, len(ciphertext.e)+len(ciphertextTValues.e)+len(ek.y1)+9)
 	hValues[0] = ek.group.n.Bytes()
 	hValues[1] = ek.group.g.Bytes()
@@ -191,7 +198,7 @@ func (ek EncryptionKey) fiatShamir(nonce []byte, ciphertext *CipherText, ciphert
 	return new(big.Int).SetBytes(h), nil
 }
 
-// schnorr computes tilde - challenge * value mod n^2
+// schnorr computes tilde - challenge * value mod n^2.
 func (ek EncryptionKey) schnorr(tilde, challenge, value *big.Int) *big.Int {
 	r := ek.group.Mul(challenge, value)
 	t := new(big.Int).Sub(tilde, r)

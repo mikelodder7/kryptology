@@ -38,12 +38,14 @@ func zero() *big.Int {
 }
 
 func assertElementZero(t *testing.T, e *Element) {
+	t.Helper()
 	require.Equal(t, zero().Bytes(), e.Bytes())
 }
 
 type binaryOperation func(*Element) *Element
 
 func assertUnequalFieldsPanic(t *testing.T, b binaryOperation) {
+	t.Helper()
 	altField := NewField(big.NewInt(23))
 	altElement := altField.NewElement(one)
 
@@ -259,7 +261,7 @@ func TestCloneElement(t *testing.T) {
 	require.NotEqual(t, clone, element)
 }
 
-// Tests un/marshaling Element
+// Tests un/marshaling Element.
 func TestElementMarshalJsonRoundTrip(t *testing.T) {
 	reallyBigInt1, ok := new(big.Int).SetString("12365234878725472538962348629568356835892346729834725643857832", 10)
 	require.True(t, ok)

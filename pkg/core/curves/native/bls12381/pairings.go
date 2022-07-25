@@ -27,7 +27,7 @@ func (c *coefficients) CMove(arg1, arg2 *coefficients, choice int) *coefficients
 	return c
 }
 
-// AddPair adds a pair of points to be paired
+// AddPair adds a pair of points to be paired.
 func (e *Engine) AddPair(g1 *G1, g2 *G2) *Engine {
 	var p pair
 	p.g1.ToAffine(g1)
@@ -38,14 +38,14 @@ func (e *Engine) AddPair(g1 *G1, g2 *G2) *Engine {
 	return e
 }
 
-// AddPairInvG1 adds a pair of points to be paired. G1 point is negated
+// AddPairInvG1 adds a pair of points to be paired. G1 point is negated.
 func (e *Engine) AddPairInvG1(g1 *G1, g2 *G2) *Engine {
 	var p G1
 	p.Neg(g1)
 	return e.AddPair(&p, g2)
 }
 
-// AddPairInvG2 adds a pair of points to be paired. G2 point is negated
+// AddPairInvG2 adds a pair of points to be paired. G2 point is negated.
 func (e *Engine) AddPairInvG2(g1 *G1, g2 *G2) *Engine {
 	var p G2
 	p.Neg(g2)
@@ -90,7 +90,7 @@ func (e *Engine) millerLoop(f *fp12, coeffs []g2Prepared) {
 		for j, terms := range coeffs {
 			identity := e.pairs[j].g1.IsIdentity() | terms.identity
 			newF.Set(f)
-			ell(newF, terms.coefficients[cIdx], &e.pairs[j].g1)
+			ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 			f.CMove(newF, f, identity)
 		}
 		cIdx++
@@ -100,7 +100,7 @@ func (e *Engine) millerLoop(f *fp12, coeffs []g2Prepared) {
 			for j, terms := range coeffs {
 				identity := e.pairs[j].g1.IsIdentity() | terms.identity
 				newF.Set(f)
-				ell(newF, terms.coefficients[cIdx], &e.pairs[j].g1)
+				ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 				f.CMove(newF, f, identity)
 			}
 			cIdx++
@@ -110,7 +110,7 @@ func (e *Engine) millerLoop(f *fp12, coeffs []g2Prepared) {
 	for j, terms := range coeffs {
 		identity := e.pairs[j].g1.IsIdentity() | terms.identity
 		newF.Set(f)
-		ell(newF, terms.coefficients[cIdx], &e.pairs[j].g1)
+		ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 		f.CMove(newF, f, identity)
 	}
 	f.Conjugate(f)
@@ -118,10 +118,10 @@ func (e *Engine) millerLoop(f *fp12, coeffs []g2Prepared) {
 
 func (e *Engine) computeCoeffs() []g2Prepared {
 	coeffs := make([]g2Prepared, len(e.pairs))
-	for i, p := range e.pairs {
-		identity := p.g2.IsIdentity()
+	for i := 0; i < len(e.pairs); i++ {
+		identity := e.pairs[i].g2.IsIdentity()
 		q := new(G2).Generator()
-		q.CMove(&p.g2, q, identity)
+		q.CMove(&e.pairs[i].g2, q, identity)
 		c := new(G2).Set(q)
 		cfs := make([]coefficients, coefficientsG2)
 		found := 0
@@ -149,7 +149,7 @@ func (e *Engine) computeCoeffs() []g2Prepared {
 	return coeffs
 }
 
-func ell(f *fp12, coeffs coefficients, p *G1) {
+func ell(f *fp12, coeffs *coefficients, p *G1) {
 	var x, y fp2
 	x.A.Mul(&coeffs.a.A, &p.y)
 	x.B.Mul(&coeffs.a.B, &p.y)

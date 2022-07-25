@@ -12,31 +12,26 @@ import (
 	"errors"
 	"fmt"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/gtank/merlin"
 
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
-type proofParamsMarshal struct {
-	X     []byte `bare:"x"`
-	Y     []byte `bare:"y"`
-	Z     []byte `bare:"z"`
-	Curve string `bare:"curve"`
-}
-
-// ProofParams contains four distinct public generators of G1 - X, Y, Z
+// ProofParams contains four distinct public generators of G1 - X, Y, Z.
 type ProofParams struct {
 	x, y, z curves.Point
 }
 
-// New samples X, Y, Z, K
+// New samples X, Y, Z, K.
 func (p *ProofParams) New(curve *curves.PairingCurve, pk *PublicKey, entropy []byte) (*ProofParams, error) {
 	pkBytes, err := pk.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 	prefix := bytes.Repeat([]byte{0xFF}, 32)
-	data := append(prefix, entropy...)
+	data := prefix
+	data = append(data, entropy...)
 	data = append(data, pkBytes...)
 	p.z = curve.Scalar.Point().Hash(data)
 
@@ -49,43 +44,63 @@ func (p *ProofParams) New(curve *curves.PairingCurve, pk *PublicKey, entropy []b
 	return p, nil
 }
 
-// MarshalBinary converts ProofParams to bytes
+// MarshalBinary converts ProofParams to bytes.
 func (p *ProofParams) MarshalBinary() ([]byte, error) {
 	if p.x == nil || p.y == nil || p.z == nil {
 		return nil, fmt.Errorf("some value x, y, or z is nil")
 	}
-	tv := &proofParamsMarshal{
-		X:     p.x.ToAffineCompressed(),
-		Y:     p.y.ToAffineCompressed(),
-		Z:     p.z.ToAffineCompressed(),
-		Curve: p.x.CurveName(),
+	x, err := curves.PointMarshalBinary(p.x)
+	if err != nil {
+		return nil, err
 	}
-	return bare.Marshal(tv)
+	y, err := curves.PointMarshalBinary(p.y)
+	if err != nil {
+		return nil, err
+	}
+	z, err := curves.PointMarshalBinary(p.z)
+	if err != nil {
+		return nil, err
+	}
+	b := core.NewByteSerializer(uint(len(x) + len(y) + len(z)))
+	if _, err = b.WriteBytes(x); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(y); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(z); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
-// UnmarshalBinary converts bytes to ProofParams
+// UnmarshalBinary converts bytes to ProofParams.
 func (p *ProofParams) UnmarshalBinary(data []byte) error {
 	if data == nil {
 		return fmt.Errorf("expected non-zero byte sequence")
 	}
-	tv := new(proofParamsMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	xBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
-	}
-	x, err := curve.NewIdentityPoint().FromAffineCompressed(tv.X)
+	yBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	y, err := curve.NewIdentityPoint().FromAffineCompressed(tv.Y)
+	zBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	z, err := curve.NewIdentityPoint().FromAffineCompressed(tv.Z)
+	x, err := curves.PointUnmarshalBinary(xBytes)
+	if err != nil {
+		return err
+	}
+	y, err := curves.PointUnmarshalBinary(yBytes)
+	if err != nil {
+		return err
+	}
+	z, err := curves.PointUnmarshalBinary(zBytes)
 	if err != nil {
 		return err
 	}
@@ -122,12 +137,13 @@ type MembershipProofCommitting struct {
 	zG1            curves.Point
 }
 
-// New initiates values of MembershipProofCommitting
-func (mpc *MembershipProofCommitting) New(
+// New initiates values of MembershipProofCommitting.
+func (*MembershipProofCommitting) New(
 	witness *MembershipWitness,
 	acc *Accumulator,
 	pp *ProofParams,
 	pk *PublicKey,
+	blindingFactor curves.Scalar,
 ) (*MembershipProofCommitting, error) {
 	// Randomly select σ, ρ
 	sigma := witness.y.Random(crand.Reader)
@@ -157,7 +173,12 @@ func (mpc *MembershipProofCommitting) New(
 	deltaRho = deltaRho.Mul(rho)
 
 	// Randomly pick r_σ,r_ρ,r_δσ,r_δρ
-	rY := witness.y.Random(crand.Reader)
+	var rY curves.Scalar
+	if blindingFactor == nil {
+		rY = witness.y.Random(crand.Reader)
+	} else {
+		rY = blindingFactor.Clone()
+	}
 	rSigma := witness.y.Random(crand.Reader)
 	rRho := witness.y.Random(crand.Reader)
 	rDeltaSigma := witness.y.Random(crand.Reader)
@@ -253,19 +274,21 @@ func (mpc *MembershipProofCommitting) New(
 	}, nil
 }
 
-// GetChallenge returns bytes that need to be hashed for generating challenge.
-// V || Ec || T_sigma || T_rho || R_E || R_sigma || R_rho || R_delta_sigma || R_delta_rho
-func (mpc MembershipProofCommitting) GetChallengeBytes() []byte {
-	res := mpc.accumulator.ToAffineCompressed()
-	res = append(res, mpc.eC.ToAffineCompressed()...)
-	res = append(res, mpc.tSigma.ToAffineCompressed()...)
-	res = append(res, mpc.tRho.ToAffineCompressed()...)
-	res = append(res, mpc.capRE.Bytes()...)
-	res = append(res, mpc.capRSigma.ToAffineCompressed()...)
-	res = append(res, mpc.capRRho.ToAffineCompressed()...)
-	res = append(res, mpc.capRDeltaSigma.ToAffineCompressed()...)
-	res = append(res, mpc.capRDeltaRho.ToAffineCompressed()...)
-	return res
+// GetChallengeBytes returns bytes that need to be hashed for generating challenge.
+// V || Ec || T_sigma || T_rho || R_E || R_sigma || R_rho || R_delta_sigma || R_delta_rho.
+func (mpc *MembershipProofCommitting) WriteChallengeContributionToTranscript(transcript *merlin.Transcript) {
+	writeChallengeContributionToTranscript(&[9][]byte{
+		mpc.accumulator.ToAffineCompressed(),
+		mpc.eC.ToAffineCompressed(),
+		mpc.tSigma.ToAffineCompressed(),
+		mpc.tRho.ToAffineCompressed(),
+		mpc.capRE.Bytes(),
+		mpc.capRSigma.ToAffineCompressed(),
+		mpc.capRRho.ToAffineCompressed(),
+		mpc.capRDeltaSigma.ToAffineCompressed(),
+		mpc.capRDeltaRho.ToAffineCompressed(),
+	}, transcript,
+	)
 }
 
 // GenProof computes the s values for Fiat-Shamir and return the actual
@@ -301,19 +324,7 @@ func schnorr(r, v, challenge curves.Scalar) curves.Scalar {
 	return res
 }
 
-type membershipProofMarshal struct {
-	EC          []byte `bare:"e_c"`
-	TSigma      []byte `bare:"t_sigma"`
-	TRho        []byte `bare:"t_rho"`
-	SSigma      []byte `bare:"s_sigma"`
-	SRho        []byte `bare:"s_rho"`
-	SDeltaSigma []byte `bare:"s_delta_sigma"`
-	SDeltaRho   []byte `bare:"s_delta_rho"`
-	SY          []byte `bare:"s_y"`
-	Curve       string `bare:"curve"`
-}
-
-// MembershipProof contains values in the proof to be verified
+// MembershipProof contains values in the proof to be verified.
 type MembershipProof struct {
 	eC          curves.Point
 	tSigma      curves.Point
@@ -414,65 +425,138 @@ func (mp *MembershipProof) Finalize(acc *Accumulator, pp *ProofParams, pk *Publi
 	}, nil
 }
 
-// MarshalBinary converts MembershipProof to bytes
-func (mp MembershipProof) MarshalBinary() ([]byte, error) {
-	tv := &membershipProofMarshal{
-		EC:          mp.eC.ToAffineCompressed(),
-		TSigma:      mp.tSigma.ToAffineCompressed(),
-		TRho:        mp.tRho.ToAffineCompressed(),
-		SSigma:      mp.sSigma.Bytes(),
-		SRho:        mp.sRho.Bytes(),
-		SDeltaSigma: mp.sDeltaSigma.Bytes(),
-		SDeltaRho:   mp.sDeltaRho.Bytes(),
-		SY:          mp.sY.Bytes(),
-		Curve:       mp.eC.CurveName(),
+// MarshalBinary converts MembershipProof to bytes.
+func (mp *MembershipProof) MarshalBinary() ([]byte, error) {
+	ec, err := curves.PointMarshalBinary(mp.eC)
+	if err != nil {
+		return nil, err
 	}
-	return bare.Marshal(tv)
+	tsigma, err := curves.PointMarshalBinary(mp.tSigma)
+	if err != nil {
+		return nil, err
+	}
+	trho, err := curves.PointMarshalBinary(mp.tRho)
+	if err != nil {
+		return nil, err
+	}
+	sSigma, err := curves.ScalarMarshalBinary(mp.sSigma)
+	if err != nil {
+		return nil, err
+	}
+	sRho, err := curves.ScalarMarshalBinary(mp.sRho)
+	if err != nil {
+		return nil, err
+	}
+	sDeltaSigma, err := curves.ScalarMarshalBinary(mp.sDeltaSigma)
+	if err != nil {
+		return nil, err
+	}
+	sDeltaRho, err := curves.ScalarMarshalBinary(mp.sDeltaRho)
+	if err != nil {
+		return nil, err
+	}
+	sY, err := curves.ScalarMarshalBinary(mp.sY)
+	if err != nil {
+		return nil, err
+	}
+	b := core.NewByteSerializer(uint(
+		len(ec) + len(tsigma) + len(trho) +
+			len(sSigma) + len(sRho) + len(sDeltaSigma) + len(sDeltaRho),
+	))
+	if _, err = b.WriteBytes(ec); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(tsigma); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(trho); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(sSigma); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(sRho); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(sDeltaSigma); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(sDeltaRho); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(sY); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
-// UnmarshalBinary converts bytes to MembershipProof
+// UnmarshalBinary converts bytes to MembershipProof.
 func (mp *MembershipProof) UnmarshalBinary(data []byte) error {
 	if data == nil {
 		return fmt.Errorf("expected non-zero byte sequence")
 	}
-	tv := new(membershipProofMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	ecBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
-	}
-	eC, err := curve.NewIdentityPoint().FromAffineCompressed(tv.EC)
+	tSigmaBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	tSigma, err := curve.NewIdentityPoint().FromAffineCompressed(tv.TSigma)
+	tRhoBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	tRho, err := curve.NewIdentityPoint().FromAffineCompressed(tv.TRho)
+	sSigmaBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	sSigma, err := curve.NewScalar().SetBytes(tv.SSigma)
+	sRhoBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	sRho, err := curve.NewScalar().SetBytes(tv.SRho)
+	sDeltaSigmaBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	sDeltaSigma, err := curve.NewScalar().SetBytes(tv.SDeltaSigma)
+	sDeltaRhoBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	sDeltaRho, err := curve.NewScalar().SetBytes(tv.SDeltaRho)
+	sYBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	sY, err := curve.NewScalar().SetBytes(tv.SY)
+	eC, err := curves.PointUnmarshalBinary(ecBytes)
+	if err != nil {
+		return err
+	}
+	tSigma, err := curves.PointUnmarshalBinary(tSigmaBytes)
+	if err != nil {
+		return err
+	}
+	tRho, err := curves.PointUnmarshalBinary(tRhoBytes)
+	if err != nil {
+		return err
+	}
+	sSigma, err := curves.ScalarUnmarshalBinary(sSigmaBytes)
+	if err != nil {
+		return err
+	}
+	sRho, err := curves.ScalarUnmarshalBinary(sRhoBytes)
+	if err != nil {
+		return err
+	}
+	sDeltaSigma, err := curves.ScalarUnmarshalBinary(sDeltaSigmaBytes)
+	if err != nil {
+		return err
+	}
+	sDeltaRho, err := curves.ScalarUnmarshalBinary(sDeltaRhoBytes)
+	if err != nil {
+		return err
+	}
+	sY, err := curves.ScalarUnmarshalBinary(sYBytes)
 	if err != nil {
 		return err
 	}
@@ -489,7 +573,7 @@ func (mp *MembershipProof) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// MembershipProofFinal contains values that are input to Fiat-Shamir Heuristic
+// MembershipProofFinal contains values that are input to Fiat-Shamir Heuristic.
 type MembershipProofFinal struct {
 	accumulator    curves.Point
 	eC             curves.Point
@@ -502,17 +586,30 @@ type MembershipProofFinal struct {
 	capRDeltaRho   curves.Point
 }
 
-// GetChallenge computes Fiat-Shamir Heuristic taking input values of MembershipProofFinal
-func (m MembershipProofFinal) GetChallenge(curve *curves.PairingCurve) curves.Scalar {
-	res := m.accumulator.ToAffineCompressed()
-	res = append(res, m.eC.ToAffineCompressed()...)
-	res = append(res, m.tSigma.ToAffineCompressed()...)
-	res = append(res, m.tRho.ToAffineCompressed()...)
-	res = append(res, m.capRE.Bytes()...)
-	res = append(res, m.capRSigma.ToAffineCompressed()...)
-	res = append(res, m.capRRho.ToAffineCompressed()...)
-	res = append(res, m.capRDeltaSigma.ToAffineCompressed()...)
-	res = append(res, m.capRDeltaRho.ToAffineCompressed()...)
-	challenge := curve.Scalar.Hash(res)
-	return challenge
+// WriteChallengeContributionToTranscript computes Fiat-Shamir Heuristic taking input values of MembershipProofFinal.
+func (m *MembershipProofFinal) WriteChallengeContributionToTranscript(transcript *merlin.Transcript) {
+	writeChallengeContributionToTranscript(&[9][]byte{
+		m.accumulator.ToAffineCompressed(),
+		m.eC.ToAffineCompressed(),
+		m.tSigma.ToAffineCompressed(),
+		m.tRho.ToAffineCompressed(),
+		m.capRE.Bytes(),
+		m.capRSigma.ToAffineCompressed(),
+		m.capRRho.ToAffineCompressed(),
+		m.capRDeltaSigma.ToAffineCompressed(),
+		m.capRDeltaRho.ToAffineCompressed(),
+	}, transcript,
+	)
+}
+
+func writeChallengeContributionToTranscript(contributions *[9][]byte, transcript *merlin.Transcript) {
+	transcript.AppendMessage([]byte("V"), contributions[0])
+	transcript.AppendMessage([]byte("Ec"), contributions[1])
+	transcript.AppendMessage([]byte("T_sigma"), contributions[2])
+	transcript.AppendMessage([]byte("T_rho"), contributions[3])
+	transcript.AppendMessage([]byte("R_E"), contributions[4])
+	transcript.AppendMessage([]byte("R_sigma"), contributions[5])
+	transcript.AppendMessage([]byte("R_rho"), contributions[6])
+	transcript.AppendMessage([]byte("R_delta_sigma"), contributions[7])
+	transcript.AppendMessage([]byte("R_delta_rho"), contributions[8])
 }

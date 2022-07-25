@@ -25,19 +25,19 @@ func (alice *Alice) dkgCommit(w io.Writer) error {
 	return enc.Encode(&result)
 }
 
-// dkgCommit receives Bob's commitment and returns schnorr statment + proof.
+// dkgCommit receives Bob's commitment and returns schnorr statement + proof.
 func (bob *Bob) dkgCommit(rw io.ReadWriter) error {
 	enc := gob.NewEncoder(rw)
 	dec := gob.NewDecoder(rw)
-	var err error
-	if err = dec.Decode(&bob.com); err != nil {
+	if err := dec.Decode(&bob.com); err != nil {
 		return err
 	}
+	var err error
 	if bob.SkB, err = bob.params.Scalar.Random(); err != nil {
 		return err
 	}
 	bob.PkB = &Schnorr{params: bob.params}
-	if err = bob.PkB.Prove(bob.SkB); err != nil {
+	if err := bob.PkB.Prove(bob.SkB); err != nil {
 		return err
 	}
 	return enc.Encode(bob.PkB)
@@ -47,14 +47,14 @@ func (bob *Bob) dkgCommit(rw io.ReadWriter) error {
 func (alice *Alice) dkgVerify(rw io.ReadWriter) error {
 	dec := gob.NewDecoder(rw)
 	enc := gob.NewEncoder(rw)
-	var err error
 	input := &Schnorr{params: alice.params}
-	if err = dec.Decode(input); err != nil {
+	if err := dec.Decode(input); err != nil {
 		return err
 	}
-	if err = input.Verify(); err != nil {
+	if err := input.Verify(); err != nil {
 		return err
 	}
+	var err error
 	if alice.Pk, err = input.Pub.ScalarMult(alice.SkA); err != nil {
 		return err
 	}
@@ -63,14 +63,14 @@ func (alice *Alice) dkgVerify(rw io.ReadWriter) error {
 
 func (bob *Bob) dkgVerify(r io.Reader) error {
 	dec := gob.NewDecoder(r)
-	var err error
 	input := &Schnorr{params: bob.params}
-	if err = dec.Decode(input); err != nil {
+	if err := dec.Decode(input); err != nil {
 		return err
 	}
-	if err = input.DecommitVerify(bob.com); err != nil {
+	if err := input.DecommitVerify(bob.com); err != nil {
 		return err
 	}
+	var err error
 	if bob.Pk, err = input.Pub.ScalarMult(bob.SkB); err != nil {
 		return err
 	}

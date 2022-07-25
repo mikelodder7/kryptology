@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/coinbase/kryptology/pkg/core/curves/native"
 	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fp"
 	"github.com/coinbase/kryptology/pkg/core/curves/native/pasta/fq"
 )
@@ -19,28 +20,28 @@ import (
 func TestPoseidonHash(t *testing.T) {
 	// Reference https://github.com/o1-labs/proof-systems/blob/master/oracle/tests/test_vectors/3w.json
 	testVectors := []struct {
-		input  []*fp.Fp
-		output *fq.Fq
+		input  []*native.Field // Fp
+		output *native.Field   // Fq
 	}{
 		{
-			input:  []*fp.Fp{},
+			input:  []*native.Field{},
 			output: hexToFq("1b3251b6912d82edc78bbb0a5c88f0c6fde1781bc3e654123fa6862a4c63e617"),
 		},
 		{
-			input: []*fp.Fp{
+			input: []*native.Field{
 				hexToFp("df698e389c6f1987ffe186d806f8163738f5bf22e8be02572cce99dc6a4ab030"),
 			},
 			output: hexToFq("f9b1b6c5f8c98017c6b35ac74bc689b6533d6dbbee1fd868831b637a43ea720c"),
 		},
 		{
-			input: []*fp.Fp{
+			input: []*native.Field{
 				hexToFp("56b648a5a85619814900a6b40375676803fe16fb1ad2d1fb79115eb1b52ac026"),
 				hexToFp("f26a8a03d9c9bbd9c6b2a1324d2a3f4d894bafe25a7e4ad1a498705f4026ff2f"),
 			},
 			output: hexToFq("7a556e93bcfbd27b55867f533cd1df293a7def60dd929a086fdd4e70393b0918"),
 		},
 		{
-			input: []*fp.Fp{
+			input: []*native.Field{
 				hexToFp("075c41fa23e4690694df5ded43624fd60ab7ee6ec6dd48f44dc71bc206cecb26"),
 				hexToFp("a4e2beebb09bd02ad42bbccc11051e8262b6ef50445d8382b253e91ab1557a0d"),
 				hexToFp("7dfc23a1242d9c0d6eb16e924cfba342bb2fccf36b8cbaf296851f2e6c469639"),
@@ -48,7 +49,7 @@ func TestPoseidonHash(t *testing.T) {
 			output: hexToFq("f94b39a919aab06f43f4a4b5a3e965b719a4dbd2b9cd26d2bba4197b10286b35"),
 		},
 		{
-			input: []*fp.Fp{
+			input: []*native.Field{
 				hexToFp("a1a659b14e80d47318c6fcdbbd388de4272d5c2815eb458cf4f196d52403b639"),
 				hexToFp("5e33065d1801131b64d13038ff9693a7ef6283f24ec8c19438d112ff59d50f04"),
 				hexToFp("38a8f4d0a9b6d0facdc4e825f6a2ba2b85401d5de119bf9f2bcb908235683e06"),
@@ -57,7 +58,7 @@ func TestPoseidonHash(t *testing.T) {
 			output: hexToFq("cc1ccfa964fd6ef9ff1994beb53cfce9ebe1212847ce30e4c64f0777875aec34"),
 		},
 		{
-			input: []*fp.Fp{
+			input: []*native.Field{
 				hexToFp("bccfee48dc76bb991c97bd531cf489f4ee37a66a15f5cfac31bdd4f159d4a905"),
 				hexToFp("2d106fb21a262f85fd400a995c6d74bad48d8adab2554046871c215e585b072b"),
 				hexToFp("8300e93ee8587956534d0756bb2aa575e5878c670cff5c8e3e55c62632333c06"),
@@ -71,14 +72,14 @@ func TestPoseidonHash(t *testing.T) {
 		ctx := new(Context).Init(ThreeW, NetworkType(NullNet))
 		ctx.Update(tv.input)
 		res := ctx.Digest()
-		require.True(t, res.Equal(tv.output))
+		require.Equal(t, 1, res.Equal(tv.output))
 	}
 	testVectors = []struct {
-		input  []*fp.Fp
-		output *fq.Fq
+		input  []*native.Field // Fp
+		output *native.Field   // Fq
 	}{
 		{
-			input: []*fp.Fp{
+			input: []*native.Field{
 				hexToFp("0f48c65bd25f85f3e4ea4efebeb75b797bd743603be04b4ead845698b76bd331"),
 				hexToFp("0f48c65bd25f85f3e4ea4efebeb75b797bd743603be04b4ead845698b76bd331"),
 				hexToFp("f34b505e1a05ecfb327d8d664ff6272ddf5cc1f69618bb6a4407e9533067e703"),
@@ -89,34 +90,34 @@ func TestPoseidonHash(t *testing.T) {
 				hexToFp("9b030903692b6b7b030000000000000000000000000000000000800100000000"),
 				hexToFp("000000a800000000000000000000000000000000000000000000000000000000"),
 			},
-			output: &fq.Fq{
-				1348483115953159504,
-				14115862092770957043,
-				15858311826851986539,
-				1644043871107534594,
-			},
+			output: fq.PastaFqNew().SetRaw(&[native.FieldLimbs]uint64{
+				0x12b6c63fd7fffd50,
+				0xc3e59dc8ca03d6f3,
+				0xdc140a95e8e37c6b,
+				0x16d0d130b485cf02,
+			}),
 		},
 	}
 	for _, tv := range testVectors {
 		ctx := new(Context).Init(ThreeW, NetworkType(MainNet))
 		ctx.Update(tv.input)
 		res := ctx.Digest()
-		require.True(t, res.Equal(tv.output))
+		require.Equal(t, 1, res.Equal(tv.output))
 	}
 }
 
-func hexToFp(s string) *fp.Fp {
+func hexToFp(s string) *native.Field {
 	var buffer [32]byte
 	input, _ := hex.DecodeString(s)
 	copy(buffer[:], input)
-	f, _ := new(fp.Fp).SetBytes(&buffer)
+	f, _ := fp.PastaFpNew().SetBytes(&buffer)
 	return f
 }
 
-func hexToFq(s string) *fq.Fq {
+func hexToFq(s string) *native.Field {
 	var buffer [32]byte
 	input, _ := hex.DecodeString(s)
 	copy(buffer[:], input)
-	f, _ := new(fq.Fq).SetBytes(&buffer)
+	f, _ := fq.PastaFqNew().SetBytes(&buffer)
 	return f
 }

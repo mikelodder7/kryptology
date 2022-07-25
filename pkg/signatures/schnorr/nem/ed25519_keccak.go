@@ -48,7 +48,7 @@ type PublicKey []byte
 // PrivateKey is the type of Ed25519 private keys. It implements crypto.Signer.
 type PrivateKey []byte
 
-// Bytes returns the publicKey in byte array
+// Bytes returns the publicKey in byte array.
 func (p PublicKey) Bytes() []byte {
 	return p
 }
@@ -62,8 +62,7 @@ func (priv PrivateKey) Public() crypto.PublicKey {
 
 func Keccak512(data []byte) ([]byte, error) {
 	k512 := sha3.NewLegacyKeccak512()
-	_, err := k512.Write(data)
-	if err != nil {
+	if _, err := k512.Write(data); err != nil {
 		return nil, err
 	}
 	return k512.Sum(nil), nil
@@ -152,7 +151,7 @@ func newKeyFromSeed(privateKey, seed []byte) error {
 	publicKeyBytes := A.Bytes()
 
 	copy(privateKey, seed)
-	copy(privateKey[32:], publicKeyBytes[:])
+	copy(privateKey[32:], publicKeyBytes)
 	return nil
 }
 
@@ -244,7 +243,7 @@ func sign(signature, privateKey, message []byte) error {
 	// s = (r + h * privKey)
 	s := edwards25519.NewScalar().MultiplyAdd(h, sc, r)
 
-	copy(signature[:], RBytes)
+	copy(signature, RBytes)
 	copy(signature[32:], s.Bytes())
 
 	return nil
@@ -252,7 +251,7 @@ func sign(signature, privateKey, message []byte) error {
 
 // Verify reports whether sig is a valid signature of message by publicKey. It
 // will panic if len(publicKey) is not PublicKeySize.
-// Previously publicKey is of type PublicKey
+// Previously publicKey is of type PublicKey.
 func Verify(publicKey PublicKey, message, sig []byte) (bool, error) {
 	if l := len(publicKey); l != PublicKeySize {
 		return false, fmt.Errorf("ed25519: bad public key length: " + strconv.Itoa(l))

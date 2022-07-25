@@ -10,8 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	"git.sr.ht/~sircmpwn/go-bare"
-
+	"github.com/coinbase/kryptology/pkg/core"
 	"github.com/coinbase/kryptology/pkg/core/curves"
 )
 
@@ -21,7 +20,7 @@ type MembershipWitness struct {
 	y curves.Scalar
 }
 
-// New creates a new membership witness
+// New creates a new membership witness.
 func (mw *MembershipWitness) New(y Element, acc *Accumulator, sk *SecretKey) (*MembershipWitness, error) {
 	if acc.value == nil || acc.value.IsIdentity() {
 		return nil, fmt.Errorf("value of accumulator should not be nil")
@@ -33,8 +32,7 @@ func (mw *MembershipWitness) New(y Element, acc *Accumulator, sk *SecretKey) (*M
 		return nil, fmt.Errorf("y should not be nil")
 	}
 	newAcc := &Accumulator{acc.value}
-	_, err := newAcc.Remove(sk, y)
-	if err != nil {
+	if _, err := newAcc.Remove(sk, y); err != nil {
 		return nil, err
 	}
 	mw.c = newAcc.value
@@ -100,8 +98,8 @@ func (mw *MembershipWitness) ApplyDelta(delta *Delta) (*MembershipWitness, error
 	return mw, nil
 }
 
-// BatchUpdate performs batch update as described in section 4
-func (mw *MembershipWitness) BatchUpdate(additions []Element, deletions []Element, coefficients []Coefficient) (*MembershipWitness, error) {
+// BatchUpdate performs batch update as described in section 4.
+func (mw *MembershipWitness) BatchUpdate(additions, deletions []Element, coefficients []Coefficient) (*MembershipWitness, error) {
 	delta, err := evaluateDelta(mw.y, additions, deletions, coefficients)
 	if err != nil {
 		return nil, err
@@ -113,9 +111,9 @@ func (mw *MembershipWitness) BatchUpdate(additions []Element, deletions []Elemen
 	return mw, nil
 }
 
-// MultiBatchUpdate performs multi-batch update using epoch as described in section 4.2
-func (mw *MembershipWitness) MultiBatchUpdate(A [][]Element, D [][]Element, C [][]Coefficient) (*MembershipWitness, error) {
-	delta, err := evaluateDeltas(mw.y, A, D, C)
+// MultiBatchUpdate performs multi-batch update using epoch as described in section 4.2.
+func (mw *MembershipWitness) MultiBatchUpdate(capA, capD [][]Element, capC [][]Coefficient) (*MembershipWitness, error) {
+	delta, err := evaluateDeltas(mw.y, capA, capD, capC)
 	if err != nil {
 		return nil, fmt.Errorf("evaluateDeltas fails")
 	}
@@ -126,46 +124,50 @@ func (mw *MembershipWitness) MultiBatchUpdate(A [][]Element, D [][]Element, C []
 	return mw, nil
 }
 
-// MarshalBinary converts a membership witness to bytes
+// MarshalBinary converts a membership witness to bytes.
 func (mw MembershipWitness) MarshalBinary() ([]byte, error) {
 	if mw.c == nil || mw.y == nil {
 		return nil, fmt.Errorf("c and y value should not be nil")
 	}
-
-	result := append(mw.c.ToAffineCompressed(), mw.y.Bytes()...)
-	tv := &structMarshal{
-		Value: result,
-		Curve: mw.c.CurveName(),
+	c, err := curves.PointMarshalBinary(mw.c)
+	if err != nil {
+		return nil, err
 	}
-	return bare.Marshal(tv)
+	y, err := curves.ScalarMarshalBinary(mw.y)
+	if err != nil {
+		return nil, err
+	}
+
+	b := core.NewByteSerializer(uint(len(c) + len(y)))
+	if _, err = b.WriteBytes(c); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(y); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
-// UnmarshalBinary converts bytes into MembershipWitness
+// UnmarshalBinary converts bytes into MembershipWitness.
 func (mw *MembershipWitness) UnmarshalBinary(data []byte) error {
 	if data == nil {
 		return fmt.Errorf("input data should not be nil")
 	}
-	tv := new(structMarshal)
-	err := bare.Unmarshal(data, tv)
+	b := core.NewByteDeserializer(data)
+	cBytes, err := b.ReadBytes()
 	if err != nil {
 		return err
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
+	yBytes, err := b.ReadBytes()
+	if err != nil {
+		return err
 	}
 
-	ptLength := len(curve.Point.ToAffineCompressed())
-	scLength := len(curve.Scalar.Bytes())
-	expectedLength := ptLength + scLength
-	if len(tv.Value) != expectedLength {
-		return fmt.Errorf("invalid byte sequence")
-	}
-	cValue, err := curve.Point.FromAffineCompressed(tv.Value[:ptLength])
+	cValue, err := curves.PointUnmarshalBinary(cBytes)
 	if err != nil {
 		return err
 	}
-	yValue, err := curve.Scalar.SetBytes(tv.Value[ptLength:])
+	yValue, err := curves.ScalarUnmarshalBinary(yBytes)
 	if err != nil {
 		return err
 	}
@@ -175,57 +177,55 @@ func (mw *MembershipWitness) UnmarshalBinary(data []byte) error {
 }
 
 // Delta contains values d and p, where d should be the division dA(y)/dD(y) on some value y
-// p should be equal to 1/dD * <Gamma_y, Omega>
+// p should be equal to 1/dD * <Gamma_y, Omega>.
 type Delta struct {
 	d curves.Scalar
 	p curves.Point
 }
 
-// MarshalBinary converts Delta into bytes
+// MarshalBinary converts Delta into bytes.
 func (d *Delta) MarshalBinary() ([]byte, error) {
 	if d.d == nil || d.p == nil {
 		return nil, fmt.Errorf("d and p should not be nil")
 	}
-	var result []byte
-	result = append(result, d.p.ToAffineCompressed()...)
-	result = append(result, d.d.Bytes()...)
-	tv := &structMarshal{
-		Value: result,
-		Curve: d.p.CurveName(),
+	pBytes, err := curves.PointMarshalBinary(d.p)
+	if err != nil {
+		return nil, err
 	}
-	return bare.Marshal(tv)
+	dBytes, err := curves.ScalarMarshalBinary(d.d)
+	if err != nil {
+		return nil, err
+	}
+	b := core.NewByteSerializer(uint(len(pBytes) + len(dBytes)))
+	if _, err = b.WriteBytes(pBytes); err != nil {
+		return nil, err
+	}
+	if _, err = b.WriteBytes(dBytes); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
-// UnmarshalBinary converts data into Delta
+// UnmarshalBinary converts data into Delta.
 func (d *Delta) UnmarshalBinary(data []byte) error {
 	if data == nil {
 		return fmt.Errorf("expected non-zero byte sequence")
 	}
+	b := core.NewByteDeserializer(data)
+	pBytes, err := b.ReadBytes()
+	if err != nil {
+		return err
+	}
+	dBytes, err := b.ReadBytes()
+	if err != nil {
+		return err
+	}
 
-	tv := new(structMarshal)
-	err := bare.Unmarshal(data, tv)
+	pValue, err := curves.PointUnmarshalBinary(pBytes)
 	if err != nil {
 		return err
 	}
-	curve := curves.GetCurveByName(tv.Curve)
-	if curve == nil {
-		return fmt.Errorf("invalid curve")
-	}
-
-	ptLength := len(curve.Point.ToAffineCompressed())
-	scLength := len(curve.Scalar.Bytes())
-	expectedLength := ptLength + scLength
-	if len(tv.Value) != expectedLength {
-		return fmt.Errorf("invalid byte sequence")
-	}
-	pValue, err := curve.NewIdentityPoint().FromAffineCompressed(tv.Value[:ptLength])
-	if err != nil {
-		return err
-	}
-	dValue, err := curve.NewScalar().SetBytes(tv.Value[ptLength:])
-	if err != nil {
-		return err
-	}
+	dValue, err := curves.ScalarUnmarshalBinary(dBytes)
 	if err != nil {
 		return err
 	}
@@ -236,13 +236,13 @@ func (d *Delta) UnmarshalBinary(data []byte) error {
 
 // evaluateDeltas compute values used for membership witness batch update with epoch
 // as described in section 4.2, page 11 of https://eprint.iacr.org/2020/777.pdf
-func evaluateDeltas(y Element, A [][]Element, D [][]Element, C [][]Coefficient) (*Delta, error) {
-	if len(A) != len(D) || len(A) != len(C) {
+func evaluateDeltas(y Element, capA, capD [][]Element, capC [][]Coefficient) (*Delta, error) {
+	if len(capA) != len(capD) || len(capA) != len(capC) {
 		return nil, fmt.Errorf("a, d, c should have same length")
 	}
 
 	one := y.One()
-	size := len(A)
+	size := len(capA)
 
 	// dA(x) =  ∏ 1..n (yA_i - x)
 	aa := make([]curves.Scalar, 0)
@@ -255,8 +255,8 @@ func evaluateDeltas(y Element, A [][]Element, D [][]Element, C [][]Coefficient) 
 	// dA_{a->b}(y) = ∏ a..b dAs(y)
 	// dD_{a->b}(y) = ∏ a..b dDs(y)
 	for i := 0; i < size; i++ {
-		adds := A[i]
-		dels := D[i]
+		adds := capA[i]
+		dels := capD[i]
 
 		// ta = dAs(y)
 		ta, err := dad(adds, y)
@@ -306,9 +306,9 @@ func evaluateDeltas(y Element, A [][]Element, D [][]Element, C [][]Coefficient) 
 
 		// dDi->t-1(y) * dAt->j(y)
 		dak = dak.Mul(ddh)
-		pp := make(polynomialPoint, len(C[i]))
+		pp := make(polynomialPoint, len(capC[i]))
 		for j := 0; j < len(pp); j++ {
-			pp[j] = C[i][j]
+			pp[j] = capC[i][j]
 		}
 
 		// dDi->t-1(y) * dAt->j(y) · Ω
@@ -340,7 +340,7 @@ func evaluateDeltas(y Element, A [][]Element, D [][]Element, C [][]Coefficient) 
 
 // evaluateDelta computes values used for membership witness batch update
 // as described in section 4.1 of https://eprint.iacr.org/2020/777.pdf
-func evaluateDelta(y Element, additions []Element, deletions []Element, coefficients []Coefficient) (*Delta, error) {
+func evaluateDelta(y Element, additions, deletions []Element, coefficients []Coefficient) (*Delta, error) {
 	// dD(y) = ∏ 1..m (yD_i - y), d = 1/dD(y)
 	var err error
 	d, err := dad(deletions, y)
@@ -352,7 +352,7 @@ func evaluateDelta(y Element, additions []Element, deletions []Element, coeffici
 		return nil, fmt.Errorf("no inverse exists")
 	}
 
-	//dA(y) =  ∏ 1..n (yA_i - y)
+	// dA(y) =  ∏ 1..n (yA_i - y)
 	a, err := dad(additions, y)
 	if err != nil {
 		return nil, fmt.Errorf("dad fails on additions")

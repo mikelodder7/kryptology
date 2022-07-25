@@ -10,18 +10,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"git.sr.ht/~sircmpwn/go-bare"
+	"github.com/pkg/errors"
 
 	"github.com/coinbase/kryptology/internal"
-	mod "github.com/coinbase/kryptology/pkg/core"
+	"github.com/coinbase/kryptology/pkg/core"
 )
-
-type decryptionKeyMarshal struct {
-	X1    [][]byte `bare:"x1"`
-	X2    []byte   `bare:"x2"`
-	X3    []byte   `bare:"x3"`
-	Group []byte   `bare:"group"`
-}
 
 // DecryptionKey decrypts verifiable ciphertext
 // as described in section 3.2 in <https://shoup.net/papers/verenc.pdf>
@@ -31,7 +24,7 @@ type DecryptionKey struct {
 	group  *PaillierGroup
 }
 
-// EncryptionKey returns the corresponding encryption key for this decryption key
+// EncryptionKey returns the corresponding encryption key for this decryption key.
 func (dk DecryptionKey) EncryptionKey() *EncryptionKey {
 	y2 := dk.group.Gexp(dk.x2)
 	y3 := dk.group.Gexp(dk.x3)
@@ -44,41 +37,21 @@ func (dk DecryptionKey) EncryptionKey() *EncryptionKey {
 	}
 }
 
-// MarshalBinary serializes a key to bytes
+// MarshalBinary serializes a key to bytes.
 func (dk DecryptionKey) MarshalBinary() ([]byte, error) {
-	tv := new(decryptionKeyMarshal)
-	var err error
-	tv.Group, err = dk.group.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	tv.X3 = dk.x3.Bytes()
-	tv.X2 = dk.x2.Bytes()
-	tv.X1 = make([][]byte, len(dk.x1))
-	for i, y := range dk.x1 {
-		tv.X1[i] = y.Bytes()
-	}
-	return bare.Marshal(tv)
+	return marshalData(dk.group, dk.x3, dk.x2, dk.x1)
 }
 
-// UnmarshalBinary deserializes a key from bytes
+// UnmarshalBinary deserializes a key from bytes.
 func (dk *DecryptionKey) UnmarshalBinary(data []byte) error {
-	tv := new(decryptionKeyMarshal)
-	err := bare.Unmarshal(data, tv)
+	group, x3, x2, x1, err := unmarshalData(data)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	dk.group = new(PaillierGroup)
-	err = dk.group.UnmarshalBinary(tv.Group)
-	if err != nil {
-		return err
-	}
-	dk.x2 = new(big.Int).SetBytes(tv.X2)
-	dk.x3 = new(big.Int).SetBytes(tv.X3)
-	dk.x1 = make([]*big.Int, len(tv.X1))
-	for i, b := range tv.X1 {
-		dk.x1[i] = new(big.Int).SetBytes(b)
-	}
+	dk.group = group
+	dk.x3 = x3
+	dk.x2 = x2
+	dk.x1 = x1
 	return nil
 }
 
@@ -93,11 +66,11 @@ func (dk DecryptionKey) Decrypt(domain []byte, cipherText *CipherText) ([]*big.I
 	if len(cipherText.e) > len(dk.x1) {
 		return nil, fmt.Errorf("number of messages %d is more than supported by this key %d", len(cipherText.e), len(dk.x1))
 	}
-	if cipherText.u.Cmp(mod.Zero) == 0 || cipherText.v.Cmp(mod.Zero) == 0 {
+	if cipherText.u.Cmp(core.Zero) == 0 || cipherText.v.Cmp(core.Zero) == 0 {
 		return nil, internal.ErrZeroValue
 	}
 	for _, e := range cipherText.e {
-		if e.Cmp(mod.Zero) == 0 {
+		if e.Cmp(core.Zero) == 0 {
 			return nil, internal.ErrZeroValue
 		}
 	}
@@ -149,4 +122,63 @@ func (dk DecryptionKey) Decrypt(domain []byte, cipherText *CipherText) ([]*big.I
 	}
 
 	return msgs, nil
+}
+
+func marshalData(pGroup *PaillierGroup, a3, a2 *big.Int, a1 []*big.Int) ([]byte, error) {
+	group, err := pGroup.MarshalBinary()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	x3 := a3.Bytes()
+	x2 := a2.Bytes()
+	x1 := make([][]byte, len(a1))
+	for i, y := range a1 {
+		x1[i] = y.Bytes()
+	}
+	b := core.NewByteSerializer(uint(len(group) + len(x3) + len(x2) + len(x1)*len(x2)))
+	if _, err = b.WriteBytes(group); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(x3); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteBytes(x2); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if _, err = b.WriteByteArray(x1); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return b.Bytes(), nil
+}
+
+func unmarshalData(data []byte) (*PaillierGroup, *big.Int, *big.Int, []*big.Int, error) {
+	b := core.NewByteDeserializer(data)
+	groupBytes, err := b.ReadBytes()
+	if err != nil {
+		return nil, nil, nil, nil, errors.WithStack(err)
+	}
+	a3Bytes, err := b.ReadBytes()
+	if err != nil {
+		return nil, nil, nil, nil, errors.WithStack(err)
+	}
+	a2Bytes, err := b.ReadBytes()
+	if err != nil {
+		return nil, nil, nil, nil, errors.WithStack(err)
+	}
+	a1Bytes, err := b.ReadByteArray()
+	if err != nil {
+		return nil, nil, nil, nil, errors.WithStack(err)
+	}
+
+	group := new(PaillierGroup)
+	if err = group.UnmarshalBinary(groupBytes); err != nil {
+		return nil, nil, nil, nil, errors.WithStack(err)
+	}
+	a2 := new(big.Int).SetBytes(a2Bytes)
+	a3 := new(big.Int).SetBytes(a3Bytes)
+	a1 := make([]*big.Int, len(a1Bytes))
+	for i, d := range a1Bytes {
+		a1[i] = new(big.Int).SetBytes(d)
+	}
+	return group, a3, a2, a1, nil
 }

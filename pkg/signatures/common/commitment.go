@@ -11,5 +11,5 @@ import (
 )
 
 // Commitment represents a point Pedersen commitment of one or more
-// points multiplied by scalars
+// points multiplied by scalars.
 type Commitment = curves.Point
